@@ -1,5 +1,6 @@
 use std::fs;
 use std::io;
+use std::iter;
 use std::path::{Path, PathBuf};
 
 use log::{debug, error, info, warn};
@@ -36,24 +37,29 @@ pub fn convert_paths(paths: &[impl AsRef<Path>]) -> Vec<&str> {
 /// finds a name that doesn't conflict with names already in the trash directory and names in
 /// other
 fn find_name(path: &str, existing: &[&str]) -> String {
-    (1..)
-        .map(|n| format!("{}_{}", path, n))
+    (0..)
+        .map(|n| {
+            if n == 0 {
+                String::from(path)
+            } else {
+                format!("{}_{}", path, n)
+            }
+        })
         .find(|new_path| !existing.contains(&&**new_path))
         .expect("BUG: path must be found, iterator is infinite")
 }
 
-pub fn find_names_multiple<'a>(paths: &[&'a str], mut existing: Vec<&'a str>) -> Vec<&'a str> {
-    let new_name_start = existing.len();
-    let mut result = Vec::with_capacity(paths.len());
+pub fn find_names_multiple<'a>(paths: &[&'a str], existing: Vec<&'a str>) -> Vec<String> {
+    let mut results: Vec<String> = Vec::with_capacity(paths.len());
 
-    for (idx, &path) in paths.into_iter().enumerate() {
-        existing.push(path);
-        let item = find_name(&existing[new_name_start + idx], &existing);
-        result.push(item)
+    for &path in paths.into_iter() {
+        let results_str = results.iter().map(|s| &**s).collect::<Vec<&str>>();
+        let existing_and_results = [existing.as_slice(), results_str.as_slice()].concat();
+        let new_name = find_name(path, &existing_and_results);
+
+        results.push(new_name)
     }
-    existing.drain(..new_name_start);
-
-    existing
+    results
 }
 
 pub fn read_dir_path<'a>(dir: &'a Path) -> Result<impl Iterator<Item = PathBuf> + 'a> {
@@ -90,9 +96,54 @@ mod tests {
 
     #[test]
     fn find_names_test() {
+        assert_eq!(find_name("vim.log", &["vim.log", "vim.log2"]), "vim.log_1");
+    }
+
+    #[test]
+    fn find_names_test_2_test() {
+        assert_eq!(find_name("vim.log", &["vim.log", "vim.log_1"]), "vim.log_2");
+    }
+
+    #[test]
+    fn find_names_test_none_test() {
+        assert_eq!(find_name("vim.log", &[]), "vim.log");
+    }
+
+    #[test]
+    fn find_names_none_none_test() {
+        assert_eq!(find_name("", &[]), "");
+    }
+
+    #[test]
+    fn find_names_multiple_test() {
         assert_eq!(
-            find_name("/home/brian/vim.log", &["/home/brian/vim.log"]),
-            "/home/brian/vim.log_1"
+            find_names_multiple(
+                &["vim.log", "dude.txt", "vim.log"],
+                vec!["vim.log", "vim.log_1"]
+            ),
+            vec!["vim.log_2", "dude.txt", "vim.log_3"]
+        );
+    }
+
+    #[test]
+    fn find_names_multiple2_test() {
+        assert_eq!(
+            find_names_multiple(
+                &["vim.log", "vim.log", "vim.log_2", "vim.log"],
+                vec!["vim.log", "vim.log_1", "vim.log_3"]
+            ),
+            vec!["vim.log_2", "vim.log_4", "vim.log_2_1", "vim.log_5"]
+        );
+    }
+
+    #[test]
+    fn find_names_multiple_same_naming_test() {
+        assert_eq!(
+            find_names_multiple(
+                &["vim.log_1", "vim.log_2", "vim.log_3"],
+                vec!["vim.log_1", "vim.log_2", "vim.log_3"]
+            ),
+            vec!["vim.log_1_1", "vim.log_2_1", "vim.log_3_1"]
         );
     }
 }

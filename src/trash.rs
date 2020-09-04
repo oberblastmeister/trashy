@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use directories::{ProjectDirs, UserDirs};
 use fs_extra::dir::{self, move_dir};
 use fs_extra::file::{self, move_file};
+use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
 use rayon::prelude::*;
 use snafu::{OptionExt, ResultExt, Snafu};
@@ -37,6 +38,29 @@ pub enum Error {
     #[snafu(display("{}", source))]
     #[snafu(context(false))]
     Utils { source: utils::Error },
+
+    #[snafu(display("Failed to move directory from {} to {}: {}", from.display(), to.display(), source))]
+    MoveDir {
+        source: fs_extra::error::Error,
+        from: PathBuf,
+        to: PathBuf,
+    },
+
+    #[snafu(display("Failed to move file from {} to {}: {}", from.display(), to.display(), source))]
+    MoveFile {
+        source: fs_extra::error::Error,
+        from: PathBuf,
+        to: PathBuf,
+    },
+
+    #[snafu(display("Failed to save trash info file to {}: {}", path.display(), source))]
+    TrashInfoSave {
+        source: trash_info::Error,
+        path: PathBuf,
+    },
+
+    #[snafu(display("Failed to create new trash info struct: {}", source))]
+    TrashInfoNew { source: trash_info::Error },
 }
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -109,7 +133,7 @@ impl Trash {
     fn get_existing_paths(&self) -> Result<Vec<String>> {
         let existing = self
             .read_dir_info()?
-            // .map(|path| convert_to_string(&path))
+            // convert pathbuf to string
             .map(|path| convert_to_string(&path))
             // log conversion errors
             .inspect(|res| {
@@ -134,12 +158,17 @@ impl Trash {
 
         from.par_iter().zip(to.par_iter()).for_each(|(from, to)| {
             let res = if from.is_dir() {
-                move_dir(from, to, &DIR_COPY_OPT)
+                move_dir(from, to, &DIR_COPY_OPT).context(MoveDir { from, to })
             } else if from.is_file() {
-                move_file(from, to, &FILE_COPY_OPT)
+                move_file(from, to, &FILE_COPY_OPT).context(MoveFile { from, to })
             } else {
                 panic!("BUG: must be file or directory");
-            };
+            }
+            .and_then(|_n| {
+                TrashInfo::new(from, None)
+                    .context(TrashInfoNew)
+                    .and_then(|trash_info| trash_info.save(to).context(TrashInfoSave { path: to }))
+            });
 
             if let Some(e) = res.as_ref().err() {
                 warn!("{}", e);

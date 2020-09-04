@@ -1,19 +1,20 @@
 use std::borrow::Cow;
 use std::convert::{TryFrom, TryInto};
-use std::fmt;
 use std::str::FromStr;
 
 use chrono::NaiveDateTime;
 use nom::bytes::complete::{is_not, tag};
 use nom::character::complete::char;
 use nom::combinator::{all_consuming, map_res};
-use nom::error::{context, convert_error, VerboseError};
+use nom::error::{context, VerboseError};
 use nom::sequence::delimited;
-use nom::{Err, IResult};
+use nom::IResult;
 use percent_encoding::percent_decode_str;
-use snafu::{ResultExt, Snafu};
+use snafu::ResultExt;
 
-use crate::trash_info::{self, TrashInfo};
+use super::error::{Error, ParseNaiveDate};
+use super::error::{NomError, Result};
+use crate::trash_info::TrashInfo;
 
 pub const TRASH_DATETIME_FORMAT: &'static str = "%Y-%m-%dT%H:%M:%S";
 
@@ -38,74 +39,6 @@ fn parse_header_line<'a>(i: &'a str) -> IResult<&'a str, &'a str, VerboseError<&
     context("header", delimited(char('['), tag("Trash Info"), char(']')))(i)
 }
 
-#[derive(Debug, Snafu)]
-pub enum Error {
-    #[snafu(context(false))]
-    #[snafu(display("Failed to parse Trash Info file:\n{}", source))]
-    NomError {
-        source: NomError,
-    },
-
-    #[snafu(display("Failed to parse NaiveDateTime from string {}: {}", date, source))]
-    ParseNaiveDate {
-        source: chrono::format::ParseError,
-        date: String,
-    },
-
-    #[snafu(context(false))]
-    #[snafu(display("Could not create TrashInfo struct: {}", source))]
-    TrashInfoCreation {
-        source: trash_info::Error,
-    },
-}
-
-type Result<T, E = Error> = ::std::result::Result<T, E>;
-
-#[derive(Debug)]
-pub struct NomError {
-    source: String,
-}
-
-impl NomError {
-    fn build(source: Err<VerboseError<&str>>, input: &str) -> Self {
-        let source = match source {
-            Err::Incomplete(_) => format!("{}", source),
-            Err::Failure(e) | Err::Error(e) => convert_error(input, e),
-        };
-
-        NomError { source }
-    }
-}
-
-impl fmt::Display for NomError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.source)
-    }
-}
-
-impl std::error::Error for NomError {}
-
-struct TrashInfoStr<'a, 'b> {
-    path: Cow<'a, str>,
-    deletion_date: &'b str,
-}
-
-impl<'a, 'b> TryFrom<TrashInfoStr<'a, 'b>> for TrashInfo {
-    type Error = Error;
-
-    fn try_from(value: TrashInfoStr<'a, 'b>) -> Result<TrashInfo> {
-        let path = value.path.into_owned();
-        let deletion_date =
-            NaiveDateTime::parse_from_str(&value.deletion_date, TRASH_DATETIME_FORMAT).context(
-                ParseNaiveDate {
-                    date: value.deletion_date,
-                },
-            )?;
-
-        Ok(TrashInfo::new(path, deletion_date)?)
-    }
-}
-
 fn parse_trash_info_str<'a>(i: &'a str) -> IResult<&str, TrashInfoStr, VerboseError<&'a str>> {
     let (i, _) = parse_header_line(i)?;
     let (i, _) = char('\n')(i)?;
@@ -128,6 +61,27 @@ fn parse_trash_info_str<'a>(i: &'a str) -> IResult<&str, TrashInfoStr, VerboseEr
 pub fn parse_trash_info<'a>(i: &'a str) -> Result<TrashInfo, Error> {
     let (_, trash_info_str) = parse_trash_info_str(i).map_err(|e| NomError::build(e, i))?;
     trash_info_str.try_into()
+}
+
+struct TrashInfoStr<'a, 'b> {
+    path: Cow<'a, str>,
+    deletion_date: &'b str,
+}
+
+impl<'a, 'b> TryFrom<TrashInfoStr<'a, 'b>> for TrashInfo {
+    type Error = Error;
+
+    fn try_from(value: TrashInfoStr<'a, 'b>) -> Result<TrashInfo> {
+        let path = value.path.into_owned();
+        let deletion_date =
+            NaiveDateTime::parse_from_str(&value.deletion_date, TRASH_DATETIME_FORMAT).context(
+                ParseNaiveDate {
+                    date: value.deletion_date,
+                },
+            )?;
+
+        Ok(TrashInfo::new(path, Some(deletion_date))?)
+    }
 }
 
 impl FromStr for TrashInfo {
