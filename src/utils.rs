@@ -11,7 +11,7 @@ pub enum Error {
 
     ReadDir { source: io::Error, path: PathBuf },
 
-    ReadDirEntry { source: io::Error, path: PathBuf }
+    ReadDirEntry { source: io::Error, path: PathBuf },
 }
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -82,4 +82,17 @@ pub fn convert_to_string(path: &Path) -> Result<String> {
 pub fn convert_to_str(path: &Path) -> Result<&str> {
     let s = path.to_str().context(Utf8 { path })?;
     Ok(s)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn find_names_test() {
+        assert_eq!(
+            find_name("/home/brian/vim.log", &["/home/brian/vim.log"]),
+            "/home/brian/vim.log_1"
+        );
+    }
 }

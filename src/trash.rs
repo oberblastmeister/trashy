@@ -9,6 +9,7 @@ use log::{debug, error, info, warn};
 use rayon::prelude::*;
 use snafu::{OptionExt, ResultExt, Snafu};
 
+use crate::parser;
 use crate::trash_info::{self, TrashInfo};
 use crate::utils::{
     self, convert_paths, convert_to_str, convert_to_string, find_names_multiple, read_dir_path,
@@ -21,44 +22,17 @@ lazy_static! {
 
 #[derive(Debug, Snafu)]
 pub enum Error {
-    #[snafu(display("No trash directory was found."))]
-    DetermineTrashDir,
-
-    // #[snafu(context(false))]
-    // #[snafu(display("{}", source))]
-    // ParseTrash { source: parser::Error },
-    #[snafu(display("Failed to create all the directories of path {:#?}: {}", path, source))]
-    CreateDirAll { source: io::Error, path: PathBuf },
-
-    #[snafu(display("Failed to read path {:#?}: {}", path, source))]
-    ReadDir { source: io::Error, path: PathBuf },
-
-    #[snafu(display("Failed to read path {:#?} a second time: {}", path, source))]
-    ReadDirSecond { source: io::Error, path: PathBuf },
-
-    #[snafu(display("Failed to read an entry from path {:#?}", path))]
-    ReadDirEntry { source: io::Error, path: PathBuf },
-
     #[snafu(display("Failed to read {:#?} to string", path))]
     ReadToString { source: io::Error, path: PathBuf },
 
-    // #[snafu(display("Failed to parse {:#?} to string: {}", path, source))]
-    // ParseTrashInfo {
-    //     source: parser::Error,
-    //     path: PathBuf,
-    // },
-    #[snafu(display("Path {:#?} is not valid utf-8", path))]
-    Utf8 { path: PathBuf },
+    #[snafu(display("Failed to parse {:#?} to string: {}", path, source))]
+    ParseTrashInfo {
+        source: parser::Error,
+        path: PathBuf,
+    },
 
     #[snafu(display("Project directories could not be determined"))]
     ProjectDirsDetermine,
-
-    #[snafu(display("Failed to remove items recursively{}", source))]
-    MoveItemsRecursive { source: fs_extra::error::Error },
-
-    #[snafu(context(false))]
-    #[snafu(display("{}", source))]
-    ParseTrashInfo { source: trash_info::Error },
 
     #[snafu(display("{}", source))]
     #[snafu(context(false))]
@@ -96,7 +70,8 @@ impl Trash {
                 let read_to_string_res = fs::read_to_string(&path).context(ReadToString {
                     path: &self.info_dir,
                 });
-                read_to_string_res.and_then(|s| s.parse::<TrashInfo>().map_err(|e| e.into()))
+                read_to_string_res
+                    .and_then(|s| s.parse::<TrashInfo>().context(ParseTrashInfo { path }))
             })
             // log parse erros
             .inspect(|res| match res {
@@ -108,7 +83,7 @@ impl Trash {
             .collect();
 
         if sorted {
-            trash_infos.sort_unstable_by(|a, b| a.deletion_date.cmp(&b.deletion_date));
+            trash_infos.sort_unstable_by(|a, b| a.deletion_date().cmp(&b.deletion_date()));
         }
 
         Ok(trash_infos)

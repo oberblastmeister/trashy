@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
+use std::str::FromStr;
 
 use chrono::NaiveDateTime;
 use nom::bytes::complete::{is_not, tag};
@@ -12,7 +13,7 @@ use nom::{Err, IResult};
 use percent_encoding::percent_decode_str;
 use snafu::{ResultExt, Snafu};
 
-use crate::trash_info::TrashInfo;
+use crate::trash_info::{self, TrashInfo};
 
 pub const TRASH_DATETIME_FORMAT: &'static str = "%Y-%m-%dT%H:%M:%S";
 
@@ -41,12 +42,20 @@ fn parse_header_line<'a>(i: &'a str) -> IResult<&'a str, &'a str, VerboseError<&
 pub enum Error {
     #[snafu(context(false))]
     #[snafu(display("Failed to parse Trash Info file:\n{}", source))]
-    Nom { source: NomError },
+    NomError {
+        source: NomError,
+    },
 
-    #[snafu(display("Failed to parse NaiveDateTime {}: {}", date, source))]
+    #[snafu(display("Failed to parse NaiveDateTime from string {}: {}", date, source))]
     ParseNaiveDate {
         source: chrono::format::ParseError,
         date: String,
+    },
+
+    #[snafu(context(false))]
+    #[snafu(display("Could not create TrashInfo struct: {}", source))]
+    TrashInfoCreation {
+        source: trash_info::Error,
     },
 }
 
@@ -89,14 +98,11 @@ impl<'a, 'b> TryFrom<TrashInfoStr<'a, 'b>> for TrashInfo {
         let deletion_date =
             NaiveDateTime::parse_from_str(&value.deletion_date, TRASH_DATETIME_FORMAT).context(
                 ParseNaiveDate {
-                    date: value.deletion_date.to_string(),
+                    date: value.deletion_date,
                 },
             )?;
 
-        Ok(TrashInfo {
-            path,
-            deletion_date,
-        })
+        Ok(TrashInfo::new(path, deletion_date)?)
     }
 }
 
@@ -122,6 +128,15 @@ fn parse_trash_info_str<'a>(i: &'a str) -> IResult<&str, TrashInfoStr, VerboseEr
 pub fn parse_trash_info<'a>(i: &'a str) -> Result<TrashInfo, Error> {
     let (_, trash_info_str) = parse_trash_info_str(i).map_err(|e| NomError::build(e, i))?;
     trash_info_str.try_into()
+}
+
+impl FromStr for TrashInfo {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<TrashInfo> {
+        let trash_info = parse_trash_info(s)?;
+        Ok(trash_info)
+    }
 }
 
 #[cfg(test)]
