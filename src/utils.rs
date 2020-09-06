@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fs;
 use std::io;
 use std::iter;
@@ -36,31 +37,71 @@ pub fn convert_paths(paths: &[impl AsRef<Path>]) -> Vec<&str> {
 
 /// finds a name that doesn't conflict with names already in the trash directory and names in
 /// other
-fn find_name(path: &str, existing: &[&str]) -> String {
+// fn find_name(path: &str, existing: &[impl AsRef<str>]) -> String {
+//     let existing: Vec<&str> = existing.into_iter().map(|s| s.as_ref()).collect();
+//     (0..)
+//         .map(|n| {
+//             if n == 0 {
+//                 String::from(path)
+//             } else {
+//                 format!("{}_{}", path, n)
+//             }
+//         })
+//         .find(|new_path| !existing.contains(&&**new_path))
+//         .expect("BUG: path must be found, iterator is infinite")
+// }
+
+pub fn find_name<'a>(path: &'a str, existing: &[impl AsRef<str>]) -> Cow<'a, str> {
+    let existing: Vec<&str> = existing.into_iter().map(|s| s.as_ref()).collect();
     (0..)
         .map(|n| {
             if n == 0 {
-                String::from(path)
+                Cow::Borrowed(path)
             } else {
-                format!("{}_{}", path, n)
+                Cow::Owned(format!("{}_{}", path, n))
             }
         })
         .find(|new_path| !existing.contains(&&**new_path))
         .expect("BUG: path must be found, iterator is infinite")
 }
 
-pub fn find_names_multiple<'a>(paths: &[&'a str], existing: Vec<&'a str>) -> Vec<String> {
-    let mut results: Vec<String> = Vec::with_capacity(paths.len());
+// pub fn find_names_multiple_concat<'a>(paths: &[&'a str], existing: Vec<&'a str>) -> Vec<String> {
+//     let mut results: Vec<String> = Vec::with_capacity(paths.len());
 
-    for &path in paths.into_iter() {
-        let results_str = results.iter().map(|s| &**s).collect::<Vec<&str>>();
-        let existing_and_results = [existing.as_slice(), results_str.as_slice()].concat();
-        let new_name = find_name(path, &existing_and_results);
+//     for &path in paths.into_iter() {
+//         let results_str = results.iter().map(|s| &**s).collect::<Vec<&str>>();
+//         let existing_and_results = [existing.as_slice(), results_str.as_slice()].concat();
+//         let new_name = find_name(path, &existing_and_results);
 
-        results.push(new_name)
+//         results.push(new_name)
+//     }
+//     results
+// }
+
+pub fn find_names_multiple<'a>(paths: &[&'a str], existing: Vec<String>) -> Vec<Cow<'a, str>> {
+    let mut existing: Vec<_> = existing.into_iter().map(|s| Cow::from(s)).collect();
+    let new_name_start = existing.len();
+
+    for path in paths.into_iter() {
+        let new_name = find_name(path, &existing);
+        existing.push(new_name);
     }
-    results
+    existing.drain(..new_name_start);
+    existing
 }
+
+// pub fn find_names_multiple<'a>(paths: &[&'a str], existing: Vec<String>) -> Vec<Cow<'a, str>> {
+//     let mut results: Vec<_> = Vec::with_capacity(paths.len());
+//     let mut existing: Vec<_> = existing.into_iter().map(|s| Cow::from(s)).collect();
+
+//     for path in paths.into_iter() {
+//         let new_name = find_name(path, &existing);
+//         existing.push(new_name.clone());
+
+//         results.push(new_name)
+//     }
+//     results
+// }
 
 pub fn read_dir_path<'a>(dir: &'a Path) -> Result<impl Iterator<Item = PathBuf> + 'a> {
     let paths = fs::read_dir(dir)
@@ -94,6 +135,12 @@ pub fn convert_to_str(path: &Path) -> Result<&str> {
 mod tests {
     use super::*;
 
+    macro_rules! string_vec {
+        ($($x:expr),*) => {
+            vec![$(String::from($x)),*]
+        }
+    }
+
     #[test]
     fn find_names_test() {
         assert_eq!(find_name("vim.log", &["vim.log", "vim.log2"]), "vim.log_1");
@@ -106,12 +153,7 @@ mod tests {
 
     #[test]
     fn find_names_test_none_test() {
-        assert_eq!(find_name("vim.log", &[]), "vim.log");
-    }
-
-    #[test]
-    fn find_names_none_none_test() {
-        assert_eq!(find_name("", &[]), "");
+        assert_eq!(find_name("vim.log", &[""]), "vim.log");
     }
 
     #[test]
@@ -119,7 +161,7 @@ mod tests {
         assert_eq!(
             find_names_multiple(
                 &["vim.log", "dude.txt", "vim.log"],
-                vec!["vim.log", "vim.log_1"]
+                string_vec!["vim.log", "vim.log_1"]
             ),
             vec!["vim.log_2", "dude.txt", "vim.log_3"]
         );
@@ -130,7 +172,7 @@ mod tests {
         assert_eq!(
             find_names_multiple(
                 &["vim.log", "vim.log", "vim.log_2", "vim.log"],
-                vec!["vim.log", "vim.log_1", "vim.log_3"]
+                string_vec!["vim.log", "vim.log_1", "vim.log_3"]
             ),
             vec!["vim.log_2", "vim.log_4", "vim.log_2_1", "vim.log_5"]
         );
@@ -141,7 +183,7 @@ mod tests {
         assert_eq!(
             find_names_multiple(
                 &["vim.log_1", "vim.log_2", "vim.log_3"],
-                vec!["vim.log_1", "vim.log_2", "vim.log_3"]
+                string_vec!["vim.log_1", "vim.log_2", "vim.log_3"]
             ),
             vec!["vim.log_1_1", "vim.log_2_1", "vim.log_3_1"]
         );

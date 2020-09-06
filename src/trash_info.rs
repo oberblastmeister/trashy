@@ -47,7 +47,7 @@ impl TrashInfo {
         })
     }
 
-    pub fn save(self, outside_path: impl AsRef<Path>) -> Result<()> {
+    fn save(self, outside_path: impl AsRef<Path>) -> Result<()> {
         let mut trash_info_file = OpenOptions::new()
             .read(false)
             .write(true)

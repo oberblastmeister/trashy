@@ -12,7 +12,7 @@ use nom::IResult;
 use percent_encoding::percent_decode_str;
 use snafu::ResultExt;
 
-use super::error::{Error, ParseNaiveDate};
+use super::error::{Error, ParseNaiveDate, TrashInfoCreation};
 use super::error::{NomError, Result};
 use crate::trash_info::TrashInfo;
 
@@ -80,7 +80,7 @@ impl<'a, 'b> TryFrom<TrashInfoStr<'a, 'b>> for TrashInfo {
                 },
             )?;
 
-        Ok(TrashInfo::new(path, Some(deletion_date))?)
+        Ok(TrashInfo::new(path, Some(deletion_date)).context(TrashInfoCreation)?)
     }
 }
 
@@ -99,29 +99,32 @@ mod tests {
 
     /// Only returns chrono result because if parsing with nom has failed this will return an error
     /// message and panic instead of returning a result.
-    // fn test_parse_trash_info<'a>(trash_info_str: &'a str, actual: (&str, &str)) {
-    //     use std::borrow::Cow;
+    fn test_parse_trash_info<'a>(trash_info_str: &'a str, actual: (&str, &str)) -> Result<()> {
+        let expected = TrashInfo::from_str(trash_info_str)?;
 
-    //     let (_, expected) = match parse_trash_info(trash_info_str)
-    //         .map_err(|e| NomError::build(e, trash_info_str))
-    //     {
-    //         Ok(expected) => expected,
-    //         Err(e) => {
-    //             println!("{}", e);
-    //             panic!("an error occurred");
-    //         }
-    //     };
+        let actual = TrashInfo::new(
+            actual.0,
+            Some(
+                NaiveDateTime::parse_from_str(actual.1, TRASH_DATETIME_FORMAT)
+                    .context(ParseNaiveDate { date: actual.1 })?,
+            ),
+        )
+        .context(TrashInfoCreation)?;
 
-    //     let date_time = NaiveDateTime::parse_from_str(actual.1, TRASH_DATETIME_FORMAT)
-    //         .expect("Actual date was not correct");
+        assert_eq!(expected, actual);
 
-    //     let actual = TrashInfo {
-    //         path: Cow::Borrowed(actual.0),
-    //         deletion_date: date_time,
-    //     };
+        Ok(())
+    }
 
-    //     assert_eq!(expected, actual);
-    // }
+    fn test_parse_trash_info_run(trash_info_str: &str, actual: (&str, &str)) {
+        match test_parse_trash_info(trash_info_str, actual) {
+            Ok(()) => (),
+            Err(e) => {
+                eprintln!("{}", e);
+                panic!("An error occurred when testing parse_trash_info");
+            }
+        }
+    }
 
     #[test]
     fn parse_header_line_test() {
@@ -152,14 +155,11 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn parse_function_test() {
-    //     let trash_info_str =
-    //         "[Trash Info]\nPath=/home/brian/dude.txt\nDeletionDate=2020-08-28T16:16:55";
-
-    //     test_parse_trash_info(
-    //         trash_info_str,
-    //         ("/home/brian/dude.txt", "2020-08-28T16:16:55"),
-    //     )
-    // }
+    #[test]
+    fn trash_info_parse_test() {
+        test_parse_trash_info_run(
+            "[Trash Info]\nPath=/home/brian/dude.txt\nDeletionDate=2020-08-28T16:16:55",
+            ("/home/brian/dude.txt", "2020-08-28T16:16:55"),
+        )
+    }
 }

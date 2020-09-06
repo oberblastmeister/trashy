@@ -13,7 +13,7 @@ use snafu::{OptionExt, ResultExt, Snafu};
 use crate::parser;
 use crate::trash_info::{self, TrashInfo};
 use crate::utils::{
-    self, convert_paths, convert_to_str, convert_to_string, find_names_multiple, read_dir_path,
+    self, convert_paths, convert_to_str, convert_to_string, find_names_multiple, find_name, read_dir_path,
 };
 
 lazy_static! {
@@ -23,10 +23,10 @@ lazy_static! {
 
 #[derive(Debug, Snafu)]
 pub enum Error {
-    #[snafu(display("Failed to read {:#?} to string", path))]
+    #[snafu(display("Failed to read {} to string", path.display()))]
     ReadToString { source: io::Error, path: PathBuf },
 
-    #[snafu(display("Failed to parse {:#?} to string: {}", path, source))]
+    #[snafu(display("Failed to parse {} to string: {}", path.display(), source))]
     ParseTrashInfo {
         source: parser::Error,
         path: PathBuf,
@@ -35,9 +35,11 @@ pub enum Error {
     #[snafu(display("Project directories could not be determined"))]
     ProjectDirsDetermine,
 
-    #[snafu(display("{}", source))]
-    #[snafu(context(false))]
-    Utils { source: utils::Error },
+    #[snafu(display("User directories could not be determined"))]
+    UserDirsDetermine,
+
+    #[snafu(display("Failed to read paths inside {} into paths: {}", path.display(), source))]
+    ReadDirPath { source: utils::Error, path: PathBuf },
 
     #[snafu(display("Failed to move directory from {} to {}: {}", from.display(), to.display(), source))]
     MoveDir {
@@ -72,10 +74,15 @@ pub struct Trash {
 }
 
 impl Trash {
+    /// Creates a new trash struct. When created this function takes a snapshot of the current
+    /// state of the system and finds the trash directory based on that. Will fail if the trash
+    /// directory cannot be determined based on the current state of the system.
     pub fn new() -> Result<Trash> {
-        let project_dirs = ProjectDirs::from("rs", "", "trash").context(ProjectDirsDetermine {})?;
-        let data_dir = project_dirs.data_dir();
-        let trash_dir = data_dir.join("Trash");
+        // let project_dirs = ProjectDirs::from("rs", "", "trash").context(ProjectDirsDetermine {})?;
+        // let data_dir = project_dirs.data_dir();
+        let user_dirs = UserDirs::new().context(UserDirsDetermine)?;
+        let home_dir = user_dirs.home_dir();
+        let trash_dir = PathBuf::from(home_dir.join(".local/share/Trash"));
         let file_dir = trash_dir.join("files");
         let info_dir = trash_dir.join("info");
 
@@ -86,7 +93,8 @@ impl Trash {
         })
     }
 
-    pub fn list_trash_infos(&self, sorted: bool) -> Result<Vec<TrashInfo>> {
+    /// Returns a vector of all the parsed TrashInfo files
+    pub fn list_all(&self, sorted: bool) -> Result<Vec<TrashInfo>> {
         let mut trash_infos: Vec<_> = self
             .read_dir_info()?
             // map paths to trash infos
@@ -121,12 +129,22 @@ impl Trash {
         todo!()
     }
 
-    pub fn read_dir_info(&self) -> Result<impl Iterator<Item = PathBuf> + '_> {
-        read_dir_path(&self.info_dir).map_err(Into::into)
+    pub fn remove_all() {
+        todo!()
     }
 
+    /// Returns something that iterates over the paths of the info dir in the trash dir.
+    pub fn read_dir_info(&self) -> Result<impl Iterator<Item = PathBuf> + '_> {
+        read_dir_path(&self.info_dir).context(ReadDirPath {
+            path: &self.info_dir,
+        })
+    }
+
+    /// Returns something that iterates over the paths of the file dir in the trash dir.
     pub fn read_dir_files(&self) -> Result<impl Iterator<Item = PathBuf> + '_> {
-        read_dir_path(&self.file_dir).map_err(Into::into)
+        read_dir_path(&self.file_dir).context(ReadDirPath {
+            path: &self.info_dir,
+        })
     }
 
     /// Get existing paths that are similar to comparison path
@@ -147,16 +165,27 @@ impl Trash {
         Ok(existing)
     }
 
-    pub fn put(&self, paths: &[impl AsRef<Path>]) -> Result<()> {
+    /// Put a list of paths into the trash
+    pub fn put_multiple(&self, paths: &[impl AsRef<Path>]) -> Result<()> {
         let existing = self.get_existing_paths()?;
-        let existing = existing.iter().map(|s| &**s).collect();
 
         let from: Vec<&Path> = paths.into_iter().map(|p| p.as_ref()).collect();
-        let to = find_names_multiple(&convert_paths(&from), existing);
+        println!("from: {:#?}", from);
+
+        let to = find_names_multiple(&convert_paths(&from), existing)
+            .into_iter()
+            .map(|s| s.into_owned())
+            .collect::<Vec<String>>();
+
+        let to = self.multiple_to_trash_files_dir(&to);
+        let to_info = self.multiple_to_trash_info_dir(&to);
+        println!("to: {:#?}", to);
+        println!("to_info: {:#?}", to_info);
 
         assert_eq!(paths.len(), to.len());
 
-        from.par_iter().zip(to.par_iter()).for_each(|(from, to)| {
+        from.iter().zip(to.iter()).for_each(|(from, to)| {
+            // let to = to.as_ref();
             let res = if from.is_dir() {
                 move_dir(from, to, &DIR_COPY_OPT).context(MoveDir { from, to })
             } else if from.is_file() {
@@ -167,13 +196,82 @@ impl Trash {
             .and_then(|_n| {
                 TrashInfo::new(from, None)
                     .context(TrashInfoNew)
-                    .and_then(|trash_info| trash_info.save(to).context(TrashInfoSave { path: to }))
+                    .and_then(|trash_info| {
+                        let mut file_name =
+                            PathBuf::from(to.file_name().expect("BUG: has to have filename"));
+                        file_name.set_extension("trashinfo");
+                        trash_info
+                            .save(file_name)
+                            .context(TrashInfoSave { path: to })
+                    })
             });
 
             if let Some(e) = res.as_ref().err() {
                 warn!("{}", e);
             }
         });
+
+        Ok(())
+    }
+
+    fn put_single(&self, from: impl AsRef<Path>, existing: &[impl AsRef<str>]) -> Result<()> {
+        let from = from.as_ref();
+        let to = find_name(convert_to_str(from)?, existing).into_owned();
+        if from.is_dir() {
+            move_dir(from, to, &DIR_COPY_OPT).context(MoveDir { from, to })
+        } else if from.is_file() {
+            move_file(from, to, &FILE_COPY_OPT).context(MoveFile { from, to })
+        } else {
+            panic!("BUG: must be file or directory");
+        }?;
+        Ok()
+    }
+
+    // /// returns the path of the file if it were trashed
+    fn to_trash_files_dir(&self, path: impl AsRef<Path>) -> PathBuf {
+        let mut trash_dir = self.file_dir.clone();
+        trash_dir.push(path.as_ref().file_name().unwrap());
+        trash_dir
+    }
+
+    fn multiple_to_trash_files_dir(&self, path: &[impl AsRef<Path>]) -> Vec<PathBuf> {
+        path.iter().map(|p| self.to_trash_files_dir(p)).collect()
+    }
+
+    fn to_trash_info_dir(&self, path: impl AsRef<Path>) -> PathBuf {
+        let mut trash_dir = self.info_dir.clone();
+        println!("info_dir: {:?}", trash_dir);
+        trash_dir.push(path.as_ref().file_name().unwrap());
+        trash_dir
+    }
+
+    fn multiple_to_trash_info_dir(&self, path: &[impl AsRef<Path>]) -> Vec<PathBuf> {
+        path.iter().map(|p| self.to_trash_info_dir(p)).collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs::File;
+    use std::io::{self, Write};
+    use tempfile::NamedTempFile;
+
+    use super::*;
+    use anyhow::{Context, Result};
+
+    #[test]
+    fn put() -> Result<()> {
+        let trash = Trash::new()?;
+        // let mut file = NamedTempFile::new()?;
+        let file_path = Path::new("/tmp/test_trash");
+        let file = File::create(file_path)?;
+        println!("File path: {}", file_path.display());
+
+        let file_name = file_path.file_name().unwrap();
+        trash.put_multiple(&[file_path])?;
+
+        assert!(trash.read_dir_files()?.any(|p| p == file_name));
+        assert!(trash.read_dir_info()?.any(|p| p == file_name));
 
         Ok(())
     }

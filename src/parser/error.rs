@@ -6,6 +6,7 @@ use snafu::Snafu;
 use crate::trash_info;
 
 #[derive(Debug, Snafu)]
+#[snafu(visibility(pub(super)))]
 pub enum Error {
     #[snafu(context(false))]
     #[snafu(display("Failed to parse Trash Info file:\n{}", source))]
@@ -14,14 +15,13 @@ pub enum Error {
     },
 
     #[snafu(display("Failed to parse NaiveDateTime from string {}: {}", date, source))]
-    #[snafu(visibility(pub(super)))]
     ParseNaiveDate {
         source: chrono::format::ParseError,
         date: String,
     },
 
-    #[snafu(context(false))]
-    #[snafu(display("Could not create TrashInfo struct: {}", source))]
+    // #[snafu(context(false))]
+    #[snafu(display("Failed to create TrashInfo struct: {}", source))]
     TrashInfoCreation {
         source: trash_info::Error,
     },

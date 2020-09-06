@@ -16,3 +16,7 @@ lazy_static = "1.4.0"
 log = "0.4.11"
 fs_extra = "1.2.0"
 rayon = "1.4.0"
+
+[dev-dependencies]
+tempfile = "3.1.0"
+anyhow = "1.0.32"
