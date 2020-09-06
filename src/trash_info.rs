@@ -8,8 +8,11 @@ use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use snafu::{OptionExt, ResultExt, Snafu};
+use crate::utils::{find_name, find_names_multiple};
 
 use super::parser::TRASH_DATETIME_FORMAT;
+
+pub const TRASH_INFO_EXT: &'_ str = "trashinfo";
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -47,7 +50,7 @@ impl TrashInfo {
         })
     }
 
-    fn save(self, outside_path: impl AsRef<Path>) -> Result<()> {
+    pub fn save(self, outside_path: impl AsRef<Path>) -> Result<()> {
         let mut trash_info_file = OpenOptions::new()
             .read(false)
             .write(true)
@@ -88,6 +91,17 @@ impl fmt::Display for TrashInfo {
 }
 
 pub struct TrashEntry {
-    name: PathBuf,
+    from: PathBuf,
     trash_info: TrashInfo,
+}
+
+impl TrashEntry {
+    pub fn new(
+        from: PathBuf,
+        path: String,
+        deletion_date: Option<NaiveDateTime>,
+    ) -> Result<TrashEntry> {
+        let trash_info = TrashInfo::new(path, deletion_date)?;
+        Ok(TrashEntry { name, trash_info })
+    }
 }
