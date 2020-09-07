@@ -7,6 +7,8 @@ use std::path::{Path, PathBuf};
 use log::{debug, error, info, warn};
 use snafu::{OptionExt, ResultExt, Snafu};
 
+use crate::{TRASH_DIR, TRASH_FILE_DIR, TRASH_INFO_DIR};
+
 #[derive(Debug, Snafu)]
 pub enum Error {
     Utf8 { path: PathBuf },
@@ -49,17 +51,38 @@ pub fn find_name<'a>(path: &'a str, existing: &[impl AsRef<str>]) -> Cow<'a, str
         .expect("BUG: path must be found, iterator is infinite")
 }
 
-pub fn find_names_multiple<'a>(paths: &[&'a str], existing: Vec<String>) -> Vec<Cow<'a, str>> {
-    let mut existing: Vec<_> = existing.into_iter().map(|s| Cow::from(s)).collect();
-    let new_name_start = existing.len();
-
-    for path in paths.into_iter() {
-        let new_name = find_name(path, &existing);
-        existing.push(new_name);
-    }
-    existing.drain(..new_name_start);
-    existing
+pub fn find_name_trash(path: &str, existing: &[impl AsRef<str>]) -> PathBuf {
+    let name = find_name(path, existing);
+    to_trash_dir_file(&*name)
 }
+
+pub fn to_trash_dir_file(path: impl AsRef<Path>) -> PathBuf {
+    to_directory(path, &*TRASH_FILE_DIR)
+}
+
+fn to_directory<T: AsRef<Path>>(path: T, dir: &Path) -> PathBuf {
+    let path = path.as_ref();
+    let mut dir = dir.to_path_buf();
+    let file_name = path.file_name().expect("BUG: must have filename");
+    dir.push(file_name);
+    dir
+}
+
+pub fn to_trash_info_dir(path: impl AsRef<Path>) -> PathBuf {
+    to_directory(path, &TRASH_INFO_DIR)
+}
+
+// pub fn find_names_multiple<'a>(paths: &[&'a str], existing: Vec<String>) -> Vec<Cow<'a, str>> {
+//     let mut existing: Vec<_> = existing.into_iter().map(|s| Cow::from(s)).collect();
+//     let new_name_start = existing.len();
+
+//     for path in paths.into_iter() {
+//         let new_name = find_name(path, &existing);
+//         existing.push(new_name);
+//     }
+//     existing.drain(..new_name_start);
+//     existing
+// }
 
 pub fn read_dir_path<'a>(dir: &'a Path) -> Result<impl Iterator<Item = PathBuf> + 'a> {
     let paths = fs::read_dir(dir)
