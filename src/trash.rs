@@ -2,7 +2,6 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use directories::{ProjectDirs, UserDirs};
 use fs_extra::dir::{self, move_dir};
 use fs_extra::file::{self, move_file};
 use log::{debug, error, info, warn};
@@ -11,9 +10,10 @@ use std::borrow::Cow;
 
 use crate::parser;
 use crate::trash_info::{self, TrashInfo};
+// use crate::utils::{self, *};
 use crate::utils::{
-    self, convert_paths, convert_to_str, convert_to_string, find_name, find_name_trash,
-    find_names_multiple, read_dir_path,
+    self, convert_to_str, convert_to_string, find_name, find_name_trash,
+    read_dir_path, to_trash_file_dir, to_trash_info_dir,
 };
 use crate::{DIR_COPY_OPT, FILE_COPY_OPT};
 pub use crate::{TRASH_FILE_DIR, TRASH_INFO_DIR};
@@ -137,8 +137,16 @@ pub fn read_dir_files() -> Result<impl Iterator<Item = PathBuf>> {
     })
 }
 
+pub fn read_names() -> Result<impl Iterator<Item = String>> {
+    let iter = read_dir_files()?.map(|p| {
+        let file_name = p.file_name().expect("Must have filename");
+        file_name.to_os_string().into_string().unwrap()
+    });
+    Ok(iter)
+}
+
 /// Get existing paths that are similar to comparison path
-fn get_existing_paths() -> Result<Vec<String>> {
+fn get_names() -> Result<Vec<String>> {
     let existing = read_dir_files()?
         // convert pathbuf to string
         .map(|path| convert_to_string(&path))
@@ -155,25 +163,23 @@ fn get_existing_paths() -> Result<Vec<String>> {
 }
 
 /// Put a list of paths into the trash
-pub fn put_multiple(paths: &[impl AsRef<Path>]) -> Result<()> {
-    let existing = get_existing_paths()?;
-    let mut existing: Vec<_> = existing.into_iter().map(|s| Cow::from(s)).collect();
+pub fn put(paths: &[impl AsRef<Path>]) -> Result<()> {
+    let existing: Vec<_> = read_names()?.map(|s| Cow::from(s)).collect();
 
     for path in paths {
-        let new_path = put_single(path, &existing)?;
-        let new_path_str = convert_to_string(&new_path).context(ConvertPath { path: &new_path })?;
-        existing.push(Cow::from(new_path_str))
+        let new_name = put_single(path, &existing)?;
+        existing.push(Cow::from(new_name))
     }
 
     Ok(())
 }
 
-fn put_single(path: impl AsRef<Path>, existing: &[impl AsRef<str>]) -> Result<PathBuf> {
+fn put_single<'a>(path: impl AsRef<Path> + 'a, existing: &[impl AsRef<str>]) -> Result<&'a str> {
     let path = path.as_ref();
     let path_str = convert_to_str(path).context(ConvertPath { path })?;
 
     let new_name = &*find_name(path_str, existing);
-    let to_file_dir = to_trash_files_dir(new_name);
+    let to_file_dir = to_trash_file_dir(new_name);
     dbg!(&to_file_dir);
 
     // move directory or file
@@ -197,29 +203,7 @@ fn put_single(path: impl AsRef<Path>, existing: &[impl AsRef<str>]) -> Result<Pa
         .save(new_name)
         .context(TrashInfoSave { path: &to_file_dir })?;
 
-    Ok(to_file_dir)
-}
-
-// /// returns the path of the file if it were trashed
-fn to_trash_files_dir(path: impl AsRef<Path>) -> PathBuf {
-    let mut trash_dir = TRASH_FILE_DIR.clone();
-    trash_dir.push(path.as_ref().file_name().unwrap());
-    trash_dir
-}
-
-fn multiple_to_trash_files_dir(path: &[impl AsRef<Path>]) -> Vec<PathBuf> {
-    path.iter().map(|p| to_trash_files_dir(p)).collect()
-}
-
-fn to_trash_info_dir(path: impl AsRef<Path>) -> PathBuf {
-    let mut trash_dir = TRASH_INFO_DIR.clone();
-    println!("info_dir: {:?}", trash_dir);
-    trash_dir.push(path.as_ref().file_name().unwrap());
-    trash_dir
-}
-
-fn multiple_to_trash_info_dir(path: &[impl AsRef<Path>]) -> Vec<PathBuf> {
-    path.iter().map(|p| to_trash_info_dir(p)).collect()
+    Ok(new_name)
 }
 
 #[cfg(test)]

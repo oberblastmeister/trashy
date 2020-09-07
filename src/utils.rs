@@ -20,23 +20,6 @@ pub enum Error {
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
 
-pub fn convert_paths(paths: &[impl AsRef<Path>]) -> Vec<&str> {
-    let paths = paths
-        .into_iter()
-        .map(|p| {
-            let path = p.as_ref();
-            path.to_str().context(Utf8 { path })
-        })
-        .inspect(|res| {
-            if let Some(e) = res.as_ref().err() {
-                warn!("{}", e);
-            }
-        })
-        .filter_map(Result::ok)
-        .collect();
-    paths
-}
-
 pub fn find_name<'a>(path: &'a str, existing: &[impl AsRef<str>]) -> Cow<'a, str> {
     let existing: Vec<&str> = existing.into_iter().map(|s| s.as_ref()).collect();
     (0..)
@@ -53,10 +36,10 @@ pub fn find_name<'a>(path: &'a str, existing: &[impl AsRef<str>]) -> Cow<'a, str
 
 pub fn find_name_trash(path: &str, existing: &[impl AsRef<str>]) -> PathBuf {
     let name = find_name(path, existing);
-    to_trash_dir_file(&*name)
+    to_trash_file_dir(&*name)
 }
 
-pub fn to_trash_dir_file(path: impl AsRef<Path>) -> PathBuf {
+pub fn to_trash_file_dir(path: impl AsRef<Path>) -> PathBuf {
     to_directory(path, &*TRASH_FILE_DIR)
 }
 
@@ -71,18 +54,6 @@ fn to_directory<T: AsRef<Path>>(path: T, dir: &Path) -> PathBuf {
 pub fn to_trash_info_dir(path: impl AsRef<Path>) -> PathBuf {
     to_directory(path, &TRASH_INFO_DIR)
 }
-
-// pub fn find_names_multiple<'a>(paths: &[&'a str], existing: Vec<String>) -> Vec<Cow<'a, str>> {
-//     let mut existing: Vec<_> = existing.into_iter().map(|s| Cow::from(s)).collect();
-//     let new_name_start = existing.len();
-
-//     for path in paths.into_iter() {
-//         let new_name = find_name(path, &existing);
-//         existing.push(new_name);
-//     }
-//     existing.drain(..new_name_start);
-//     existing
-// }
 
 pub fn read_dir_path<'a>(dir: &'a Path) -> Result<impl Iterator<Item = PathBuf> + 'a> {
     let paths = fs::read_dir(dir)
