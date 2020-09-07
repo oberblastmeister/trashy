@@ -197,24 +197,29 @@ pub fn put_multiple(paths: &[impl AsRef<Path>]) -> Result<()> {
     Ok(())
 }
 
-fn put_single(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<()> {
-    let from = from.as_ref();
-    let to = to.as_ref();
-    if from.is_dir() {
-        move_dir(from, to, &DIR_COPY_OPT).context(MoveDir { from, to })
-    } else if from.is_file() {
-        move_file(from, to, &FILE_COPY_OPT).context(MoveFile { from, to })
+fn put_single(path: impl AsRef<Path>, existing: &[impl AsRef<str>]) -> Result<()> {
+    let path = path.as_ref();
+    let path_str = convert_to_str(path).context(ConvertPath { path })?;
+    let new_name = &*find_name(path_str, existing);
+
+    if path.is_dir() {
+        move_dir(path, new_name, &DIR_COPY_OPT).context(MoveDir {
+            from: path,
+            to: new_name,
+        })
+    } else if path.is_file() {
+        move_file(path, new_name, &FILE_COPY_OPT).context(MoveFile {
+            from: path,
+            to: new_name,
+        })
     } else {
         panic!("BUG: must be file or directory");
     }?;
-    let trash_entry = TrashEntry::new(
-        to.to_owned(),
-        convert_to_string(from).context(ConvertPath { path: from })?,
-        None,
-    )
-    .context(TrashEntryNew)?;
+    let trash_info = TrashInfo::new(path, None).context(TrashInfoNew)?;
+    trash_info.save(new_name).context(TrashInfoSave { path: new_name })?;
 
     Ok(())
+
 }
 
 // /// returns the path of the file if it were trashed

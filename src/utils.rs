@@ -35,22 +35,6 @@ pub fn convert_paths(paths: &[impl AsRef<Path>]) -> Vec<&str> {
     paths
 }
 
-/// finds a name that doesn't conflict with names already in the trash directory and names in
-/// other
-// fn find_name(path: &str, existing: &[impl AsRef<str>]) -> String {
-//     let existing: Vec<&str> = existing.into_iter().map(|s| s.as_ref()).collect();
-//     (0..)
-//         .map(|n| {
-//             if n == 0 {
-//                 String::from(path)
-//             } else {
-//                 format!("{}_{}", path, n)
-//             }
-//         })
-//         .find(|new_path| !existing.contains(&&**new_path))
-//         .expect("BUG: path must be found, iterator is infinite")
-// }
-
 pub fn find_name<'a>(path: &'a str, existing: &[impl AsRef<str>]) -> Cow<'a, str> {
     let existing: Vec<&str> = existing.into_iter().map(|s| s.as_ref()).collect();
     (0..)
@@ -65,19 +49,6 @@ pub fn find_name<'a>(path: &'a str, existing: &[impl AsRef<str>]) -> Cow<'a, str
         .expect("BUG: path must be found, iterator is infinite")
 }
 
-// pub fn find_names_multiple_concat<'a>(paths: &[&'a str], existing: Vec<&'a str>) -> Vec<String> {
-//     let mut results: Vec<String> = Vec::with_capacity(paths.len());
-
-//     for &path in paths.into_iter() {
-//         let results_str = results.iter().map(|s| &**s).collect::<Vec<&str>>();
-//         let existing_and_results = [existing.as_slice(), results_str.as_slice()].concat();
-//         let new_name = find_name(path, &existing_and_results);
-
-//         results.push(new_name)
-//     }
-//     results
-// }
-
 pub fn find_names_multiple<'a>(paths: &[&'a str], existing: Vec<String>) -> Vec<Cow<'a, str>> {
     let mut existing: Vec<_> = existing.into_iter().map(|s| Cow::from(s)).collect();
     let new_name_start = existing.len();
@@ -89,19 +60,6 @@ pub fn find_names_multiple<'a>(paths: &[&'a str], existing: Vec<String>) -> Vec<
     existing.drain(..new_name_start);
     existing
 }
-
-// pub fn find_names_multiple<'a>(paths: &[&'a str], existing: Vec<String>) -> Vec<Cow<'a, str>> {
-//     let mut results: Vec<_> = Vec::with_capacity(paths.len());
-//     let mut existing: Vec<_> = existing.into_iter().map(|s| Cow::from(s)).collect();
-
-//     for path in paths.into_iter() {
-//         let new_name = find_name(path, &existing);
-//         existing.push(new_name.clone());
-
-//         results.push(new_name)
-//     }
-//     results
-// }
 
 pub fn read_dir_path<'a>(dir: &'a Path) -> Result<impl Iterator<Item = PathBuf> + 'a> {
     let paths = fs::read_dir(dir)
