@@ -1,5 +1,7 @@
 use std::borrow::Cow;
+use std::cmp::Ordering;
 use std::fmt;
+use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -8,7 +10,7 @@ use fs_extra::dir::{self, move_dir};
 use fs_extra::file::{self, move_file};
 
 use crate::trash::{TRASH_FILE_DIR, TRASH_INFO_DIR};
-use crate::utils::{self, convert_to_str, find_name, find_names_multiple, to_trash_info_dir};
+use crate::utils::{self, convert_to_str, find_name, to_trash_info_dir};
 use chrono::{DateTime, Local, NaiveDateTime};
 use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
@@ -16,9 +18,7 @@ use percent_encoding::{percent_decode_str, utf8_percent_encode, NON_ALPHANUMERIC
 use snafu::{OptionExt, ResultExt, Snafu};
 
 use super::parser::TRASH_DATETIME_FORMAT;
-use crate::{DIR_COPY_OPT, FILE_COPY_OPT};
-
-pub const TRASH_INFO_EXT: &'_ str = "trashinfo";
+use crate::{DIR_COPY_OPT, FILE_COPY_OPT, TRASH_INFO_EXT};
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -109,6 +109,14 @@ impl TrashInfo {
         Ok(())
     }
 
+    pub fn from_path(path: impl AsRef<Path>) -> Self {
+        let trash_info = fs::read_to_string(path.as_ref())
+            .unwrap()
+            .parse::<TrashInfo>()
+            .unwrap();
+        trash_info
+    }
+
     /// Returns the path as a percent encoded string
     pub fn path(&self) -> &str {
         &self.percent_path
@@ -144,5 +152,17 @@ impl fmt::Display for TrashInfo {
             self.percent_path,
             self.deletion_date_string_format(),
         )
+    }
+}
+
+impl Ord for TrashInfo {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.deletion_date.cmp(&other.deletion_date)
+    }
+}
+
+impl PartialOrd for TrashInfo {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }

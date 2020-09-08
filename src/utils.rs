@@ -1,13 +1,16 @@
 use std::borrow::Cow;
 use std::fs;
 use std::io;
-use std::iter;
 use std::path::{Path, PathBuf};
 
-use log::{debug, error, info, warn};
+use fs_extra::dir::{self, move_dir};
+use fs_extra::file::{self, move_file};
 use snafu::{OptionExt, ResultExt, Snafu};
+use log::{debug, error, info, warn};
 
 use crate::{TRASH_DIR, TRASH_FILE_DIR, TRASH_INFO_DIR};
+// use crate::utils::{self, *};
+use crate::{DIR_COPY_OPT, FILE_COPY_OPT};
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -81,6 +84,33 @@ pub fn convert_to_string(path: &Path) -> Result<String> {
 pub fn convert_to_str(path: &Path) -> Result<&str> {
     let s = path.to_str().context(Utf8 { path })?;
     Ok(s)
+}
+
+pub fn move_file_or_dir(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<()> {
+    let from = from.as_ref();
+    let to = to.as_ref();
+
+    if from.is_dir() {
+        move_dir(from, to, &DIR_COPY_OPT)
+    } else if from.is_file() {
+        move_file(from, to, &FILE_COPY_OPT)
+    } else {
+        panic!("BUG: must be file or directory");
+    }
+    .unwrap();
+
+    Ok(())
+}
+
+pub fn remove_file_or_dir(path: impl AsRef<Path>) {
+    let path = path.as_ref();
+    if path.is_dir() {
+        dir::remove(path).unwrap();
+    } else if path.is_file() {
+        file::remove(path).unwrap();
+    } else {
+        panic!("BUG: must be file or directory");
+    };
 }
 
 #[cfg(test)]
