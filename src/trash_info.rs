@@ -1,24 +1,20 @@
 use std::borrow::Cow;
+use std::str::FromStr;
 use std::cmp::Ordering;
 use std::fmt;
 use std::fs;
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
-use fs_extra::dir::{self, move_dir};
-use fs_extra::file::{self, move_file};
-
-use crate::trash::{TRASH_FILE_DIR, TRASH_INFO_DIR};
-use crate::utils::{self, convert_to_str, find_name, to_trash_info_dir};
-use chrono::{DateTime, Local, NaiveDateTime};
-use lazy_static::lazy_static;
+use chrono::{Local, NaiveDateTime};
 use log::{debug, error, info, warn};
 use percent_encoding::{percent_decode_str, utf8_percent_encode, NON_ALPHANUMERIC};
 use snafu::{OptionExt, ResultExt, Snafu};
 
-use super::parser::TRASH_DATETIME_FORMAT;
-use crate::{DIR_COPY_OPT, FILE_COPY_OPT, TRASH_INFO_EXT};
+use super::parser::{self, TRASH_DATETIME_FORMAT, parse_trash_info};
+use crate::TRASH_INFO_EXT;
+use crate::utils::{self, to_trash_info_dir};
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -26,7 +22,9 @@ pub enum Error {
         "Could not convert path {:#?} to utf-8 str to do percent encoding",
         path
     ))]
-    Utf8PercentEncode { path: PathBuf },
+    Utf8PercentEncode {
+        path: PathBuf,
+    },
 
     #[snafu(display(
         "Percent-decoded bytes of {} are not well-formed in UTF-8: {}",
@@ -39,13 +37,21 @@ pub enum Error {
     },
 
     #[snafu(display("Failed to open file with path {}: {}", path.display(), source))]
-    FileOpen { source: io::Error, path: PathBuf },
+    FileOpen {
+        source: io::Error,
+        path: PathBuf,
+    },
 
     #[snafu(display("Failed to write to trash info file: {}", source))]
-    TrashInfoWrite { source: io::Error },
+    TrashInfoWrite {
+        source: io::Error,
+    },
 
     #[snafu(display("Failed to convert path {} to string {}", path.display(), source))]
-    ConvertToStr { source: utils::Error, path: PathBuf },
+    ConvertToStr {
+        source: utils::Error,
+        path: PathBuf,
+    },
 
     #[snafu(display("Failed to move directory from {} to {}: {}", from.display(), to.display(), source))]
     MoveDir {
@@ -60,6 +66,23 @@ pub enum Error {
         from: PathBuf,
         to: PathBuf,
     },
+
+    ReadToStr {
+        path: PathBuf,
+    },
+
+    #[snafu(context(false))]
+    ParseTrashInfo {
+        source: parser::Error,
+    },
+
+    WrongExtension {
+        path: PathBuf,
+    },
+
+    NoExtension {
+        path: PathBuf,
+    },
 }
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -71,7 +94,7 @@ pub struct TrashInfo {
 }
 
 impl TrashInfo {
-    pub(crate) fn new(
+    pub(super) fn new(
         real_path: impl AsRef<Path>,
         deletion_date: Option<NaiveDateTime>,
     ) -> Result<Self> {
@@ -87,7 +110,7 @@ impl TrashInfo {
     }
 
     /// saves the name with the extension .trashinfo
-    pub(crate) fn save(self, name: &str) -> Result<()> {
+    pub(super) fn save(self, name: &str) -> Result<()> {
         let mut name = PathBuf::from(name);
         name.set_extension(TRASH_INFO_EXT);
         let path = to_trash_info_dir(name);
@@ -109,12 +132,13 @@ impl TrashInfo {
         Ok(())
     }
 
-    pub fn from_path(path: impl AsRef<Path>) -> Self {
-        let trash_info = fs::read_to_string(path.as_ref())
-            .unwrap()
-            .parse::<TrashInfo>()
-            .unwrap();
-        trash_info
+    pub(crate) fn parse_from_path(path: impl AsRef<Path>) -> Result<Self> {
+        let path = path.as_ref();
+        check_extension(path)?;
+        let trash_info = fs::read_to_string(path)
+            .context(ReadToStr { path })?
+            .parse::<TrashInfo>()?;
+        Ok(trash_info)
     }
 
     /// Returns the path as a percent encoded string
@@ -141,6 +165,28 @@ impl TrashInfo {
     /// Gets the deletions date as a string formated using the trash_info_format
     pub fn deletion_date_string_format(&self) -> String {
         format!("{}", self.deletion_date.format(TRASH_DATETIME_FORMAT))
+    }
+}
+
+/// Checks if the extension is correct or no extension
+fn check_extension(path: impl AsRef<Path>) -> Result<()> {
+    let path = path.as_ref();
+    if let Some(ext) = path.extension() {
+        if ext != TRASH_INFO_EXT {
+            WrongExtension { path }.fail();
+        }
+    } else {
+        NoExtension { path }.fail();
+    }
+    Ok(())
+}
+
+impl FromStr for TrashInfo {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<TrashInfo> {
+        let trash_info = parse_trash_info(s)?;
+        Ok(trash_info)
     }
 }
 

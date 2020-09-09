@@ -1,7 +1,8 @@
 mod utils;
+mod trash_info_entry;
 pub mod trash_info;
 mod trash_entry;
-pub mod parser;
+mod parser;
 
 use lazy_static::lazy_static;
 use directories::UserDirs;
@@ -94,16 +95,19 @@ pub enum Error {
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
 
-/// Returns a vector of all the parsed TrashInfo files
-pub fn read_trash_infos() -> Result<impl Iterator<Item = TrashInfo>> {
-    let trash_infos = read_dir_info()?
-        // map paths to trash infos
+/// Returns a iterator of all the parsed TrashInfo files
+pub fn read_trash_entries() -> Result<impl Iterator<Item = TrashEntry>> {
+    let trash_infos = read_dir_files()?
+        // map paths to trash entries
         .map(|path| {
-            let read_to_string_res = fs::read_to_string(&path).context(ReadToString {
-                path: &*TRASH_INFO_DIR,
-            });
-            read_to_string_res.and_then(|s| s.parse::<TrashInfo>().context(ParseTrashInfo { path }))
+            TrashEntry::new(path)
         })
+        // .map(|path| {
+        //     let read_to_string_res = fs::read_to_string(&path).context(ReadToString {
+        //         path: &*TRASH_INFO_DIR,
+        //     });
+        //     read_to_string_res.and_then(|s| s.parse::<TrashInfo>().context(ParseTrashInfo { path }))
+        // })
         // log parse erros
         .inspect(|res| match res {
             Err(e) => warn!("{}", e),
@@ -115,15 +119,17 @@ pub fn read_trash_infos() -> Result<impl Iterator<Item = TrashInfo>> {
 }
 
 pub fn read_trash_infos_sorted() -> Result<impl Iterator<Item = TrashInfo>> {
-    Ok(read_trash_infos()?.sorted())
+    Ok(read_trash_entries()?.sorted())
 }
 
+/// Helper function
 pub fn restore(name: impl AsRef<Path>) {
-    TrashEntry::from_path(name).restore()
+    TrashEntry::new(name).restore()
 }
 
+/// Helper function
 pub fn remove(name: impl AsRef<Path>) {
-    TrashEntry::from_path(name).remove()
+    TrashEntry::new(name).remove()
 }
 
 pub fn remove_all() -> Result<()> {

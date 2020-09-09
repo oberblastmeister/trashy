@@ -68,10 +68,10 @@ struct TrashInfoStr<'a, 'b> {
     deletion_date: &'b str,
 }
 
-impl<'a, 'b> TryFrom<TrashInfoStr<'a, 'b>> for TrashInfo {
+impl<'a, 'b> TryInto<TrashInfo> for TrashInfoStr<'a, 'b> {
     type Error = Error;
 
-    fn try_from(value: TrashInfoStr<'a, 'b>) -> Result<TrashInfo> {
+    fn try_into(value: TrashInfoStr<'a, 'b>) -> Result<TrashInfo> {
         let path = value.path.into_owned();
         let deletion_date =
             NaiveDateTime::parse_from_str(&value.deletion_date, TRASH_DATETIME_FORMAT).context(
@@ -81,15 +81,6 @@ impl<'a, 'b> TryFrom<TrashInfoStr<'a, 'b>> for TrashInfo {
             )?;
 
         Ok(TrashInfo::new(path, Some(deletion_date)).context(TrashInfoCreation)?)
-    }
-}
-
-impl FromStr for TrashInfo {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<TrashInfo> {
-        let trash_info = parse_trash_info(s)?;
-        Ok(trash_info)
     }
 }
 
