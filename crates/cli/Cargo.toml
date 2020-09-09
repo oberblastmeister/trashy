@@ -4,25 +4,18 @@ version = "0.1.0"
 authors = ["Brian Shu <littlebubu.shu@gmail.com>"]
 edition = "2018"
 
-[workspace]
-members = [
-    "crates/lib",
-    "crates/cli"
-]
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+trash-lib = { path = "../lib" }
 chrono = "0.4.15"
-nom = "5.1.2"
-snafu = "0.6.8"
 percent-encoding = "2.1.0"
-directories = "3.0.1"
-lazy_static = "1.4.0"
-log = "0.4.11"
 fs_extra = "1.2.0"
-itertools = "0.9.0"
-
-[dev-dependencies]
-tempfile = "3.1.0"
-anyhow = "1.0.32"
+nom = "5.1.2"
+structopt = "0.3.17"
+rayon = "1.4.0"
+snafu = "0.6.8"
+log = "0.4.11"
+prettytable-rs = "0.8.0"
+ansi_term = "0.12.1"
+lscolors = "0.7.1"
