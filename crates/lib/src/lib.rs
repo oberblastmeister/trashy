@@ -1,8 +1,9 @@
 mod utils;
-mod trash_info_entry;
+mod trash_entry_iter;
 pub mod trash_info;
 mod trash_entry;
 mod parser;
+mod percent_path;
 
 use lazy_static::lazy_static;
 use directories::UserDirs;
@@ -20,7 +21,6 @@ use std::borrow::Cow;
 
 use crate::trash_entry::TrashEntry;
 use crate::trash_info::TrashInfo;
-// use crate::utils::{self, *};
 use crate::utils::{
     convert_to_str, convert_to_string, find_name, read_dir_path,
     to_trash_file_dir, move_file_or_dir
@@ -55,9 +55,6 @@ pub enum Error {
     #[snafu(display("User directories could not be determined"))]
     UserDirsDetermine,
 
-    #[snafu(display("Failed to read paths inside {} into paths: {}", path.display(), source))]
-    ReadDirPath { source: utils::Error, path: PathBuf },
-
     #[snafu(display("Failed to move directory from {} to {}: {}", from.display(), to.display(), source))]
     MoveDir {
         source: fs_extra::error::Error,
@@ -72,11 +69,6 @@ pub enum Error {
         to: PathBuf,
     },
 
-    RemoveItems {
-        dir: PathBuf,
-        source: fs_extra::error::Error,
-    },
-
     #[snafu(display("Failed to save trash info file to {}: {}", path.display(), source))]
     TrashInfoSave {
         source: trash_info::Error,
@@ -87,7 +79,7 @@ pub enum Error {
     TrashInfoNew { source: trash_info::Error },
 
     #[snafu(display("Failed to create new trash entry struct: {}", source))]
-    TrashEntryNew { source: trash_info::Error },
+    TrashEntryNew { source: trash_entry::Error },
 
     #[snafu(display("Failed to convert path {} to string: {}", path.display(), source))]
     ConvertPath { source: utils::Error, path: PathBuf },
@@ -100,14 +92,8 @@ pub fn read_trash_entries() -> Result<impl Iterator<Item = TrashEntry>> {
     let trash_infos = read_dir_files()?
         // map paths to trash entries
         .map(|path| {
-            TrashEntry::new(path)
+            TrashEntry::new(path).context(TrashEntryNew)
         })
-        // .map(|path| {
-        //     let read_to_string_res = fs::read_to_string(&path).context(ReadToString {
-        //         path: &*TRASH_INFO_DIR,
-        //     });
-        //     read_to_string_res.and_then(|s| s.parse::<TrashInfo>().context(ParseTrashInfo { path }))
-        // })
         // log parse erros
         .inspect(|res| match res {
             Err(e) => warn!("{}", e),
@@ -118,7 +104,7 @@ pub fn read_trash_entries() -> Result<impl Iterator<Item = TrashEntry>> {
     Ok(trash_infos)
 }
 
-pub fn read_trash_infos_sorted() -> Result<impl Iterator<Item = TrashInfo>> {
+pub fn read_trash_entries_sorted() -> Result<impl Iterator<Item = TrashInfo>> {
     Ok(read_trash_entries()?.sorted())
 }
 

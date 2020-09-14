@@ -1,6 +1,5 @@
 use std::borrow::Cow;
-use std::convert::{TryFrom, TryInto};
-use std::str::FromStr;
+use std::convert::TryInto;
 
 use chrono::NaiveDateTime;
 use nom::bytes::complete::{is_not, tag};
@@ -12,7 +11,7 @@ use nom::IResult;
 use percent_encoding::percent_decode_str;
 use snafu::ResultExt;
 
-use super::error::{Error, ParseNaiveDate, TrashInfoCreation};
+use super::error::{Error, ParseNaiveDate};
 use super::error::{NomError, Result};
 use crate::trash_info::TrashInfo;
 
@@ -71,12 +70,12 @@ struct TrashInfoStr<'a, 'b> {
 impl<'a, 'b> TryInto<TrashInfo> for TrashInfoStr<'a, 'b> {
     type Error = Error;
 
-    fn try_into(value: TrashInfoStr<'a, 'b>) -> Result<TrashInfo> {
-        let path = value.path.into_owned();
+    fn try_into(self: TrashInfoStr<'a, 'b>) -> Result<TrashInfo> {
+        let path = self.path.into_owned();
         let deletion_date =
-            NaiveDateTime::parse_from_str(&value.deletion_date, TRASH_DATETIME_FORMAT).context(
+            NaiveDateTime::parse_from_str(&self.deletion_date, TRASH_DATETIME_FORMAT).context(
                 ParseNaiveDate {
-                    date: value.deletion_date,
+                    date: self.deletion_date,
                 },
             )?;
 

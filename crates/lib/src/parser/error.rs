@@ -3,8 +3,6 @@ use nom::error::{convert_error, VerboseError};
 use nom::Err;
 use snafu::Snafu;
 
-use crate::trash_info;
-
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(super)))]
 pub enum Error {
@@ -18,12 +16,6 @@ pub enum Error {
     ParseNaiveDate {
         source: chrono::format::ParseError,
         date: String,
-    },
-
-    // #[snafu(context(false))]
-    #[snafu(display("Failed to create TrashInfo struct: {}", source))]
-    TrashInfoCreation {
-        source: trash_info::Error,
     },
 }
 

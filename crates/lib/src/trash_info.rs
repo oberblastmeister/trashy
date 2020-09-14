@@ -1,41 +1,21 @@
-use std::borrow::Cow;
-use std::str::FromStr;
 use std::cmp::Ordering;
 use std::fmt;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
+use crate::percent_path::PercentPath;
 use chrono::{Local, NaiveDateTime};
-use log::{debug, error, info, warn};
-use percent_encoding::{percent_decode_str, utf8_percent_encode, NON_ALPHANUMERIC};
-use snafu::{OptionExt, ResultExt, Snafu};
+use snafu::{ResultExt, Snafu};
 
-use super::parser::{self, TRASH_DATETIME_FORMAT, parse_trash_info};
+use super::parser::{self, parse_trash_info, TRASH_DATETIME_FORMAT};
+use crate::utils::to_trash_info_dir;
 use crate::TRASH_INFO_EXT;
-use crate::utils::{self, to_trash_info_dir};
 
 #[derive(Debug, Snafu)]
 pub enum Error {
-    #[snafu(display(
-        "Could not convert path {:#?} to utf-8 str to do percent encoding",
-        path
-    ))]
-    Utf8PercentEncode {
-        path: PathBuf,
-    },
-
-    #[snafu(display(
-        "Percent-decoded bytes of {} are not well-formed in UTF-8: {}",
-        string,
-        source
-    ))]
-    Utf8PercentDecode {
-        string: String,
-        source: core::str::Utf8Error,
-    },
-
     #[snafu(display("Failed to open file with path {}: {}", path.display(), source))]
     FileOpen {
         source: io::Error,
@@ -47,28 +27,10 @@ pub enum Error {
         source: io::Error,
     },
 
-    #[snafu(display("Failed to convert path {} to string {}", path.display(), source))]
-    ConvertToStr {
-        source: utils::Error,
-        path: PathBuf,
-    },
-
-    #[snafu(display("Failed to move directory from {} to {}: {}", from.display(), to.display(), source))]
-    MoveDir {
-        source: fs_extra::error::Error,
-        from: PathBuf,
-        to: PathBuf,
-    },
-
-    #[snafu(display("Failed to move file from {} to {}: {}", from.display(), to.display(), source))]
-    MoveFile {
-        source: fs_extra::error::Error,
-        from: PathBuf,
-        to: PathBuf,
-    },
-
+    #[snafu(display("Failed to read path {} to a string: {}", path.display(), source))]
     ReadToStr {
         path: PathBuf,
+        source: io::Error,
     },
 
     #[snafu(context(false))]
@@ -76,11 +38,8 @@ pub enum Error {
         source: parser::Error,
     },
 
+    #[snafu(display("Wrong extension for path {}", path.display()))]
     WrongExtension {
-        path: PathBuf,
-    },
-
-    NoExtension {
         path: PathBuf,
     },
 }
@@ -89,22 +48,19 @@ type Result<T, E = Error> = ::std::result::Result<T, E>;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct TrashInfo {
-    percent_path: String,
+    percent_path: PercentPath,
     deletion_date: NaiveDateTime,
 }
 
 impl TrashInfo {
     pub(super) fn new(
-        real_path: impl AsRef<Path>,
+        percent_path: PercentPath,
         deletion_date: Option<NaiveDateTime>,
     ) -> Result<Self> {
-        let path = real_path.as_ref();
-        let path = path.to_str().context(Utf8PercentEncode { path })?;
-        let path = utf8_percent_encode(path, NON_ALPHANUMERIC).to_string();
         let deletion_date = deletion_date.unwrap_or(Local::now().naive_local());
 
         Ok(TrashInfo {
-            percent_path: path,
+            percent_path,
             deletion_date,
         })
     }
@@ -142,19 +98,8 @@ impl TrashInfo {
     }
 
     /// Returns the path as a percent encoded string
-    pub fn path(&self) -> &str {
+    pub fn percent_path(&self) -> &PercentPath {
         &self.percent_path
-    }
-
-    /// Returns the path as a percent decoded string
-    pub fn path_decoded(&self) -> Result<Cow<'_, str>> {
-        let decoded_str = percent_decode_str(&self.percent_path)
-            .decode_utf8()
-            .context(Utf8PercentDecode {
-                string: &self.percent_path,
-            })?;
-
-        Ok(decoded_str)
     }
 
     /// Gets the deletion date
@@ -173,10 +118,10 @@ fn check_extension(path: impl AsRef<Path>) -> Result<()> {
     let path = path.as_ref();
     if let Some(ext) = path.extension() {
         if ext != TRASH_INFO_EXT {
-            WrongExtension { path }.fail();
+            WrongExtension { path }.fail::<()>();
         }
     } else {
-        NoExtension { path }.fail();
+        WrongExtension { path }.fail::<()>();
     }
     Ok(())
 }
@@ -212,3 +157,4 @@ impl PartialOrd for TrashInfo {
         Some(self.cmp(other))
     }
 }
+

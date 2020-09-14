@@ -3,8 +3,6 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use fs_extra::dir::{self, move_dir};
-use fs_extra::file::{self, move_file};
 use snafu::{OptionExt, ResultExt, Snafu};
 use log::{debug, error, info, warn};
 
@@ -58,25 +56,6 @@ pub fn to_trash_info_dir(path: impl AsRef<Path>) -> PathBuf {
     to_directory(path, &TRASH_INFO_DIR)
 }
 
-pub fn read_dir_path<'a>(dir: &'a Path) -> Result<impl Iterator<Item = PathBuf> + 'a> {
-    let paths = fs::read_dir(dir)
-        .context(ReadDir { path: dir })?
-        // context of dir_entry errors
-        .map(move |dent_res| dent_res.context(ReadDirEntry { path: dir }))
-        // log dir_entry errors
-        .inspect(|res| {
-            if let Some(e) = res.as_ref().err() {
-                warn!("{}", e);
-            }
-        })
-        // filter out errors
-        .filter_map(Result::ok)
-        // convert dir_entry to string
-        .map(|d| d.path());
-
-    Ok(paths)
-}
-
 pub fn convert_to_string(path: &Path) -> Result<String> {
     Ok(convert_to_str(path)?.to_string())
 }
@@ -84,33 +63,6 @@ pub fn convert_to_string(path: &Path) -> Result<String> {
 pub fn convert_to_str(path: &Path) -> Result<&str> {
     let s = path.to_str().context(Utf8 { path })?;
     Ok(s)
-}
-
-pub fn move_file_or_dir(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<()> {
-    let from = from.as_ref();
-    let to = to.as_ref();
-
-    if from.is_dir() {
-        move_dir(from, to, &DIR_COPY_OPT)
-    } else if from.is_file() {
-        move_file(from, to, &FILE_COPY_OPT)
-    } else {
-        panic!("BUG: must be file or directory");
-    }
-    .unwrap();
-
-    Ok(())
-}
-
-pub fn remove_file_or_dir(path: impl AsRef<Path>) {
-    let path = path.as_ref();
-    if path.is_dir() {
-        dir::remove(path).unwrap();
-    } else if path.is_file() {
-        file::remove(path).unwrap();
-    } else {
-        panic!("BUG: must be file or directory");
-    };
 }
 
 #[cfg(test)]
