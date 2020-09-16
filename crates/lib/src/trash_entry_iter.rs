@@ -2,20 +2,21 @@ use std::fs::{self, ReadDir};
 use std::io;
 use std::path::{Path, PathBuf};
 
+use log::{debug, error, info, warn};
+use itertools::Itertools;
+use snafu::{ResultExt, Snafu};
+
 use crate::read_dir_files;
 use crate::TRASH_FILE_DIR;
 use crate::{TrashEntry, TrashInfo};
 
-use log::{debug, error, info, warn};
-use snafu::{ResultExt, Snafu};
-
 // #[derive(Debug, Snafu)]
 // pub enum Error {
-//     #[snafu(display("Failed to read paths inside {} into paths: {}", path.display(), source))]
-//     ReadDir { source: io::Error, path: PathBuf },
+    #[snafu(display("Failed to read paths inside {} into paths: {}", path.display(), source))]
+    ReadDir { source: io::Error, path: PathBuf },
 
-//     #[snafu(display("Failed to read an entry from path {}: {}", path.display(), source))]
-//     ReadDirEntry { source: io::Error, path: PathBuf },
+    #[snafu(display("Failed to read an entry from path {}: {}", path.display(), source))]
+    ReadDirEntry { source: io::Error, path: PathBuf },
 // }
 
 // type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -67,23 +68,3 @@ impl<T: Iterator<Item = (TrashEntry, TrashInfo)>> Iterator for TrashInfoIter<T> 
     }
 }
 
-pub fn read_dir_path<'a>(path: &'a Path) -> Result<impl Iterator<Item = PathBuf> + 'a, ()> {
-    let paths = fs::read_dir(path)
-        .unwrap()
-        // .context(ReadDir { path })
-        // context of dir_entry errors
-        // .map(move |dent_res| dent_res.context(ReadDirEntry { path }))
-        .map(move |dent_res| dent_res.unwrap())
-        // log dir_entry errors
-        .inspect(|res| {
-            if let Some(e) = res.as_ref().err() {
-                warn!("{}", e);
-            }
-        })
-        // filter out errors
-        .filter_map(Result::ok)
-        // convert dir_entry to string
-        .map(|d| d.path());
-
-    Ok(paths)
-}

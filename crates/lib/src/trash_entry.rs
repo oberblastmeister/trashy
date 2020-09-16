@@ -1,13 +1,17 @@
 use std::path::{Path, PathBuf};
+use std::fs;
+use std::io;
 
 use fs_extra::dir::{self, move_dir};
 use fs_extra::file::{self, move_file};
+use log::{debug, error, info, warn};
+use itertools::Itertools;
+use snafu::{ensure, OptionExt, ResultExt, Snafu};
 
 use crate::{DIR_COPY_OPT, FILE_COPY_OPT};
 use crate::percent_path;
 use crate::trash_info::{self, TrashInfo};
 use crate::{TRASH_FILE_DIR, TRASH_INFO_DIR};
-use snafu::{ensure, OptionExt, ResultExt, Snafu};
 
 /// Represents an entry in the trash directory. Includes the file path and the trash info path.
 pub struct TrashEntry {
@@ -43,6 +47,12 @@ pub enum Error {
         path: PathBuf,
         source: fs_extra::error::Error,
     },
+
+    #[snafu(display("Failed to read paths inside {} into paths: {}", path.display(), source))]
+    ReadDir { source: io::Error, path: PathBuf },
+
+    #[snafu(display("Failed to read an entry from path {}: {}", path.display(), source))]
+    ReadDirEntry { source: io::Error, path: PathBuf },
 }
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -108,7 +118,7 @@ impl TrashEntry {
     }
 }
 
-pub fn move_file_or_dir(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<u64> {
+fn move_file_or_dir(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<u64> {
     let from = from.as_ref();
     let to = to.as_ref();
 
@@ -121,7 +131,7 @@ pub fn move_file_or_dir(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<
     }.context(MovePath { from, to })
 }
 
-pub fn remove_file_or_dir(path: impl AsRef<Path>) -> Result<()> {
+fn remove_file_or_dir(path: impl AsRef<Path>) -> Result<()> {
     let path = path.as_ref();
     if path.is_dir() {
         dir::remove(path)
@@ -132,3 +142,37 @@ pub fn remove_file_or_dir(path: impl AsRef<Path>) -> Result<()> {
     }.context(RemovePath { path })
 }
 
+
+pub fn read_dir_trash_entry() -> Result<impl Iterator<Item = TrashEntry>> {
+    let iter = read_dir_path(&TRASH_FILE_DIR)?
+        .map(|path| TrashEntry::new(path))
+        .inspect(|res| {
+            if let Some(e) = res.as_ref().err() {
+                warn!("{}", e);
+            }
+        })
+        .filter_map(Result::ok);
+    Ok(iter)
+}
+
+pub fn read_dir_trash_entry_sorted() -> Result<impl Iterator<Item = TrashEntry>> {
+    Ok(read_dir_trash_entry()?.sorted())
+}
+
+fn read_dir_path<'a>(path: &'a Path) -> Result<impl Iterator<Item = PathBuf> + 'a> {
+    let paths = fs::read_dir(path).context(ReadDir { path })?
+        // context of dir_entry errors
+        .map(move |dent_res| dent_res.context(ReadDirEntry { path }))
+        // log dir_entry errors
+        .inspect(|res| {
+            if let Some(e) = res.as_ref().err() {
+                warn!("{}", e);
+            }
+        })
+        // filter out errors
+        .filter_map(Result::ok)
+        // convert dir_entry to string
+        .map(|d| d.path());
+
+    Ok(paths)
+}

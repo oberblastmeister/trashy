@@ -1,30 +1,23 @@
 mod utils;
-mod trash_entry_iter;
 pub mod trash_info;
 mod trash_entry;
 mod parser;
 mod percent_path;
 
-use lazy_static::lazy_static;
-use directories::UserDirs;
-use std::path::{Path, PathBuf};
-
 use std::fs;
 use std::io;
+use std::borrow::Cow;
+use std::path::{Path, PathBuf};
 
 use fs_extra::dir::{self, move_dir};
 use fs_extra::file::{self, move_file};
-use itertools::Itertools;
 use log::{debug, error, info, warn};
 use snafu::{OptionExt, ResultExt, Snafu};
-use std::borrow::Cow;
+use lazy_static::lazy_static;
+use directories::UserDirs;
 
-use crate::trash_entry::TrashEntry;
+use crate::trash_entry::{read_dir_trash_entry, TrashEntry};
 use crate::trash_info::TrashInfo;
-use crate::utils::{
-    convert_to_str, convert_to_string, find_name, read_dir_path,
-    to_trash_file_dir, move_file_or_dir
-};
 
 lazy_static! {
     static ref USER_DIRS: UserDirs = UserDirs::new().expect("Failed to determine user directories");
@@ -87,27 +80,6 @@ pub enum Error {
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
 
-/// Returns a iterator of all the parsed TrashInfo files
-pub fn read_trash_entries() -> Result<impl Iterator<Item = TrashEntry>> {
-    let trash_infos = read_dir_files()?
-        // map paths to trash entries
-        .map(|path| {
-            TrashEntry::new(path).context(TrashEntryNew)
-        })
-        // log parse erros
-        .inspect(|res| match res {
-            Err(e) => warn!("{}", e),
-            _ => (),
-        })
-        // then remove parse errors
-        .filter_map(Result::ok);
-    Ok(trash_infos)
-}
-
-pub fn read_trash_entries_sorted() -> Result<impl Iterator<Item = TrashInfo>> {
-    Ok(read_trash_entries()?.sorted())
-}
-
 /// Helper function
 pub fn restore(name: impl AsRef<Path>) {
     TrashEntry::new(name).restore()
@@ -119,15 +91,9 @@ pub fn remove(name: impl AsRef<Path>) {
 }
 
 pub fn remove_all() -> Result<()> {
-    let infos = read_dir_info()?.collect::<Vec<_>>();
-    let files = read_dir_files()?.collect::<Vec<_>>();
-
-    fs_extra::remove_items(&infos).context(RemoveItems {
-        dir: &*TRASH_INFO_DIR,
-    })?;
-    fs_extra::remove_items(&files).context(RemoveItems {
-        dir: &*TRASH_FILE_DIR,
-    })?;
+    for trash_entry in read_dir_trash_entry().unwrap() {
+        trash_entry.remove()?
+    }
 
     Ok(())
 }
