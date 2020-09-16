@@ -14,6 +14,7 @@ use snafu::ResultExt;
 use super::error::{Error, ParseNaiveDate};
 use super::error::{NomError, Result};
 use crate::trash_info::TrashInfo;
+use crate::percent_path::PercentPath;
 
 pub const TRASH_DATETIME_FORMAT: &'static str = "%Y-%m-%dT%H:%M:%S";
 
@@ -71,7 +72,7 @@ impl<'a, 'b> TryInto<TrashInfo> for TrashInfoStr<'a, 'b> {
     type Error = Error;
 
     fn try_into(self: TrashInfoStr<'a, 'b>) -> Result<TrashInfo> {
-        let path = self.path.into_owned();
+        let percent_path = PercentPath::from_str(self.path.as_ref());
         let deletion_date =
             NaiveDateTime::parse_from_str(&self.deletion_date, TRASH_DATETIME_FORMAT).context(
                 ParseNaiveDate {
@@ -79,7 +80,7 @@ impl<'a, 'b> TryInto<TrashInfo> for TrashInfoStr<'a, 'b> {
                 },
             )?;
 
-        Ok(TrashInfo::new(path, Some(deletion_date)).context(TrashInfoCreation)?)
+        Ok(TrashInfo::new(percent_path, Some(deletion_date)).unwrap())
     }
 }
 

@@ -1,16 +1,15 @@
-use std::path::{Path, PathBuf};
+use std::borrow::Cow;
 use std::fs;
 use std::io;
+use std::path::{Path, PathBuf};
 
-use fs_extra::dir::{self, move_dir};
-use fs_extra::file::{self, move_file};
 use log::{debug, error, info, warn};
-use itertools::Itertools;
 use snafu::{ensure, OptionExt, ResultExt, Snafu};
 
-use crate::{DIR_COPY_OPT, FILE_COPY_OPT};
-use crate::percent_path;
+use crate::percent_path::{self, PercentPath};
 use crate::trash_info::{self, TrashInfo};
+use crate::utils::{self, convert_to_str, move_path, read_dir_path, remove_path};
+use crate::{DIR_COPY_OPT, FILE_COPY_OPT};
 use crate::{TRASH_FILE_DIR, TRASH_INFO_DIR};
 
 /// Represents an entry in the trash directory. Includes the file path and the trash info path.
@@ -21,38 +20,37 @@ pub struct TrashEntry {
 
 #[derive(Snafu, Debug)]
 pub enum Error {
-    NotInTrash { path: PathBuf },
-
-    ExistsInfoPath { path: PathBuf },
-
-    ExistsFilePath { path: PathBuf },
-
-    NoFileName { path: PathBuf },
-
-    #[snafu(context(false))]
-    DecodePercentPath { source: percent_path::Error },
-
-    #[snafu(context(false))]
-    ParseTrashInfo { source: trash_info::Error },
-
-    #[snafu(display("Failed to move path {} to {}: {}", from.display(), to.display(), source))]
-    MovePath {
-        source: fs_extra::error::Error,
-        from: PathBuf,
-        to: PathBuf,
-    },
-
-    #[snafu(display("Failed to remove path {}: {}", path.display(), source))]
-    RemovePath {
+    NotInTrash {
         path: PathBuf,
-        source: fs_extra::error::Error,
     },
 
-    #[snafu(display("Failed to read paths inside {} into paths: {}", path.display(), source))]
-    ReadDir { source: io::Error, path: PathBuf },
+    ExistsInfoPath {
+        path: PathBuf,
+    },
 
-    #[snafu(display("Failed to read an entry from path {}: {}", path.display(), source))]
-    ReadDirEntry { source: io::Error, path: PathBuf },
+    ExistsFilePath {
+        path: PathBuf,
+    },
+
+    NoFileName {
+        path: PathBuf,
+    },
+
+    #[snafu(context(false))]
+    DecodePercentPath {
+        source: percent_path::Error,
+    },
+
+    #[snafu(context(false))]
+    ParseTrashInfo {
+        source: trash_info::Error,
+    },
+
+    #[snafu(context(false))]
+    #[snafu(display("Utils error: {}", source))]
+    Utils {
+        source: utils::Error,
+    },
 }
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -60,12 +58,10 @@ type Result<T, E = Error> = ::std::result::Result<T, E>;
 /// Represents an entry in the trash. Holds the paths of the file and the .trashinfo file that make
 /// up one TrashEntry
 impl TrashEntry {
-    /// Create a new TrashEntry from path
-    pub fn new(path: impl AsRef<Path>) -> Result<TrashEntry> {
-        let path = path.as_ref();
-        // get file name
-        let name = path.file_name().context(NoFileName { path })?;
-        // get paths
+    /// Create a new TrashEntry from a name or path
+    pub fn new(name: impl AsRef<Path>) -> Result<TrashEntry> {
+        let name = name.as_ref();
+        let name = name.file_name().context(NoFileName { path: name })?;
         let info_path = TRASH_INFO_DIR.join(name);
         let file_path = TRASH_FILE_DIR.join(name);
         let trash_entry = TrashEntry {
@@ -76,18 +72,28 @@ impl TrashEntry {
         Ok(trash_entry)
     }
 
+    pub(crate) fn create(path: impl AsRef<Path>, existing: &[TrashEntry]) -> Result<TrashEntry> {
+        let path = path.as_ref();
+        let percent_path = PercentPath::from_path(path)?;
+        let name = find_name(path, existing)?;
+        let name = name.as_ref();
+        TrashInfo::new(percent_path, None)?.save(name)?;
+        move_path(path, TRASH_FILE_DIR.join(name))?;
+        Ok(TrashEntry::new(name)?)
+    }
+
     /// Check if paths in TrashEntry is valid.
-    fn is_valid(self) -> Result<()> {
+    pub fn is_valid(&self) -> Result<()> {
         ensure!(
             self.info_path.exists(),
             ExistsInfoPath {
-                path: self.info_path
+                path: &self.info_path
             }
         );
         ensure!(
             self.file_path.exists(),
             ExistsFilePath {
-                path: self.info_path
+                path: &self.info_path
             }
         );
         Ok(())
@@ -96,54 +102,28 @@ impl TrashEntry {
     /// Restores the trash entry
     pub fn restore(self) -> Result<()> {
         self.is_valid()?;
-        let original_path = TrashInfo::parse_from_path(self.info_path)?
-            .percent_path()
-            .decoded()?
-            .as_ref();
-        move_file_or_dir(self.file_path, original_path)?;
-        remove_file_or_dir(self.file_path)?;
+        let trash_info = TrashInfo::parse_from_path(self.info_path)?;
+        let original_path = trash_info.percent_path().decoded()?;
+
+        move_path(&self.file_path, original_path.as_ref())?;
+        remove_path(&self.file_path)?;
         Ok(())
     }
 
     /// Removes the trash_entry
     pub fn remove(self) -> Result<()> {
         self.is_valid()?;
-        remove_file_or_dir(self.info_path)?;
-        remove_file_or_dir(self.file_path)?;
+        remove_path(self.info_path)?;
+        remove_path(self.file_path)?;
         Ok(())
     }
 
     pub fn parse_trash_info(&self) -> Result<TrashInfo, trash_info::Error> {
-        TrashInfo::parse_from_path(self.info_path)
+        TrashInfo::parse_from_path(&self.info_path)
     }
 }
 
-fn move_file_or_dir(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<u64> {
-    let from = from.as_ref();
-    let to = to.as_ref();
-
-    if from.is_dir() {
-        move_dir(from, to, &DIR_COPY_OPT)
-    } else if from.is_file() {
-        move_file(from, to, &FILE_COPY_OPT)
-    } else {
-        panic!("BUG: must be file or directory");
-    }.context(MovePath { from, to })
-}
-
-fn remove_file_or_dir(path: impl AsRef<Path>) -> Result<()> {
-    let path = path.as_ref();
-    if path.is_dir() {
-        dir::remove(path)
-    } else if path.is_file() {
-        file::remove(path)
-    } else {
-        panic!("BUG: must be file or directory");
-    }.context(RemovePath { path })
-}
-
-
-pub fn read_dir_trash_entry() -> Result<impl Iterator<Item = TrashEntry>> {
+pub fn read_dir_trash_entries() -> Result<impl Iterator<Item = TrashEntry>> {
     let iter = read_dir_path(&TRASH_FILE_DIR)?
         .map(|path| TrashEntry::new(path))
         .inspect(|res| {
@@ -155,24 +135,32 @@ pub fn read_dir_trash_entry() -> Result<impl Iterator<Item = TrashEntry>> {
     Ok(iter)
 }
 
-pub fn read_dir_trash_entry_sorted() -> Result<impl Iterator<Item = TrashEntry>> {
-    Ok(read_dir_trash_entry()?.sorted())
-}
+pub fn find_name<'a, T>(path: &'a T, existing: &[TrashEntry]) -> Result<Cow<'a, str>>
+where
+    T: AsRef<Path> + ?Sized,
+{
+    let path = convert_to_str(path.as_ref())?;
+    let existing_names: Vec<_> = existing
+        .into_iter()
+        .map(|trash_entry| {
+            trash_entry
+                .file_path
+                .file_name()
+                .expect("Need to have file name")
+        })
+        .map(|p| convert_to_str(p.as_ref()).unwrap())
+        .collect();
 
-fn read_dir_path<'a>(path: &'a Path) -> Result<impl Iterator<Item = PathBuf> + 'a> {
-    let paths = fs::read_dir(path).context(ReadDir { path })?
-        // context of dir_entry errors
-        .map(move |dent_res| dent_res.context(ReadDirEntry { path }))
-        // log dir_entry errors
-        .inspect(|res| {
-            if let Some(e) = res.as_ref().err() {
-                warn!("{}", e);
+    let res = (0..)
+        .map(|n| {
+            if n == 0 {
+                Cow::Borrowed(path)
+            } else {
+                Cow::Owned(format!("{}_{}", path, n))
             }
         })
-        // filter out errors
-        .filter_map(Result::ok)
-        // convert dir_entry to string
-        .map(|d| d.path());
+        .find(|new_path| !existing_names.contains(&&**new_path))
+        .expect("BUG: path must be found, iterator is infinite");
 
-    Ok(paths)
+    Ok(res)
 }
