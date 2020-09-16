@@ -9,16 +9,16 @@ use crate::{TrashEntry, TrashInfo};
 use log::{debug, error, info, warn};
 use snafu::{ResultExt, Snafu};
 
-#[derive(Debug, Snafu)]
-pub enum Error {
-    #[snafu(display("Failed to read paths inside {} into paths: {}", path.display(), source))]
-    ReadDir { source: io::Error, path: PathBuf },
+// #[derive(Debug, Snafu)]
+// pub enum Error {
+//     #[snafu(display("Failed to read paths inside {} into paths: {}", path.display(), source))]
+//     ReadDir { source: io::Error, path: PathBuf },
 
-    #[snafu(display("Failed to read an entry from path {}: {}", path.display(), source))]
-    ReadDirEntry { source: io::Error, path: PathBuf },
-}
+//     #[snafu(display("Failed to read an entry from path {}: {}", path.display(), source))]
+//     ReadDirEntry { source: io::Error, path: PathBuf },
+// }
 
-type Result<T, E = Error> = ::std::result::Result<T, E>;
+// type Result<T, E = Error> = ::std::result::Result<T, E>;
 
 pub struct TrashEntryIter<T: Iterator<Item = TrashEntry>>(T);
 
@@ -31,22 +31,22 @@ impl<T: Iterator<Item = TrashEntry>> Iterator for TrashEntryIter<T> {
 }
 
 impl<T: Iterator<Item = TrashEntry>> TrashEntryIter<T> {
-    fn new() -> Result<TrashEntryIter<T>> {
-        let trash_entries = read_dir_files(&TRASH_FILE_DIR)
-            .context(ReadDir {
-                path: &TRASH_FILE_DIR,
-            })
+    fn new() -> Self {
+        let trash_entries = read_dir_path(&TRASH_FILE_DIR).unwrap()
+            // .context(ReadDir {
+            //     path: &TRASH_FILE_DIR,
+            // })
             // map paths to trash entries
-            .map(|path| TrashEntry::new(path).unwrap())
+            .map(|path| TrashEntry::new(path).unwrap());
             // log parse erros
-            .inspect(|res| match res {
-                Err(e) => warn!("{}", e),
-                _ => (),
-            })
+            // .inspect(|res| match res {
+            //     Err(e) => warn!("{}", e),
+            //     _ => (),
+            // })
             // then remove parse errors
-            .filter_map(Result::ok);
+            // .filter_map(Result::ok);
 
-        Ok(TrashEntryIter(trash_entries))
+        TrashEntryIter(trash_entries)
     }
 }
 
@@ -67,11 +67,13 @@ impl<T: Iterator<Item = (TrashEntry, TrashInfo)>> Iterator for TrashInfoIter<T> 
     }
 }
 
-pub fn read_dir_path<'a>(path: &'a Path) -> Result<impl Iterator<Item = PathBuf> + 'a> {
+pub fn read_dir_path<'a>(path: &'a Path) -> Result<impl Iterator<Item = PathBuf> + 'a, ()> {
     let paths = fs::read_dir(path)
-        .context(ReadDir { path })
+        .unwrap()
+        // .context(ReadDir { path })
         // context of dir_entry errors
-        .map(move |dent_res| dent_res.context(ReadDirEntry { path }))
+        // .map(move |dent_res| dent_res.context(ReadDirEntry { path }))
+        .map(move |dent_res| dent_res.unwrap())
         // log dir_entry errors
         .inspect(|res| {
             if let Some(e) = res.as_ref().err() {
