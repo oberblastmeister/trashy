@@ -1,16 +1,13 @@
 use std::borrow::Cow;
-use std::fs;
-use std::io;
 use std::path::{Path, PathBuf};
 
 use log::{debug, error, info, warn};
-use snafu::{ensure, OptionExt, ResultExt, Snafu};
+use snafu::{ensure, OptionExt, Snafu};
 
 use crate::percent_path::{self, PercentPath};
 use crate::trash_info::{self, TrashInfo};
 use crate::utils::{self, convert_to_str, move_path, read_dir_path, remove_path};
-use crate::{DIR_COPY_OPT, FILE_COPY_OPT};
-use crate::{TRASH_FILE_DIR, TRASH_INFO_DIR};
+use crate::{TRASH_FILE_DIR, TRASH_INFO_DIR, TRASH_DIR};
 
 /// Represents an entry in the trash directory. Includes the file path and the trash info path.
 pub struct TrashEntry {
@@ -20,18 +17,17 @@ pub struct TrashEntry {
 
 #[derive(Snafu, Debug)]
 pub enum Error {
-    NotInTrash {
-        path: PathBuf,
-    },
-
+    #[snafu(display("The trash info path {} does not exist", path.display()))]
     ExistsInfoPath {
         path: PathBuf,
     },
 
+    #[snafu(display("The trash file path {} does not exist", path.display()))]
     ExistsFilePath {
         path: PathBuf,
     },
 
+    #[snafu(display("There is not a file name for path {}", path.display()))]
     NoFileName {
         path: PathBuf,
     },
@@ -51,6 +47,9 @@ pub enum Error {
     Utils {
         source: utils::Error,
     },
+
+    #[snafu(display("Moving path {} into the trash directory when it is already there", path.display()))]
+    CreationInTrash { path: PathBuf },
 }
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -58,7 +57,8 @@ type Result<T, E = Error> = ::std::result::Result<T, E>;
 /// Represents an entry in the trash. Holds the paths of the file and the .trashinfo file that make
 /// up one TrashEntry
 impl TrashEntry {
-    /// Create a new TrashEntry from a name or path
+    /// Constructor for TrashEntry struct. Fails if the name or path is not a valid TrashEntry
+    /// name.
     pub fn new(name: impl AsRef<Path>) -> Result<TrashEntry> {
         let name = name.as_ref();
         let name = name.file_name().context(NoFileName { path: name })?;
@@ -72,8 +72,15 @@ impl TrashEntry {
         Ok(trash_entry)
     }
 
+    /// Create a trash entry from a path not in the trash directory. Will move the path to the
+    /// trash files directory. Can fail if attempting to move something already in the trash
+    /// directory
     pub(crate) fn create(path: impl AsRef<Path>, existing: &[TrashEntry]) -> Result<TrashEntry> {
         let path = path.as_ref();
+
+        if in_trash_dir(path) {
+            CreationInTrash { path }.fail()?;
+        }
         let percent_path = PercentPath::from_path(path)?;
         let name = find_name(path, existing)?;
         let name = name.as_ref();
@@ -93,7 +100,7 @@ impl TrashEntry {
         ensure!(
             self.file_path.exists(),
             ExistsFilePath {
-                path: &self.info_path
+                path: &self.file_path
             }
         );
         Ok(())
@@ -164,3 +171,11 @@ where
 
     Ok(res)
 }
+
+pub fn in_trash_dir(path: impl AsRef<Path>) -> bool {
+    path.as_ref().parent()
+        .and_then(|p| p.parent())
+        .map(|p| p == *TRASH_DIR)
+        .unwrap_or(false)
+}
+

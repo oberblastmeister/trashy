@@ -30,66 +30,19 @@ pub const TRASH_INFO_EXT: &'_ str = "trashinfo";
 
 #[derive(Debug, Snafu)]
 pub enum Error {
-    #[snafu(display("Failed to read {} to string", path.display()))]
-    ReadToString {
-        source: io::Error,
-        path: PathBuf,
-    },
-
-    #[snafu(display("Failed to parse {} to string: {}", path.display(), source))]
-    ParseTrashInfo {
-        source: parser::Error,
-        path: PathBuf,
-    },
-
-    #[snafu(display("Project directories could not be determined"))]
-    ProjectDirsDetermine,
-
-    #[snafu(display("User directories could not be determined"))]
-    UserDirsDetermine,
-
-    #[snafu(display("Failed to move directory from {} to {}: {}", from.display(), to.display(), source))]
-    MoveDir {
-        source: fs_extra::error::Error,
-        from: PathBuf,
-        to: PathBuf,
-    },
-
-    #[snafu(display("Failed to move file from {} to {}: {}", from.display(), to.display(), source))]
-    MoveFile {
-        source: fs_extra::error::Error,
-        from: PathBuf,
-        to: PathBuf,
-    },
-
-    #[snafu(display("Failed to save trash info file to {}: {}", path.display(), source))]
-    TrashInfoSave {
-        source: trash_info::Error,
-        path: PathBuf,
-    },
-
-    #[snafu(display("Failed to create new trash info struct: {}", source))]
-    TrashInfoNew {
-        source: trash_info::Error,
-    },
-
     #[snafu(display("Failed to create new trash entry struct: {}", source))]
     TrashEntryNew {
         source: trash_entry::Error,
     },
 
+    #[snafu(display("Failed to restore trash entry {}", source))]
     TrashEntryRestore {
         source: trash_entry::Error,
     },
 
+    #[snafu(display("Failed to remove trash entry {}", source))]
     TrashEntryRemove {
         source: trash_entry::Error,
-    },
-
-    #[snafu(display("Failed to convert path {} to string: {}", path.display(), source))]
-    ConvertPath {
-        source: utils::Error,
-        path: PathBuf,
     },
 
     #[snafu(context(false))]

@@ -1,6 +1,6 @@
-use std::borrow::Cow;
 use std::fs;
 use std::io;
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
 use fs_extra::dir::{self, move_dir};
@@ -8,21 +8,23 @@ use fs_extra::file::{self, move_file};
 use log::{debug, error, info, warn};
 use snafu::{OptionExt, ResultExt, Snafu};
 
-use crate::{TRASH_FILE_DIR, TRASH_INFO_DIR};
-// use crate::utils::{self, *};
+use crate::{TRASH_FILE_DIR, TRASH_INFO_DIR, TRASH_DIR};
 use crate::{DIR_COPY_OPT, FILE_COPY_OPT};
 
 #[derive(Debug, Snafu)]
 pub enum Error {
+    #[snafu(display("The path {} was not valid utf-8", path.display()))]
     Utf8 {
         path: PathBuf,
     },
 
+    #[snafu(display("Failed to read path {}: {}", path.display(), source))]
     ReadDir {
         source: io::Error,
         path: PathBuf,
     },
 
+    #[snafu(display("Failed to read directory entry from path {}: {}", path.display(), source))]
     ReadDirEntry {
         source: io::Error,
         path: PathBuf,
@@ -44,9 +46,9 @@ pub enum Error {
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
 
-pub fn to_trash_file_dir(path: impl AsRef<Path>) -> PathBuf {
-    to_directory(path, &*TRASH_FILE_DIR)
-}
+// pub fn to_trash_file_dir(path: impl AsRef<Path>) -> PathBuf {
+//     to_directory(path, &*TRASH_FILE_DIR)
+// }
 
 fn to_directory<T: AsRef<Path>>(path: T, dir: &Path) -> PathBuf {
     let path = path.as_ref();
@@ -60,11 +62,11 @@ pub fn to_trash_info_dir(path: impl AsRef<Path>) -> PathBuf {
     to_directory(path, &TRASH_INFO_DIR)
 }
 
-pub fn convert_to_string(path: impl AsRef<Path>) -> Result<String> {
-    Ok(convert_to_str(path.as_ref())?.to_string())
-}
+// pub fn convert_to_string(path: impl AsRef<Path>) -> Result<String> {
+//     Ok(convert_to_str(path.as_ref())?.to_string())
+// }
 
-pub fn convert_to_str<'a>(path: &'a Path) -> Result<&'a str> {
+pub fn convert_to_str(path: &Path) -> Result<&str> {
     let s = path.to_str().context(Utf8 { path })?;
     Ok(s)
 }

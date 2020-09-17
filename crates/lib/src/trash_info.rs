@@ -118,10 +118,10 @@ fn check_extension(path: impl AsRef<Path>) -> Result<()> {
     let path = path.as_ref();
     if let Some(ext) = path.extension() {
         if ext != TRASH_INFO_EXT {
-            WrongExtension { path }.fail::<()>();
+            WrongExtension { path }.fail()?;
         }
     } else {
-        WrongExtension { path }.fail::<()>();
+        WrongExtension { path }.fail()?;
     }
     Ok(())
 }
