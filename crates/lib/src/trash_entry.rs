@@ -10,6 +10,7 @@ use crate::utils::{self, convert_to_str, move_path, read_dir_path, remove_path};
 use crate::{TRASH_FILE_DIR, TRASH_INFO_DIR, TRASH_DIR};
 
 /// Represents an entry in the trash directory. Includes the file path and the trash info path.
+#[derive(Debug)]
 pub struct TrashEntry {
     info_path: PathBuf,
     file_path: PathBuf,
@@ -142,7 +143,7 @@ pub fn read_dir_trash_entries() -> Result<impl Iterator<Item = TrashEntry>> {
     Ok(iter)
 }
 
-pub fn find_name_trash_entry<'a, T>(path: &'a T, existing: &[TrashEntry]) -> Result<Cow<'a, str>>
+fn find_name_trash_entry<'a, T>(path: &'a T, existing: &[TrashEntry]) -> Result<Cow<'a, str>>
 where
     T: AsRef<Path> + ?Sized,
 {
@@ -163,7 +164,7 @@ where
 }
 
 fn find_name<'a>(s: &'a str, existing: &[&str]) -> Cow<'a, str> {
-    (0..)
+    (0..200)
         .map(|n| {
             if n == 0 {
                 Cow::Borrowed(s)
@@ -175,7 +176,7 @@ fn find_name<'a>(s: &'a str, existing: &[&str]) -> Cow<'a, str> {
         .expect("BUG: path must be found, iterator is infinite")
 }
 
-pub fn in_trash_dir(path: impl AsRef<Path>) -> bool {
+fn in_trash_dir(path: impl AsRef<Path>) -> bool {
     path.as_ref().parent()
         .and_then(|p| p.parent())
         .map(|p| p == *TRASH_DIR)
@@ -185,6 +186,7 @@ pub fn in_trash_dir(path: impl AsRef<Path>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::{Context, Result};
 
     #[test]
     fn find_names_test() {
@@ -224,5 +226,12 @@ mod tests {
     #[test]
     fn in_trash_dir4_test() {
         assert_eq!(in_trash_dir("/home/brian/.local/share/Trash/files"), false);
+    }
+
+    #[test]
+    fn read_dir_trash_entries_test() -> Result<()> {
+        let tents: Vec<_> = read_dir_trash_entries()?.collect();
+        println!("{:?}", tents);
+        Ok(())
     }
 }

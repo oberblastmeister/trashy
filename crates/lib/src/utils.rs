@@ -115,6 +115,33 @@ mod tests {
     use anyhow::{Context, Result};
 
     #[test]
+    fn read_dir_path_test() -> Result<()> {
+        const TEMP_FILE_AMOUNT: usize = 20;
+
+        let tempdir = tempdir()?;
+        let tempdir_path = tempdir.path();
+        let mut temp_files = Vec::with_capacity(TEMP_FILE_AMOUNT);
+
+        for _ in 0..TEMP_FILE_AMOUNT {
+            let temp_file = NamedTempFile::new_in(tempdir_path)?;
+            temp_files.push(temp_file);
+        }
+
+        let paths: Vec<_> = read_dir_path(tempdir_path)?.collect();
+
+        assert_eq!(paths.len(), temp_files.len());
+
+        let temp_files_path: Vec<_> = temp_files.iter()
+            .map(|file| file.path()).collect();
+
+        for path in paths {
+            assert!(temp_files_path.contains(&&*path));
+        }
+
+        Ok(())
+    }
+
+    #[test]
     fn remove_path_dir_test() -> Result<()> {
         let tempdir = tempdir()?;
         let path = tempdir.path();
@@ -130,10 +157,5 @@ mod tests {
         remove_path(path)?;
         assert!(!path.exists());
         Ok(())
-    }
-
-    #[test]
-    fn move_path_file_test() {
-        
     }
 }

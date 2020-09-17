@@ -1,10 +1,9 @@
 mod parser;
-mod percent_path;
-mod trash_entry;
+pub mod percent_path;
+pub mod trash_entry;
 pub mod trash_info;
 mod utils;
 
-use std::io;
 use std::path::{Path, PathBuf};
 
 use directories::UserDirs;
@@ -79,10 +78,30 @@ pub fn remove_all() -> Result<()> {
 /// Put a list of paths into the trash
 pub fn put(paths: &[impl AsRef<Path>]) -> Result<()> {
     let mut existing: Vec<_> = read_dir_trash_entries().unwrap().collect();
+    
     for path in paths {
         let trash_entry = TrashEntry::create(path, &existing).unwrap();
         existing.push(trash_entry)
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use anyhow::{Context, Result};
+    use std::fs::File;
+    use std::io::Write;
+
+    #[test]
+    fn put_test_single() -> Result<()> {
+        let path = "/tmp/test_trash";
+        let mut tempfile = File::create(path)?;
+        tempfile.write_all(b"this is a test trash file")?;
+        drop(tempfile);
+        put(&[path])?;
+
+        Ok(())
+    }
 }
