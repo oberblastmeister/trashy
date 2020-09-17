@@ -82,7 +82,7 @@ impl TrashEntry {
             CreationInTrash { path }.fail()?;
         }
         let percent_path = PercentPath::from_path(path)?;
-        let name = find_name(path, existing)?;
+        let name = find_name_trash_entry(path, existing)?;
         let name = name.as_ref();
         TrashInfo::new(percent_path, None)?.save(name)?;
         move_path(path, TRASH_FILE_DIR.join(name))?;
@@ -142,7 +142,7 @@ pub fn read_dir_trash_entries() -> Result<impl Iterator<Item = TrashEntry>> {
     Ok(iter)
 }
 
-pub fn find_name<'a, T>(path: &'a T, existing: &[TrashEntry]) -> Result<Cow<'a, str>>
+pub fn find_name_trash_entry<'a, T>(path: &'a T, existing: &[TrashEntry]) -> Result<Cow<'a, str>>
 where
     T: AsRef<Path> + ?Sized,
 {
@@ -158,18 +158,21 @@ where
         .map(|p| convert_to_str(p.as_ref()).unwrap())
         .collect();
 
-    let res = (0..)
+    let res = find_name(path, &existing_names);
+    Ok(res)
+}
+
+fn find_name<'a>(s: &'a str, existing: &[&str]) -> Cow<'a, str> {
+    (0..)
         .map(|n| {
             if n == 0 {
-                Cow::Borrowed(path)
+                Cow::Borrowed(s)
             } else {
-                Cow::Owned(format!("{}_{}", path, n))
+                Cow::Owned(format!("{}_{}", s, n))
             }
         })
-        .find(|new_path| !existing_names.contains(&&**new_path))
-        .expect("BUG: path must be found, iterator is infinite");
-
-    Ok(res)
+        .find(|new_path| !existing.contains(&&**new_path))
+        .expect("BUG: path must be found, iterator is infinite")
 }
 
 pub fn in_trash_dir(path: impl AsRef<Path>) -> bool {
@@ -179,3 +182,47 @@ pub fn in_trash_dir(path: impl AsRef<Path>) -> bool {
         .unwrap_or(false)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn find_names_test() {
+        assert_eq!(find_name("vim.log", &["vim.log", "vim.log2"]), "vim.log_1");
+    }
+
+    #[test]
+    fn find_names_test_2_test() {
+        assert_eq!(find_name("vim.log", &["vim.log", "vim.log_1"]), "vim.log_2");
+    }
+
+    #[test]
+    fn find_names_test_none_test() {
+        assert_eq!(find_name("vim.log", &[""]), "vim.log");
+    }
+
+    #[test]
+    fn in_trash_dir_test() {
+        assert_eq!(in_trash_dir("/home/brian/.local/share/Trash"), false);
+    }
+
+    #[test]
+    fn in_trash_dir_files() {
+        assert_eq!(in_trash_dir("/home/brian/.local/share/Trash/files/a_file"), true);
+    }
+
+    #[test]
+    fn ins_trash_dir_info_test() {
+        assert_eq!(in_trash_dir("/home/brian/.local/share/Trash/info/another_file"), true);
+    }
+
+    #[test]
+    fn in_trash_dir3_test() {
+        assert_eq!(in_trash_dir("/home/brian/.local/share/Trash/info"), false);
+    }
+
+    #[test]
+    fn in_trash_dir4_test() {
+        assert_eq!(in_trash_dir("/home/brian/.local/share/Trash/files"), false);
+    }
+}

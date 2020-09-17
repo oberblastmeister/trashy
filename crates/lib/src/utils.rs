@@ -46,10 +46,6 @@ pub enum Error {
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
 
-// pub fn to_trash_file_dir(path: impl AsRef<Path>) -> PathBuf {
-//     to_directory(path, &*TRASH_FILE_DIR)
-// }
-
 fn to_directory<T: AsRef<Path>>(path: T, dir: &Path) -> PathBuf {
     let path = path.as_ref();
     let mut dir = dir.to_path_buf();
@@ -61,10 +57,6 @@ fn to_directory<T: AsRef<Path>>(path: T, dir: &Path) -> PathBuf {
 pub fn to_trash_info_dir(path: impl AsRef<Path>) -> PathBuf {
     to_directory(path, &TRASH_INFO_DIR)
 }
-
-// pub fn convert_to_string(path: impl AsRef<Path>) -> Result<String> {
-//     Ok(convert_to_str(path.as_ref())?.to_string())
-// }
 
 pub fn convert_to_str(path: &Path) -> Result<&str> {
     let s = path.to_str().context(Utf8 { path })?;
@@ -116,62 +108,32 @@ pub(crate) fn read_dir_path<'a>(path: &'a Path) -> Result<impl Iterator<Item = P
     Ok(paths)
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::{NamedTempFile, tempdir};
+    use anyhow::{Context, Result};
 
-//     macro_rules! string_vec {
-//         ($($x:expr),*) => {
-//             vec![$(String::from($x)),*]
-//         }
-//     }
+    #[test]
+    fn remove_path_dir_test() -> Result<()> {
+        let tempdir = tempdir()?;
+        let path = tempdir.path();
+        remove_path(path)?;
+        assert!(!path.exists());
+        Ok(())
+    }
 
-//     #[test]
-//     fn find_names_test() {
-//         assert_eq!(find_name("vim.log", &["vim.log", "vim.log2"]), "vim.log_1");
-//     }
+    #[test]
+    fn remove_path_file_test() -> Result<()> {
+        let tempfile = NamedTempFile::new()?;
+        let path = tempfile.path();
+        remove_path(path)?;
+        assert!(!path.exists());
+        Ok(())
+    }
 
-//     #[test]
-//     fn find_names_test_2_test() {
-//         assert_eq!(find_name("vim.log", &["vim.log", "vim.log_1"]), "vim.log_2");
-//     }
-
-//     #[test]
-//     fn find_names_test_none_test() {
-//         assert_eq!(find_name("vim.log", &[""]), "vim.log");
-//     }
-
-//     #[test]
-//     fn find_names_multiple_test() {
-//         assert_eq!(
-//             find_names_multiple(
-//                 &["vim.log", "dude.txt", "vim.log"],
-//                 string_vec!["vim.log", "vim.log_1"]
-//             ),
-//             vec!["vim.log_2", "dude.txt", "vim.log_3"]
-//         );
-//     }
-
-//     #[test]
-//     fn find_names_multiple2_test() {
-//         assert_eq!(
-//             find_names_multiple(
-//                 &["vim.log", "vim.log", "vim.log_2", "vim.log"],
-//                 string_vec!["vim.log", "vim.log_1", "vim.log_3"]
-//             ),
-//             vec!["vim.log_2", "vim.log_4", "vim.log_2_1", "vim.log_5"]
-//         );
-//     }
-
-//     #[test]
-//     fn find_names_multiple_same_naming_test() {
-//         assert_eq!(
-//             find_names_multiple(
-//                 &["vim.log_1", "vim.log_2", "vim.log_3"],
-//                 string_vec!["vim.log_1", "vim.log_2", "vim.log_3"]
-//             ),
-//             vec!["vim.log_1_1", "vim.log_2_1", "vim.log_3_1"]
-//         );
-//     }
-
-// }
+    #[test]
+    fn move_path_file_test() {
+        
+    }
+}

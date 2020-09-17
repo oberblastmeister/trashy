@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::convert::TryInto;
+use std::str::FromStr;
 
 use chrono::NaiveDateTime;
 use nom::bytes::complete::{is_not, tag};
@@ -87,20 +88,25 @@ impl<'a, 'b> TryInto<TrashInfo> for TrashInfoStr<'a, 'b> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::{Context, Result};
 
     /// Only returns chrono result because if parsing with nom has failed this will return an error
     /// message and panic instead of returning a result.
     fn test_parse_trash_info<'a>(trash_info_str: &'a str, actual: (&str, &str)) -> Result<()> {
-        let expected = TrashInfo::from_str(trash_info_str)?;
+        let expected = match TrashInfo::from_str(trash_info_str) {
+            Err(e) => {
+                eprintln!("{}", e);
+                panic!("An error occurred");
+            }
+            Ok(trash_info) => trash_info
+        };
 
         let actual = TrashInfo::new(
-            actual.0,
+            PercentPath::from_str(actual.0),
             Some(
-                NaiveDateTime::parse_from_str(actual.1, TRASH_DATETIME_FORMAT)
-                    .context(ParseNaiveDate { date: actual.1 })?,
+                NaiveDateTime::parse_from_str(actual.1, TRASH_DATETIME_FORMAT)?
             ),
-        )
-        .context(TrashInfoCreation)?;
+        )?;
 
         assert_eq!(expected, actual);
 
