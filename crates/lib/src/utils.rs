@@ -1,6 +1,6 @@
+use std::ffi::OsStr;
 use std::fs;
 use std::io;
-use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
 use fs_extra::dir::{self, move_dir};
@@ -8,27 +8,19 @@ use fs_extra::file::{self, move_file};
 use log::{debug, error, info, warn};
 use snafu::{OptionExt, ResultExt, Snafu};
 
-use crate::{TRASH_FILE_DIR, TRASH_INFO_DIR, TRASH_DIR};
 use crate::{DIR_COPY_OPT, FILE_COPY_OPT};
+use crate::{TRASH_DIR, TRASH_FILE_DIR, TRASH_INFO_DIR};
 
 #[derive(Debug, Snafu)]
 pub enum Error {
     #[snafu(display("The path {} was not valid utf-8", path.display()))]
-    Utf8 {
-        path: PathBuf,
-    },
+    Utf8 { path: PathBuf },
 
     #[snafu(display("Failed to read path {}: {}", path.display(), source))]
-    ReadDir {
-        source: io::Error,
-        path: PathBuf,
-    },
+    ReadDir { source: io::Error, path: PathBuf },
 
     #[snafu(display("Failed to read directory entry from path {}: {}", path.display(), source))]
-    ReadDirEntry {
-        source: io::Error,
-        path: PathBuf,
-    },
+    ReadDirEntry { source: io::Error, path: PathBuf },
 
     #[snafu(display("Failed to move path {} to {}: {}", from.display(), to.display(), source))]
     MovePath {
@@ -109,10 +101,39 @@ pub(crate) fn read_dir_path<'a>(path: &'a Path) -> Result<impl Iterator<Item = P
 }
 
 #[cfg(test)]
+use tempfile::NamedTempFile;
+
+#[cfg(test)]
+use std::ops::Deref;
+
+#[cfg(test)]
+pub fn temp_file_iter<'a, T>(
+    dir: &'a T,
+    amount: usize,
+) -> impl Iterator<Item = NamedTempFile> + 'a
+where
+    T: AsRef<Path> + ?Sized,
+{
+
+    let dir = dir.as_ref();
+    (0..amount).map(move |_| NamedTempFile::new_in(dir).expect("Failed to create temp file"))
+}
+
+#[cfg(test)]
+pub fn contains_all_elements<T, U>(v1: Vec<T>, v2: Vec<&U>)
+where T: PartialEq + Deref<Target = U>,
+      U: PartialEq + ?Sized
+{
+    assert_eq!(v1.len(), v2.len());
+    assert!(v1.into_iter().all(|e| v2.contains(&&*e)));
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::{NamedTempFile, tempdir};
     use anyhow::{Context, Result};
+    use tempfile::{tempdir, NamedTempFile};
+
 
     #[test]
     fn read_dir_path_test() -> Result<()> {
@@ -120,23 +141,13 @@ mod tests {
 
         let tempdir = tempdir()?;
         let tempdir_path = tempdir.path();
-        let mut temp_files = Vec::with_capacity(TEMP_FILE_AMOUNT);
 
-        for _ in 0..TEMP_FILE_AMOUNT {
-            let temp_file = NamedTempFile::new_in(tempdir_path)?;
-            temp_files.push(temp_file);
-        }
+        let temp_files: Vec<_> = temp_file_iter(tempdir_path, TEMP_FILE_AMOUNT).collect();
+        let temp_file_paths: Vec<_> = temp_files.iter().map(|file| file.path()).collect();
 
         let paths: Vec<_> = read_dir_path(tempdir_path)?.collect();
 
-        assert_eq!(paths.len(), temp_files.len());
-
-        let temp_files_path: Vec<_> = temp_files.iter()
-            .map(|file| file.path()).collect();
-
-        for path in paths {
-            assert!(temp_files_path.contains(&&*path));
-        }
+        contains_all_elements(paths, temp_file_paths);
 
         Ok(())
     }

@@ -7,7 +7,7 @@ use snafu::{ensure, OptionExt, Snafu};
 use crate::percent_path::{self, PercentPath};
 use crate::trash_info::{self, TrashInfo};
 use crate::utils::{self, convert_to_str, move_path, read_dir_path, remove_path};
-use crate::{TRASH_FILE_DIR, TRASH_INFO_DIR, TRASH_DIR};
+use crate::{TRASH_DIR, TRASH_FILE_DIR, TRASH_INFO_DIR};
 
 /// Represents an entry in the trash directory. Includes the file path and the trash info path.
 #[derive(Debug)]
@@ -19,35 +19,23 @@ pub struct TrashEntry {
 #[derive(Snafu, Debug)]
 pub enum Error {
     #[snafu(display("The trash info path {} does not exist", path.display()))]
-    ExistsInfoPath {
-        path: PathBuf,
-    },
+    ExistsInfoPath { path: PathBuf },
 
     #[snafu(display("The trash file path {} does not exist", path.display()))]
-    ExistsFilePath {
-        path: PathBuf,
-    },
+    ExistsFilePath { path: PathBuf },
 
     #[snafu(display("There is not a file name for path {}", path.display()))]
-    NoFileName {
-        path: PathBuf,
-    },
+    NoFileName { path: PathBuf },
 
     #[snafu(context(false))]
-    DecodePercentPath {
-        source: percent_path::Error,
-    },
+    DecodePercentPath { source: percent_path::Error },
 
     #[snafu(context(false))]
-    ParseTrashInfo {
-        source: trash_info::Error,
-    },
+    ParseTrashInfo { source: trash_info::Error },
 
     #[snafu(context(false))]
     #[snafu(display("Utils error: {}", source))]
-    Utils {
-        source: utils::Error,
-    },
+    Utils { source: utils::Error },
 
     #[snafu(display("Moving path {} into the trash directory when it is already there", path.display()))]
     CreationInTrash { path: PathBuf },
@@ -71,6 +59,14 @@ impl TrashEntry {
         };
         trash_entry.is_valid()?;
         Ok(trash_entry)
+    }
+
+    pub fn info_path(&self) -> &Path {
+        &self.info_path
+    }
+
+    pub fn file_path(&self) -> &Path {
+        &self.file_path
     }
 
     /// Create a trash entry from a path not in the trash directory. Will move the path to the
@@ -177,7 +173,8 @@ fn find_name<'a>(s: &'a str, existing: &[&str]) -> Cow<'a, str> {
 }
 
 fn in_trash_dir(path: impl AsRef<Path>) -> bool {
-    path.as_ref().parent()
+    path.as_ref()
+        .parent()
         .and_then(|p| p.parent())
         .map(|p| p == *TRASH_DIR)
         .unwrap_or(false)
@@ -186,7 +183,9 @@ fn in_trash_dir(path: impl AsRef<Path>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::{contains_all_elements, temp_file_iter};
     use anyhow::{Context, Result};
+    use tempfile::{tempdir, NamedTempFile};
 
     #[test]
     fn find_names_test() {
@@ -210,12 +209,18 @@ mod tests {
 
     #[test]
     fn in_trash_dir_files() {
-        assert_eq!(in_trash_dir("/home/brian/.local/share/Trash/files/a_file"), true);
+        assert_eq!(
+            in_trash_dir("/home/brian/.local/share/Trash/files/a_file"),
+            true
+        );
     }
 
     #[test]
     fn ins_trash_dir_info_test() {
-        assert_eq!(in_trash_dir("/home/brian/.local/share/Trash/info/another_file"), true);
+        assert_eq!(
+            in_trash_dir("/home/brian/.local/share/Trash/info/another_file"),
+            true
+        );
     }
 
     #[test]
@@ -229,9 +234,41 @@ mod tests {
     }
 
     #[test]
-    fn read_dir_trash_entries_test() -> Result<()> {
-        let tents: Vec<_> = read_dir_trash_entries()?.collect();
-        println!("{:?}", tents);
+    fn read_dir_trash_entries_test_none() -> Result<()> {
+        const TEMP_FILE_AMOUNT: usize = 20;
+
+        let _: Vec<_> = temp_file_iter(&*TRASH_FILE_DIR, TEMP_FILE_AMOUNT).collect();
+
+        let trash_entries: Vec<_> = read_dir_trash_entries()?.collect();
+        assert_eq!(trash_entries.len(), 0);
+
+        Ok(())
+    }
+
+    #[ignore]
+    #[test]
+    fn test_temp_file_iter() {
+        let _: Vec<_> = temp_file_iter(&*TRASH_FILE_DIR, 20).map(|temp| temp.keep().expect("Failed to keep tempfile")).collect();
+    }
+
+    #[ignore]
+    #[test]
+    fn read_dir_trash_entries_test_some_test() -> Result<()> {
+        const TEMP_FILE_AMOUNT: usize = 20;
+
+        let temp_files: Vec<_> = temp_file_iter(&*TRASH_FILE_DIR, TEMP_FILE_AMOUNT).collect();
+        let temp_file_paths: Vec<_> = temp_files.iter().map(|file| file.path()).collect();
+
+        let trash_entries: Vec<_> = read_dir_trash_entries()?.collect();
+        let trash_entry_paths: Vec<&Path> = trash_entries
+            .iter()
+            .map(|tent| tent.file_path())
+            .map(|path| path.file_name().expect("Must have file name"))
+            .map(|os_s| os_s.as_ref())
+            .collect();
+
+        contains_all_elements(trash_entry_paths, temp_file_paths);
+
         Ok(())
     }
 }

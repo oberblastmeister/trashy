@@ -94,6 +94,7 @@ mod tests {
     use std::fs::File;
     use std::io::Write;
 
+    #[ignore]
     #[test]
     fn put_test_single() -> Result<()> {
         let path = "/tmp/test_trash";
