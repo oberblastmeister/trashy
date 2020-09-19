@@ -1,15 +1,14 @@
-use std::ffi::OsStr;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
 use fs_extra::dir::{self, move_dir};
 use fs_extra::file::{self, move_file};
-use log::{debug, error, info, warn};
+use log::warn;
 use snafu::{OptionExt, ResultExt, Snafu};
 
 use crate::{DIR_COPY_OPT, FILE_COPY_OPT};
-use crate::{TRASH_DIR, TRASH_FILE_DIR, TRASH_INFO_DIR};
+use crate::TRASH_INFO_DIR;
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -38,16 +37,13 @@ pub enum Error {
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
 
-fn to_directory<T: AsRef<Path>>(path: T, dir: &Path) -> PathBuf {
+/// makes the paths parent directory a new directory
+pub fn to_directory(path: impl AsRef<Path>, dir: impl AsRef<Path>) -> PathBuf {
     let path = path.as_ref();
-    let mut dir = dir.to_path_buf();
+    let mut dir = dir.as_ref().to_path_buf();
     let file_name = path.file_name().expect("BUG: must have filename");
     dir.push(file_name);
     dir
-}
-
-pub fn to_trash_info_dir(path: impl AsRef<Path>) -> PathBuf {
-    to_directory(path, &TRASH_INFO_DIR)
 }
 
 pub fn convert_to_str(path: &Path) -> Result<&str> {
@@ -168,5 +164,15 @@ mod tests {
         remove_path(path)?;
         assert!(!path.exists());
         Ok(())
+    }
+
+    #[test]
+    fn to_dir_simple_test() {
+        assert_eq!(to_directory("a_file", "a_dir"), PathBuf::from("a_dir/a_file"));
+    }
+
+    #[test]
+    fn to_dir_already_dir_test() {
+        assert_eq!(to_directory("/tmp/hello/a_file", "another_directory"), PathBuf::from("another_directory/a_file"));
     }
 }

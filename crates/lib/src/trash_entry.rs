@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
-use log::{debug, error, info, warn};
+use log::warn;
 use snafu::{ensure, OptionExt, Snafu};
 
 use crate::percent_path::{self, PercentPath};
@@ -81,7 +81,7 @@ impl TrashEntry {
         let percent_path = PercentPath::from_path(path)?;
         let name = find_name_trash_entry(path, existing)?;
         let name = name.as_ref();
-        TrashInfo::new(percent_path, None)?.save(name)?;
+        TrashInfo::new(percent_path, None).save(name)?;
         move_path(path, TRASH_FILE_DIR.join(name))?;
         Ok(TrashEntry::new(name)?)
     }

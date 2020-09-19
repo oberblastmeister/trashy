@@ -81,7 +81,7 @@ impl<'a, 'b> TryInto<TrashInfo> for TrashInfoStr<'a, 'b> {
                 },
             )?;
 
-        Ok(TrashInfo::new(percent_path, Some(deletion_date)).unwrap())
+        Ok(TrashInfo::new(percent_path, Some(deletion_date)))
     }
 }
 
@@ -106,7 +106,7 @@ mod tests {
             Some(
                 NaiveDateTime::parse_from_str(actual.1, TRASH_DATETIME_FORMAT)?
             ),
-        )?;
+        );
 
         assert_eq!(expected, actual);
 
