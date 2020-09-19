@@ -171,9 +171,9 @@ mod tests {
     use super::*;
     use crate::HOME_DIR;
     use anyhow::Result;
-    use tempfile::tempfile_in;
+    use tempfile::{NamedTempFile, tempfile_in};
     use std::fs;
-    use std::io::Read;
+    use std::io::{Write, Seek, SeekFrom, Read};
 
     lazy_static!{
         static ref TEST_OPEN_OPTIONS: OpenOptions = {
@@ -214,6 +214,7 @@ mod tests {
         assert_eq!(trash_info.to_string(), "[Trash Info]\nPath=hello\nDeletionDate=hello");
     }
 
+    #[ignore]
     #[test]
     fn save_trash_info_test() -> Result<()> {
         let trash_info = TrashInfo::new(PercentPath::from_str("this/is/a/path"), None);
@@ -225,6 +226,23 @@ mod tests {
         let mut contents = String::new();
         temp_trash_info_file.read_to_string(&mut contents)?;
         println!("contents: {}", contents);
+
+        assert_eq!(trash_info.to_string(), contents);
+
+        Ok(())
+    }
+
+    #[test]
+    fn save_trash_info_test_test() -> Result<()> {
+        let trash_info = TrashInfo::new(PercentPath::from_str("this/is/a/path"), None);
+        
+        let mut temp_trash_info_file = tempfile_in(&*TRASH_INFO_DIR)?;
+
+        save_trash_info(&mut temp_trash_info_file, trash_info.clone(), &TEST_OPEN_OPTIONS)?;
+        temp_trash_info_file.seek(SeekFrom::Start(0))?;
+
+        let mut contents = String::new();
+        temp_trash_info_file.read_to_string(&mut contents)?;
 
         assert_eq!(trash_info.to_string(), contents);
 
