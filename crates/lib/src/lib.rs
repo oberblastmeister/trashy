@@ -34,6 +34,16 @@ pub enum Error {
         source: trash_entry::Error,
     },
 
+    #[snafu(display("Failed to create new trash entry by moving a path and creating a trash info file: {}", source))]
+    TrashEntryCreation {
+        source: trash_entry::Error,
+    },
+
+    #[snafu(display("Failed to read an iterator of trash entries: {}", source))]
+    ReadDirTrashEntry {
+        source: trash_entry::Error,
+    },
+
     #[snafu(display("Failed to restore trash entry {}", source))]
     TrashEntryRestore {
         source: trash_entry::Error,
@@ -75,16 +85,24 @@ pub fn remove_all() -> Result<()> {
     Ok(())
 }
 
-/// Put a list of paths into the trash
-pub fn put(paths: &[impl AsRef<Path>]) -> Result<()> {
-    let mut existing: Vec<_> = read_dir_trash_entries().unwrap().collect();
+/// Put a list of paths into the trash and returns the newly created trash_entries. Will panic if the
+/// paths are empty!
+pub fn put(paths: &[impl AsRef<Path>]) -> Result<Vec<TrashEntry>> {
+    if paths.is_empty() {
+        panic!("Attempting to put empty paths");
+    }
+
+    let mut existing: Vec<_> = read_dir_trash_entries().context(ReadDirTrashEntry)?.collect();
+    let old_trash_entries_end = existing.len() - 1;
     
     for path in paths {
-        let trash_entry = TrashEntry::create(path, &existing).unwrap();
+        let trash_entry = TrashEntry::create(path, &existing).context(TrashEntryCreation)?;
         existing.push(trash_entry)
     }
 
-    Ok(())
+    existing.drain(..old_trash_entries_end);
+
+    Ok(existing)
 }
 
 #[cfg(test)]
@@ -92,16 +110,22 @@ mod tests {
     use super::*;
     use anyhow::{Context, Result};
     use std::fs::File;
+    use tempfile::NamedTempFile;
     use std::io::Write;
 
-    #[ignore]
+    #[should_panic]
+    #[test]
+    fn put_test_nothing_test() {
+        let nothing: [&str; 0] = [];
+        let _ = put(&nothing);
+    }
+
     #[test]
     fn put_test_single() -> Result<()> {
-        let path = "/tmp/test_trash";
-        let mut tempfile = File::create(path)?;
-        tempfile.write_all(b"this is a test trash file")?;
-        drop(tempfile);
-        put(&[path])?;
+        let mut tempfile = NamedTempFile::new()?;
+        tempfile.write_all(b"this is for the put_test_single")?;
+        put(&[tempfile.path()])?;
+        // tempfile.close()?; // TODO: fix this failure
 
         Ok(())
     }

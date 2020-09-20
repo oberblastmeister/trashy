@@ -7,7 +7,7 @@ use snafu::{ensure, OptionExt, Snafu};
 use crate::percent_path::{self, PercentPath};
 use crate::trash_info::{self, TrashInfo};
 use crate::utils::{self, convert_to_str, move_path, read_dir_path, remove_path};
-use crate::{TRASH_DIR, TRASH_FILE_DIR, TRASH_INFO_DIR};
+use crate::{TRASH_DIR, TRASH_FILE_DIR, TRASH_INFO_DIR, TRASH_INFO_EXT};
 
 /// Represents an entry in the trash directory. Includes the file path and the trash info path.
 #[derive(Debug)]
@@ -51,13 +51,21 @@ impl TrashEntry {
     pub fn new(name: impl AsRef<Path>) -> Result<TrashEntry> {
         let name = name.as_ref();
         let name = name.file_name().context(NoFileName { path: name })?;
-        let info_path = TRASH_INFO_DIR.join(name);
+
+        // the info path is the name and the info dir with an extension
+        let mut info_path = TRASH_INFO_DIR.join(name);
+        info_path.set_extension(&TRASH_INFO_EXT);
+
+        // same for file path
         let file_path = TRASH_FILE_DIR.join(name);
+
+        // create the trash entry struct and check if it is valid
         let trash_entry = TrashEntry {
             info_path,
             file_path,
         };
         trash_entry.is_valid()?;
+
         Ok(trash_entry)
     }
 
@@ -78,11 +86,16 @@ impl TrashEntry {
         if in_trash_dir(path) {
             CreationInTrash { path }.fail()?;
         }
-        let percent_path = PercentPath::from_path(path)?;
         let name = find_name_trash_entry(path, existing)?;
         let name = name.as_ref();
-        TrashInfo::new(percent_path, None).save(name)?;
+
+        // create the trash info file
+        TrashInfo::new(PercentPath::from_path(path)?, None).save(name)?;
+
+        // move the path the the trash file dir
         move_path(path, TRASH_FILE_DIR.join(name))?;
+
+        // return the trash entry that was created
         Ok(TrashEntry::new(name)?)
     }
 
@@ -152,24 +165,37 @@ where
                 .file_name()
                 .expect("Need to have file name")
         })
-        .map(|p| convert_to_str(p.as_ref()).unwrap())
+        .map(|p| convert_to_str(p.as_ref()).unwrap()) // TODO: fix unwrap
         .collect();
 
-    let res = find_name(path, &existing_names);
+    let res = find_name(path, &existing_names)?;
     Ok(res)
 }
 
-fn find_name<'a>(s: &'a str, existing: &[&str]) -> Cow<'a, str> {
-    (0..200)
-        .map(|n| {
-            if n == 0 {
-                Cow::Borrowed(s)
+fn find_name<'a, T>(path: &'a T, existing: &[&str]) -> Result<Cow<'a, str>> 
+where T: AsRef<Path> + ?Sized
+{
+    let name = path.as_ref().file_name().expect("Must have filename");
+    let name = convert_to_str(name.as_ref())?;
+
+    let res = (0..1000)
+        .map(|num| {
+            if num == 0 {
+                Cow::Borrowed(name)
             } else {
-                Cow::Owned(format!("{}_{}", s, n))
+                Cow::Owned(format!("{}_{}", name, num))
             }
         })
-        .find(|new_path| !existing.contains(&&**new_path))
-        .expect("BUG: path must be found, iterator is infinite")
+        .find(|new_path| !contains_contains(existing, new_path))
+        .expect("BUG: timeout is too small for find_name");
+    Ok(res)
+}
+
+fn contains_contains(slice: &[&str], item: &str) -> bool {
+    slice.into_iter()
+        .any(|s| {
+            s.contains(item)
+        })
 }
 
 fn in_trash_dir(path: impl AsRef<Path>) -> bool {
@@ -186,20 +212,30 @@ mod tests {
     use crate::utils::{contains_all_elements, temp_file_iter};
     use anyhow::{Context, Result};
     use tempfile::{tempdir, NamedTempFile};
+    use std::io::Write;
 
     #[test]
-    fn find_names_test() {
-        assert_eq!(find_name("vim.log", &["vim.log", "vim.log2"]), "vim.log_1");
+    fn find_names_test() -> Result<()> {
+        assert_eq!(find_name("vim.log", &["vim.log", "vim.log2"])?, "vim.log_1");
+        Ok(())
     }
 
     #[test]
-    fn find_names_test_2_test() {
-        assert_eq!(find_name("vim.log", &["vim.log", "vim.log_1"]), "vim.log_2");
+    fn find_names_test_2_test() -> Result<()> {
+        assert_eq!(find_name("vim.log", &["vim.log", "vim.log_1"])?, "vim.log_2");
+        Ok(())
     }
 
     #[test]
-    fn find_names_test_none_test() {
-        assert_eq!(find_name("vim.log", &[""]), "vim.log");
+    fn find_names_test_none_test() -> Result<()> {
+        assert_eq!(find_name("vim.log", &[""])?, "vim.log");
+        Ok(())
+    }
+
+    #[test]
+    fn find_names_already_in_dir_test() -> Result<()> {
+        assert_eq!(find_name("/tmp/vim.log", &["vim.log", "vim.log_1"])?, "vim.log_2");
+        Ok(())
     }
 
     #[test]
@@ -268,6 +304,17 @@ mod tests {
             .collect();
 
         contains_all_elements(trash_entry_paths, temp_file_paths);
+
+        Ok(())
+    }
+
+    #[ignore]
+    #[test]
+    fn trash_entry_create_test() -> Result<()> {
+        let mut tempfile = NamedTempFile::new()?;
+        tempfile.write_all(b"this is for the trash_entry_create_test")?;
+        let existing: Vec<_> = read_dir_trash_entries()?.collect();
+        let trash_entry = TrashEntry::create(tempfile.path(), &existing)?;
 
         Ok(())
     }

@@ -9,13 +9,13 @@ use std::str::FromStr;
 // use chrono::{Local, NaiveDateTime};
 use chrono::prelude::*;
 use fs::File;
-use snafu::{ResultExt, Snafu};
 use lazy_static::lazy_static;
+use snafu::{ResultExt, Snafu};
 
 use super::parser::{self, parse_trash_info, TRASH_DATETIME_FORMAT};
 use crate::percent_path::PercentPath;
-use crate::{TRASH_INFO_DIR, TRASH_INFO_EXT};
 use crate::utils::to_directory;
+use crate::{TRASH_INFO_DIR, TRASH_INFO_EXT};
 
 lazy_static! {
     static ref OPEN_OPTIONS: OpenOptions = {
@@ -47,6 +47,9 @@ pub enum Error {
 
     #[snafu(display("Wrong extension for path {}", path.display()))]
     WrongExtension { path: PathBuf },
+
+    #[snafu(display("The path {} does not exist", path.display()))]
+    NonExistentPath { path: PathBuf },
 }
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -58,10 +61,7 @@ pub struct TrashInfo {
 }
 
 impl TrashInfo {
-    pub(super) fn new(
-        percent_path: PercentPath,
-        deletion_date: Option<NaiveDateTime>,
-    ) -> Self {
+    pub(super) fn new(percent_path: PercentPath, deletion_date: Option<NaiveDateTime>) -> Self {
         let deletion_date = deletion_date.unwrap_or(Local::now().naive_local());
 
         TrashInfo {
@@ -74,13 +74,13 @@ impl TrashInfo {
     pub(super) fn save(self, name: impl AsRef<Path>) -> Result<()> {
         let path = get_trash_info_path(name);
         let mut trash_info_file = OPEN_OPTIONS.open(&path).context(FileOpen { path })?;
-        save_trash_info(&mut trash_info_file, self, &OPEN_OPTIONS)?;
+        save_trash_info(&mut trash_info_file, self)?;
         Ok(())
     }
 
     pub(crate) fn parse_from_path(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
-        check_extension(path)?;
+        validate_path(path)?;
         let trash_info = fs::read_to_string(path)
             .context(ReadToStr { path })?
             .parse::<TrashInfo>()?;
@@ -145,25 +145,34 @@ fn get_trash_info_path(name: impl AsRef<Path>) -> PathBuf {
     path
 }
 
-fn save_trash_info(file: &mut File, trash_info: TrashInfo, open_options: &OpenOptions) -> Result<()> {
-    file
-        .write_all(trash_info.to_string().as_bytes())
+fn save_trash_info(
+    file: &mut File,
+    trash_info: TrashInfo,
+) -> Result<()> {
+    file.write_all(trash_info.to_string().as_bytes())
         .context(TrashInfoWrite)?;
 
     Ok(())
 }
 
 /// Checks if the extension is correct or no extension
-fn check_extension(path: impl AsRef<Path>) -> Result<()> {
+fn check_extension(path: impl AsRef<Path>) -> bool {
     let path = path.as_ref();
-    if let Some(ext) = path.extension() {
-        if ext != TRASH_INFO_EXT {
-            WrongExtension { path }.fail()?;
-        }
-    } else {
-        WrongExtension { path }.fail()?;
+    match path.extension() {
+        Some(ext) if ext == TRASH_INFO_EXT => true,
+        _ => false,
     }
-    Ok(())
+}
+
+fn validate_path(path: impl AsRef<Path>) -> Result<()> {
+    let path = path.as_ref();
+    if !check_extension(path) {
+        WrongExtension { path }.fail()
+    } else if !path.exists() {
+        NonExistentPath { path }.fail()
+    } else {
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -171,74 +180,72 @@ mod tests {
     use super::*;
     use crate::HOME_DIR;
     use anyhow::Result;
-    use tempfile::{NamedTempFile, tempfile_in};
-    use std::fs;
-    use std::io::{Write, Seek, SeekFrom, Read};
+    use std::io::{Read, Seek, SeekFrom};
+    use tempfile::tempfile_in;
 
-    lazy_static!{
-        static ref TEST_OPEN_OPTIONS: OpenOptions = {
-            let mut open_options = OpenOptions::new();
-            open_options
-                .read(true) // read access false
-                .write(true) // write access true
-                .append(false) // do not append to file
-                .truncate(false) // do not truncate file
-                .create(false); // create the file if it does not exist or open existing file
-            open_options
-        };
-    }
+    // lazy_static! {
+    //     static ref TEST_OPEN_OPTIONS: OpenOptions = {
+    //         let mut open_options = OpenOptions::new();
+    //         open_options
+    //             .read(true) // read access false
+    //             .write(true) // write access true
+    //             .append(false) // do not append to file
+    //             .truncate(false) // do not truncate file
+    //             .create(false); // create the file if it does not exist or open existing file
+    //         open_options
+    //     };
+    // }
 
     #[test]
     fn get_trash_info_path_test() {
-        assert_eq!(get_trash_info_path("this_is_a_name"), HOME_DIR.join(".local/share/Trash/info/this_is_a_name.trashinfo"));
+        assert_eq!(
+            get_trash_info_path("this_is_a_name"),
+            HOME_DIR.join(".local/share/Trash/info/this_is_a_name.trashinfo")
+        );
     }
 
     #[test]
     fn get_trash_info_path_already_extnesion_test() {
-        assert_eq!(get_trash_info_path("already_extension.trashinfo"), HOME_DIR.join(".local/share/Trash/info/already_extension.trashinfo"));
+        assert_eq!(
+            get_trash_info_path("already_extension.trashinfo"),
+            HOME_DIR.join(".local/share/Trash/info/already_extension.trashinfo")
+        );
     }
 
     #[test]
     fn trash_format_test() {
-        let time = Local.ymd(2014, 7, 8).and_hms_milli(9, 10, 11, 12).naive_local();
+        let time = Local
+            .ymd(2014, 7, 8)
+            .and_hms_milli(9, 10, 11, 12)
+            .naive_local();
         let s = trash_info_format(time);
         assert_eq!(s, "2014-07-08T09:10:11");
     }
 
-    #[ignore]
     #[test]
     fn trash_info_display_test() {
-        let time = Local.ymd(2020, 4, 9).and_hms_nano(9, 11, 10, 12_000_000).naive_local();
+        let time = Local
+            .ymd(2020, 4, 9)
+            .and_hms_nano(9, 11, 10, 12_000_000)
+            .naive_local();
         let percent_path = PercentPath::from_str("/a/directory");
-        let trash_info = TrashInfo::new(percent_path, Some(time));
-        assert_eq!(trash_info.to_string(), "[Trash Info]\nPath=hello\nDeletionDate=hello");
-    }
-
-    #[ignore]
-    #[test]
-    fn save_trash_info_test() -> Result<()> {
-        let trash_info = TrashInfo::new(PercentPath::from_str("this/is/a/path"), None);
-        
-        let mut temp_trash_info_file = tempfile_in(&*TRASH_INFO_DIR)?;
-
-        save_trash_info(&mut temp_trash_info_file, trash_info.clone(), &TEST_OPEN_OPTIONS)?;
-
-        let mut contents = String::new();
-        temp_trash_info_file.read_to_string(&mut contents)?;
-        println!("contents: {}", contents);
-
-        assert_eq!(trash_info.to_string(), contents);
-
-        Ok(())
+        let trash_info = TrashInfo::new(percent_path.clone(), Some(time));
+        assert_eq!(
+            trash_info.to_string(),
+            format!("[Trash Info]\nPath={}\nDeletionDate={}", percent_path, trash_info_format(time)),
+        );
     }
 
     #[test]
     fn save_trash_info_test_test() -> Result<()> {
         let trash_info = TrashInfo::new(PercentPath::from_str("this/is/a/path"), None);
-        
+
         let mut temp_trash_info_file = tempfile_in(&*TRASH_INFO_DIR)?;
 
-        save_trash_info(&mut temp_trash_info_file, trash_info.clone(), &TEST_OPEN_OPTIONS)?;
+        save_trash_info(
+            &mut temp_trash_info_file,
+            trash_info.clone(),
+        )?;
         temp_trash_info_file.seek(SeekFrom::Start(0))?;
 
         let mut contents = String::new();
