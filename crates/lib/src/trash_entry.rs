@@ -1,8 +1,10 @@
 use std::borrow::Cow;
+use std::io;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
 use log::warn;
-use snafu::{ensure, OptionExt, Snafu};
+use snafu::{ResultExt, Snafu, OptionExt, ensure};
 
 use crate::percent_path::{self, PercentPath};
 use crate::trash_info::{self, TrashInfo};
@@ -29,6 +31,12 @@ pub enum Error {
 
     #[snafu(context(false))]
     DecodePercentPath { source: percent_path::Error },
+
+    #[snafu(display("Failed to read entries from path {}: {}", path.display(), source))]
+    ReadDirPath { source: io::Error, path: PathBuf },
+
+    #[snafu(display("The path {} was not found"))]
+    NotFound { path: PathBuf },
 
     #[snafu(context(false))]
     ParseTrashInfo { source: trash_info::Error },
@@ -141,7 +149,13 @@ impl TrashEntry {
 }
 
 pub fn read_dir_trash_entries() -> Result<impl Iterator<Item = TrashEntry>> {
-    let iter = read_dir_path(&TRASH_FILE_DIR)?
+    let res = read_dir_path(&TRASH_FILE_DIR);
+    if let Err(ref e) = res {
+        if e.kind() == ErrorKind::NotFound {
+            NotFound { path: &*TRASH_FILE_DIR }.fail()?;
+        }
+    }
+    let iter = res.context(ReadDirPath { path: &*TRASH_FILE_DIR })?
         .map(|path| TrashEntry::new(path))
         .inspect(|res| {
             if let Some(e) = res.as_ref().err() {
@@ -172,8 +186,9 @@ where
     Ok(res)
 }
 
-fn find_name<'a, T>(path: &'a T, existing: &[&str]) -> Result<Cow<'a, str>> 
-where T: AsRef<Path> + ?Sized
+fn find_name<'a, T>(path: &'a T, existing: &[&str]) -> Result<Cow<'a, str>>
+where
+    T: AsRef<Path> + ?Sized,
 {
     let name = path.as_ref().file_name().expect("Must have filename");
     let name = convert_to_str(name.as_ref())?;
@@ -192,10 +207,7 @@ where T: AsRef<Path> + ?Sized
 }
 
 fn contains_contains(slice: &[&str], item: &str) -> bool {
-    slice.into_iter()
-        .any(|s| {
-            s.contains(item)
-        })
+    slice.into_iter().any(|s| s.contains(item))
 }
 
 fn in_trash_dir(path: impl AsRef<Path>) -> bool {
@@ -211,8 +223,8 @@ mod tests {
     use super::*;
     use crate::utils::{contains_all_elements, temp_file_iter};
     use anyhow::{Context, Result};
-    use tempfile::{tempdir, NamedTempFile};
     use std::io::Write;
+    use tempfile::{tempdir, NamedTempFile};
 
     #[test]
     fn find_names_test() -> Result<()> {
@@ -222,7 +234,10 @@ mod tests {
 
     #[test]
     fn find_names_test_2_test() -> Result<()> {
-        assert_eq!(find_name("vim.log", &["vim.log", "vim.log_1"])?, "vim.log_2");
+        assert_eq!(
+            find_name("vim.log", &["vim.log", "vim.log_1"])?,
+            "vim.log_2"
+        );
         Ok(())
     }
 
@@ -234,7 +249,10 @@ mod tests {
 
     #[test]
     fn find_names_already_in_dir_test() -> Result<()> {
-        assert_eq!(find_name("/tmp/vim.log", &["vim.log", "vim.log_1"])?, "vim.log_2");
+        assert_eq!(
+            find_name("/tmp/vim.log", &["vim.log", "vim.log_1"])?,
+            "vim.log_2"
+        );
         Ok(())
     }
 
@@ -284,7 +302,9 @@ mod tests {
     #[ignore]
     #[test]
     fn test_temp_file_iter() {
-        let _: Vec<_> = temp_file_iter(&*TRASH_FILE_DIR, 20).map(|temp| temp.keep().expect("Failed to keep tempfile")).collect();
+        let _: Vec<_> = temp_file_iter(&*TRASH_FILE_DIR, 20)
+            .map(|temp| temp.keep().expect("Failed to keep tempfile"))
+            .collect();
     }
 
     #[ignore]
