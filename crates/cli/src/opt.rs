@@ -1,11 +1,11 @@
-use structopt::StructOpt;
-
 mod subcommand;
 
-use subcommand::Subcommand;
+use structopt::StructOpt;
 
-#[derive(StructOpt, Debug, PartialEq)]
-pub struct Opt {
+use subcommand::SubCommand;
+
+#[derive(Debug, StructOpt)]
+struct Opt {
     #[structopt(subcommand)]
-    pub subcmd: Subcommand
+    subcmd: SubCommand,
 }
