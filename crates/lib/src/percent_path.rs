@@ -27,13 +27,13 @@ type Result<T, E = Error> = ::std::result::Result<T, E>;
 pub struct PercentPath(String);
 
 impl PercentPath {
-    pub fn from_path(path: impl AsRef<Path>) -> Result<Self> {
+    pub(crate) fn from_path(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
         let s = convert_to_str(path)?;
         Ok(Self(utf8_percent_encode(s, NON_ALPHANUMERIC).to_string()))
     }
 
-    pub fn from_str(s: &str) -> Self {
+    pub(crate) fn from_str(s: &str) -> Self {
         // Self(utf8_percent_encode(s, NON_ALPHANUMERIC).to_string())
         Self(s.to_string())
     }
