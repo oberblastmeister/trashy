@@ -156,7 +156,7 @@ mod tests {
     fn trash_info_parse_test() {
         test_parse_trash_info_run(
             "[Trash Info]\nPath=/home/brian/dude.txt\nDeletionDate=2020-08-28T16:16:55",
-            ("/home/brian/dude.txt", "2020-08-28T16:16:55"),
+            ("/home/brian/dude.txt", "2020-09-21T08:34:36"),
         )
     }
 }

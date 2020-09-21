@@ -34,7 +34,8 @@ impl PercentPath {
     }
 
     pub fn from_str(s: &str) -> Self {
-        Self(utf8_percent_encode(s, NON_ALPHANUMERIC).to_string())
+        // Self(utf8_percent_encode(s, NON_ALPHANUMERIC).to_string())
+        Self(s.to_string())
     }
 
     pub fn encoded(&self) -> &str {

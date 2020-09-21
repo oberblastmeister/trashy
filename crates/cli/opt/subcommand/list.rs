@@ -15,9 +15,9 @@ lazy_static! {
 }
 
 #[derive(StructOpt, Debug, PartialEq)]
-pub struct ListOpts {}
+pub struct ListOpt {}
 
-pub fn trash_list(_opt: ListOpts) -> Result<()> {
+pub fn trash_list(_opt: ListOpt) -> Result<()> {
     let res = read_dir_trash_entries();
     let iter = match res {
         Err(ref e) => match e {
@@ -28,11 +28,15 @@ pub fn trash_list(_opt: ListOpts) -> Result<()> {
     };
     let mut table = Table::new();
 
-    iter.map(|trash_entry| {
+    iter
+    // .inspect(|t| println!("{:?}", t))
+    .map(|trash_entry| {
         let trash_info = trash_entry.parse_trash_info();
-        (trash_entry, trash_info)
+        trash_info
     })
-    .filter_map(|tuple| tuple.1.ok())
+    .inspect(|t| println!("{:?}", t))
+    .filter_map(Result::ok)
+    // .inspect(|t| println!("{}", t))
     .sorted()
     .map(|trash_info| -> Result<Row> {
         row_from_trash_info(trash_info)

@@ -180,21 +180,8 @@ mod tests {
     use super::*;
     use crate::HOME_DIR;
     use anyhow::Result;
-    use std::io::{Read, Seek, SeekFrom};
-    use tempfile::tempfile_in;
-
-    // lazy_static! {
-    //     static ref TEST_OPEN_OPTIONS: OpenOptions = {
-    //         let mut open_options = OpenOptions::new();
-    //         open_options
-    //             .read(true) // read access false
-    //             .write(true) // write access true
-    //             .append(false) // do not append to file
-    //             .truncate(false) // do not truncate file
-    //             .create(false); // create the file if it does not exist or open existing file
-    //         open_options
-    //     };
-    // }
+    use std::io::{Write, Read, Seek, SeekFrom};
+    use tempfile::{NamedTempFile, tempfile_in, Builder};
 
     #[test]
     fn get_trash_info_path_test() {
@@ -253,6 +240,21 @@ mod tests {
 
         assert_eq!(trash_info.to_string(), contents);
 
+        Ok(())
+    }
+
+    #[test]
+    fn parse_from_path_test() -> Result<()> {
+        let s = "[Trash Info]
+Path=/home/brian/.stardict
+DeletionDate=2020-09-21T08:34:36";
+        let mut temp = Builder::new()
+            .prefix("parse_from_path_test")
+            .suffix(".trashinfo")
+            .tempfile()?;
+        temp.write_all(s.as_bytes())?;
+        let temp_path = temp.path();
+        assert_eq!(TrashInfo::parse_from_path(temp_path)?.to_string(), s);
         Ok(())
     }
 }

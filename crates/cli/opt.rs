@@ -5,7 +5,7 @@ use structopt::StructOpt;
 use subcommand::SubCommand;
 
 #[derive(Debug, StructOpt)]
-struct Opt {
+pub struct Opt {
     #[structopt(subcommand)]
-    subcmd: SubCommand,
+    pub subcmd: SubCommand,
 }
