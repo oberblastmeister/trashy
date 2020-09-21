@@ -77,9 +77,8 @@ pub(crate) fn remove_path(path: impl AsRef<Path>) -> Result<()> {
     .context(RemovePath { path })
 }
 
-pub(crate) fn read_dir_path<'a>(path: &'a Path) -> Result<impl Iterator<Item = PathBuf> + 'a> {
-    let paths = fs::read_dir(path)
-        .context(ReadDir { path })?
+pub(crate) fn read_dir_path<'a>(path: &'a Path) -> io::Result<impl Iterator<Item = PathBuf> + 'a> {
+    let paths = fs::read_dir(path)?
         // context of dir_entry errors
         .map(move |dent_res| dent_res.context(ReadDirEntry { path }))
         // log dir_entry errors

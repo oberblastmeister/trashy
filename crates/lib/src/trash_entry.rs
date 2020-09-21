@@ -35,7 +35,7 @@ pub enum Error {
     #[snafu(display("Failed to read entries from path {}: {}", path.display(), source))]
     ReadDirPath { source: io::Error, path: PathBuf },
 
-    #[snafu(display("The path {} was not found"))]
+    #[snafu(display("The path {} was not found", path.display()))]
     NotFound { path: PathBuf },
 
     #[snafu(context(false))]
@@ -287,6 +287,7 @@ mod tests {
         assert_eq!(in_trash_dir("/home/brian/.local/share/Trash/files"), false);
     }
 
+    #[ignore]
     #[test]
     fn read_dir_trash_entries_test_none() -> Result<()> {
         const TEMP_FILE_AMOUNT: usize = 20;

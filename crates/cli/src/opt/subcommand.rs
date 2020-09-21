@@ -1,22 +1,11 @@
 mod list;
 
-use snafu::Snafu;
 use structopt::StructOpt;
+use eyre::{WrapErr, Result};
 
 use list::{trash_list, ListOpts};
 
-#[derive(Debug, Snafu)]
-pub enum Error {
-    #[snafu(context(false))]
-    #[snafu(display("An error occured while running the subcommand list: {}", source))]
-    List {
-        source: list::Error,
-    }
-}
-
-pub type Result<T, E = Error> = ::std::result::Result<T, E>;
-
-#[derive(Debug, StructOpt)]
+#[derive(StructOpt, Debug, PartialEq)]
 pub enum Subcommand {
     List(ListOpts)
 }
@@ -24,7 +13,7 @@ pub enum Subcommand {
 impl Subcommand {
     pub fn run(self) -> Result<()> {
         match self {
-            Subcommand::List(_list_opts) => trash_list()?,
+            Subcommand::List(list_opts) => trash_list(list_opts)?,
         }
 
         Ok(())
