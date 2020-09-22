@@ -10,7 +10,6 @@ use directories::UserDirs;
 use fs_extra::dir;
 use fs_extra::file;
 use lazy_static::lazy_static;
-// use log::{debug, error, info, warn};
 use snafu::{ResultExt, Snafu};
 
 use trash_entry::{read_dir_trash_entries, TrashEntry};

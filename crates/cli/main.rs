@@ -1,9 +1,13 @@
 mod opt;
 
+use std::iter::Inspect;
+use std::process;
+
+use ansi_term::Colour::Red;
 use env_logger::Builder;
 use eyre::{Result, WrapErr};
+use log::{debug, error, info, warn, LevelFilter};
 use structopt::StructOpt;
-use log::LevelFilter;
 
 use opt::Opt;
 
@@ -25,9 +29,23 @@ fn convert_to_level_filter(n: u8) -> LevelFilter {
     }
 }
 
-fn main() -> Result<()> {
+fn format_err(s: impl std::fmt::Display) -> String {
+    format!("{}: {}", Red.paint("Error"), s)
+}
+
+fn run() -> Result<()> {
     let opt = Opt::from_args();
     start_logger(opt.verbosity);
     opt.subcmd.run()?;
     Ok(())
+}
+
+fn main() {
+    match run() {
+        Ok(()) => process::exit(0),
+        Err(e) => {
+            println!("{}", format_err(e));
+            process::exit(1);
+        }
+    }
 }

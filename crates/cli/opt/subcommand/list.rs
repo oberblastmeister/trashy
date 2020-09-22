@@ -1,9 +1,10 @@
+use chrono::naive::NaiveDateTime;
 use eyre::{eyre, Result, WrapErr};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
 use lscolors::{LsColors, Style};
-use prettytable::{Cell, Row, Table};
+use prettytable::{Cell, Row, Table, row, cell};
 use structopt::StructOpt;
 
 use trash_lib::trash_entry::{self, read_dir_trash_entries};
@@ -15,9 +16,9 @@ lazy_static! {
 }
 
 #[derive(StructOpt, Debug, PartialEq)]
-pub struct ListOpt {}
+pub struct Opt {}
 
-pub fn trash_list(_opt: ListOpt) -> Result<()> {
+pub fn trash_list(_opt: Opt) -> Result<()> {
     let res = read_dir_trash_entries();
     let iter = match res {
         Err(ref e) => match e {
@@ -27,6 +28,7 @@ pub fn trash_list(_opt: ListOpt) -> Result<()> {
         Ok(iter) => iter,
     };
     let mut table = Table::new();
+    table.add_row(header_row());
 
     iter
     .map(|trash_entry| {
@@ -39,10 +41,14 @@ pub fn trash_list(_opt: ListOpt) -> Result<()> {
         }
     })
     .filter_map(Result::ok)
-    // .inspect(|t| println!("{}", t))
     .sorted()
     .map(|trash_info| -> Result<Row> {
         row_from_trash_info(trash_info)
+    })
+    .inspect(|trash_info| {
+        if let Some(e) = trash_info.as_ref().err() {
+            error!("{}", e);
+        }
     })
     .filter_map(|res| res.ok())
     .for_each(|row| {
@@ -59,5 +65,24 @@ fn row_from_trash_info(trash_info: TrashInfo) -> Result<Row> {
     let style = LS_COLORS.style_for_path(&path);
     let ansi_style = style.map(Style::to_ansi_term_style).unwrap_or_default();
     let colored = format!("{}", ansi_style.paint(path));
-    Ok(Row::new(vec![Cell::new(&trash_info.deletion_date_string_format()), Cell::new(&colored)]))
+    let mut res = format_date(trash_info.deletion_date());
+    res.push(Cell::new(&colored));
+    Ok(Row::new(res))
+}
+
+fn header_row() -> Row {
+    row!["Year", "Month", "Day", "Time", "Path"]
+}
+
+fn format_date(date: NaiveDateTime) -> Vec<Cell> {
+    let year = format!("{}", date.format("%y"));
+    let month = format!("{}", date.format("%b"));
+    let day = format!("{}", date.format("%d"));
+    let time = format!("{}", date.format("%H:%M:%S"));
+    vec![
+        Cell::new(&year),
+        Cell::new(&month),
+        Cell::new(&day),
+        Cell::new(&time),
+    ]
 }

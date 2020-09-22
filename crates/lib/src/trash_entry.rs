@@ -56,6 +56,9 @@ pub enum Error {
 
     #[snafu(display("Moving path {} into the trash directory when it is already there", path.display()))]
     CreationInTrash { path: PathBuf },
+
+    #[snafu(display("Failed to canonicalize path {}: {}", path.display(), source))]
+    CanonicalizePath { path: PathBuf, source: io::Error },
 }
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -105,6 +108,9 @@ impl TrashEntry {
         }
         let name = find_name_trash_entry(path, existing)?;
         let name = name.as_ref();
+
+        // make sure the path is canonicalized
+        let path = &path.canonicalize().context(CanonicalizePath { path })?;
 
         // create the trash info file
         let trash_info = TrashInfo::new(PercentPath::from_path(path)?, None);
