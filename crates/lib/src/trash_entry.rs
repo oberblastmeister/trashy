@@ -4,7 +4,7 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
 use log::warn;
-use snafu::{ResultExt, Snafu, OptionExt, ensure};
+use snafu::{ensure, OptionExt, ResultExt, Snafu};
 
 use crate::percent_path::{self, PercentPath};
 use crate::trash_info::{self, TrashInfo};
@@ -38,8 +38,17 @@ pub enum Error {
     #[snafu(display("The path {} was not found", path.display()))]
     NotFound { path: PathBuf },
 
-    #[snafu(context(false))]
-    ParseTrashInfo { source: trash_info::Error },
+    #[snafu(display("Could not parse trash info file with path {}: {}", path.display(), source))]
+    ParseTrashInfo {
+        path: PathBuf,
+        source: trash_info::Error,
+    },
+
+    #[snafu(display("Failed to save trash info with name {}: {}", name, source))]
+    TrashInfoSave {
+        name: String,
+        source: trash_info::Error,
+    },
 
     #[snafu(context(false))]
     #[snafu(display("Utils error: {}", source))]
@@ -98,7 +107,8 @@ impl TrashEntry {
         let name = name.as_ref();
 
         // create the trash info file
-        TrashInfo::new(PercentPath::from_path(path)?, None).save(name)?;
+        let trash_info = TrashInfo::new(PercentPath::from_path(path)?, None);
+        trash_info.save(name).context(TrashInfoSave { name })?;
 
         // move the path the the trash file dir
         move_path(path, TRASH_FILE_DIR.join(name))?;
@@ -127,7 +137,9 @@ impl TrashEntry {
     /// Restores the trash entry
     pub fn restore(self) -> Result<()> {
         self.is_valid()?;
-        let trash_info = TrashInfo::parse_from_path(self.info_path)?;
+        let trash_info = TrashInfo::parse_from_path(&self.info_path).context(ParseTrashInfo {
+            path: &self.info_path,
+        })?;
         let original_path = trash_info.percent_path().decoded()?;
 
         move_path(&self.file_path, original_path.as_ref())?;
@@ -143,8 +155,10 @@ impl TrashEntry {
         Ok(())
     }
 
-    pub fn parse_trash_info(&self) -> Result<TrashInfo, trash_info::Error> {
-        TrashInfo::parse_from_path(&self.info_path)
+    pub fn parse_trash_info(&self) -> Result<TrashInfo> {
+        TrashInfo::parse_from_path(&self.info_path).context(ParseTrashInfo {
+            path: &self.info_path,
+        })
     }
 }
 
@@ -152,10 +166,16 @@ pub fn read_dir_trash_entries() -> Result<impl Iterator<Item = TrashEntry>> {
     let res = read_dir_path(&TRASH_FILE_DIR);
     if let Err(ref e) = res {
         if e.kind() == ErrorKind::NotFound {
-            NotFound { path: &*TRASH_FILE_DIR }.fail()?;
+            NotFound {
+                path: &*TRASH_FILE_DIR,
+            }
+            .fail()?;
         }
     }
-    let iter = res.context(ReadDirPath { path: &*TRASH_FILE_DIR })?
+    let iter = res
+        .context(ReadDirPath {
+            path: &*TRASH_FILE_DIR,
+        })?
         .map(|path| TrashEntry::new(path))
         .inspect(|res| {
             if let Some(e) = res.as_ref().err() {

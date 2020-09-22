@@ -1,7 +1,7 @@
 use eyre::{eyre, Result, WrapErr};
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use log::*;
+use log::{debug, error, info, warn};
 use lscolors::{LsColors, Style};
 use prettytable::{Cell, Row, Table};
 use structopt::StructOpt;
@@ -29,12 +29,15 @@ pub fn trash_list(_opt: ListOpt) -> Result<()> {
     let mut table = Table::new();
 
     iter
-    // .inspect(|t| println!("{:?}", t))
     .map(|trash_entry| {
         let trash_info = trash_entry.parse_trash_info();
         trash_info
     })
-    .inspect(|t| println!("{:?}", t))
+    .inspect(|trash_info| {
+        if let Some(e) = trash_info.as_ref().err() {
+            error!("{}", e);
+        }
+    })
     .filter_map(Result::ok)
     // .inspect(|t| println!("{}", t))
     .sorted()

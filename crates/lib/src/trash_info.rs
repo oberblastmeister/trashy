@@ -43,6 +43,7 @@ pub enum Error {
     ReadToStr { path: PathBuf, source: io::Error },
 
     #[snafu(context(false))]
+    #[snafu(display("Failed to parse trash info file:\n{}", source))]
     ParseTrashInfo { source: parser::Error },
 
     #[snafu(display("Wrong extension for path {}", path.display()))]
@@ -81,9 +82,10 @@ impl TrashInfo {
     pub(crate) fn parse_from_path(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
         validate_path(path)?;
-        let trash_info = fs::read_to_string(path)
-            .context(ReadToStr { path })?
-            .parse::<TrashInfo>()?;
+        let contents = fs::read_to_string(path).context(ReadToStr { path })?;
+        let trimmed = contents.trim_end_matches('\n');
+
+        let trash_info = trimmed.parse::<TrashInfo>()?;
         Ok(trash_info)
     }
 
@@ -145,10 +147,7 @@ fn get_trash_info_path(name: impl AsRef<Path>) -> PathBuf {
     path
 }
 
-fn save_trash_info(
-    file: &mut File,
-    trash_info: TrashInfo,
-) -> Result<()> {
+fn save_trash_info(file: &mut File, trash_info: TrashInfo) -> Result<()> {
     file.write_all(trash_info.to_string().as_bytes())
         .context(TrashInfoWrite)?;
 
@@ -180,8 +179,8 @@ mod tests {
     use super::*;
     use crate::HOME_DIR;
     use anyhow::Result;
-    use std::io::{Write, Read, Seek, SeekFrom};
-    use tempfile::{NamedTempFile, tempfile_in, Builder};
+    use std::io::{Read, Seek, SeekFrom, Write};
+    use tempfile::{tempfile_in, Builder, NamedTempFile};
 
     #[test]
     fn get_trash_info_path_test() {
@@ -219,7 +218,11 @@ mod tests {
         let trash_info = TrashInfo::new(percent_path.clone(), Some(time));
         assert_eq!(
             trash_info.to_string(),
-            format!("[Trash Info]\nPath={}\nDeletionDate={}", percent_path, trash_info_format(time)),
+            format!(
+                "[Trash Info]\nPath={}\nDeletionDate={}",
+                percent_path,
+                trash_info_format(time)
+            ),
         );
     }
 
@@ -229,10 +232,7 @@ mod tests {
 
         let mut temp_trash_info_file = tempfile_in(&*TRASH_INFO_DIR)?;
 
-        save_trash_info(
-            &mut temp_trash_info_file,
-            trash_info.clone(),
-        )?;
+        save_trash_info(&mut temp_trash_info_file, trash_info.clone())?;
         temp_trash_info_file.seek(SeekFrom::Start(0))?;
 
         let mut contents = String::new();
@@ -255,6 +255,19 @@ DeletionDate=2020-09-21T08:34:36";
         temp.write_all(s.as_bytes())?;
         let temp_path = temp.path();
         assert_eq!(TrashInfo::parse_from_path(temp_path)?.to_string(), s);
+        Ok(())
+    }
+
+    #[ignore]
+    #[test]
+    fn read_to_string_test() -> Result<()> {
+        assert_eq!(
+            "\
+[Trash Info]
+Path=/home/brian/projects/trash/crates/cli
+DeletionDate=2020-09-21T10:40:17",
+            std::fs::read_to_string("/home/brian/.local/share/Trash/info/cli.trashinfo")?
+        );
         Ok(())
     }
 }

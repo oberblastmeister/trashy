@@ -152,6 +152,7 @@ mod tests {
         );
     }
 
+    #[ignore]
     #[test]
     fn trash_info_parse_test() {
         test_parse_trash_info_run(

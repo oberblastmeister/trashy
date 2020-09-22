@@ -4,8 +4,31 @@ use std::fmt;
 use std::path::Path;
 
 use crate::utils::{self, convert_to_str};
-use percent_encoding::{percent_decode_str, utf8_percent_encode, NON_ALPHANUMERIC};
+use percent_encoding::{
+    percent_decode_str, utf8_percent_encode, AsciiSet, CONTROLS, NON_ALPHANUMERIC,
+};
 use snafu::{ResultExt, Snafu};
+
+/// The excluded characters that must be escaped with percents in the percent path of each trash
+/// info file.
+pub const ASCII_SET: &'static AsciiSet = &CONTROLS
+    // space
+    .add(b' ')
+    // delims
+    .add(b'<')
+    .add(b'>')
+    .add(b'#')
+    .add(b'%')
+    .add(b'"')
+    // unwise
+    .add(b'{')
+    .add(b'}')
+    .add(b'|')
+    .add(b'\\')
+    .add(b'^')
+    .add(b'[')
+    .add(b']')
+    .add(b'`');
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -30,12 +53,12 @@ impl PercentPath {
     pub(crate) fn from_path(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
         let s = convert_to_str(path)?;
-        Ok(Self(utf8_percent_encode(s, NON_ALPHANUMERIC).to_string()))
+        Ok(Self(utf8_percent_encode(s, ASCII_SET).to_string()))
     }
 
     pub(crate) fn from_str(s: &str) -> Self {
-        // Self(utf8_percent_encode(s, NON_ALPHANUMERIC).to_string())
-        Self(s.to_string())
+        Self(utf8_percent_encode(s, ASCII_SET).to_string())
+        // Self(s.to_string())
     }
 
     pub fn encoded(&self) -> &str {
