@@ -3,6 +3,7 @@ mod opt;
 use std::iter::Inspect;
 use std::process;
 
+use ansi_term::Style;
 use ansi_term::Colour::Red;
 use env_logger::Builder;
 use eyre::{Result, WrapErr};
@@ -30,7 +31,7 @@ fn convert_to_level_filter(n: u8) -> LevelFilter {
 }
 
 fn format_err(s: impl std::fmt::Display) -> String {
-    format!("{}: {}", Red.paint("Error"), s)
+    format!("{}: {}", Style::new().bold().fg(Red).paint("Error"), s)
 }
 
 fn run() -> Result<()> {

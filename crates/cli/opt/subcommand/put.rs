@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use eyre::{WrapErr, Result};
+use eyre::{WrapErr, Result, eyre};
 use structopt::StructOpt;
 use trash_lib::trash_entry::TrashEntry;
 
@@ -11,5 +11,9 @@ pub struct Opt {
 }
 
 pub fn trash_put(opt: Opt) -> Result<Vec<TrashEntry>> {
-    trash_lib::put(&opt.paths).map_err(Into::into)
+    let paths = &opt.paths;
+    if paths.is_empty() {
+        return Err(eyre!("No paths were specified to trash!"));
+    }
+    trash_lib::put(paths).map_err(Into::into)
 }
