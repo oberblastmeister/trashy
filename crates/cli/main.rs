@@ -33,7 +33,7 @@ fn convert_to_level_filter(n: u8) -> LevelFilter {
 }
 
 fn format_err(s: impl std::fmt::Display) -> String {
-    format!("{}: {}", Style::new().bold().fg(Red).paint("Error"), s)
+    format!("{}: {}", Style::new().bold().fg(Red).paint("error"), s)
 }
 
 fn run() -> Result<()> {
