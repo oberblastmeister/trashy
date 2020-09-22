@@ -79,7 +79,7 @@ pub fn remove(name: impl AsRef<Path>) -> Result<()> {
 }
 
 /// Removes all trash_entries and optionally removes stray files.
-pub fn empty(remove_stray: bool) -> Result<()> {
+pub fn empty(keep_stray: bool) -> Result<()> {
     // remove the the correct trash_entries
     read_dir_trash_entries()
         .context(ReadDirTrashEntry)?
@@ -92,7 +92,7 @@ pub fn empty(remove_stray: bool) -> Result<()> {
         .for_each(|_| ());
 
     // remove the stray files taht does not have a pair
-    if remove_stray {
+    if !keep_stray {
         read_dir_path(&TRASH_INFO_DIR)?
             .chain(read_dir_path(&TRASH_FILE_DIR)?)
             .inspect(|path| warn!("{}", StrayPath { path }.build()))

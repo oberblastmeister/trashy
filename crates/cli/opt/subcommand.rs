@@ -1,6 +1,7 @@
 mod list;
 mod put;
 mod empty;
+mod restore;
 
 use structopt::StructOpt;
 use eyre::{WrapErr, Result};
@@ -10,6 +11,7 @@ pub enum SubCommand {
     List(list::Opt),
     Put(put::Opt),
     Empty(empty::Opt),
+    Restore(restore::Opt),
 }
 
 impl SubCommand {
@@ -20,6 +22,7 @@ impl SubCommand {
                 let _ = put::put(opt)?;
             },
             SubCommand::Empty(opt) => empty::empty(opt)?,
+            SubCommand::Restore(opt) => restore::restore(opt)?,
         }
         Ok(())
     }

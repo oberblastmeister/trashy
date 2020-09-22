@@ -8,6 +8,6 @@ pub struct Opt {
 }
 
 pub fn empty(opt: Opt) -> Result<()> {
-    trash_lib::empty(!opt.keep_strays)?;
+    trash_lib::empty(opt.keep_strays)?;
     Ok(())
 }

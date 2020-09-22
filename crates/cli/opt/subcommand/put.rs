@@ -7,7 +7,7 @@ use trash_lib::trash_entry::TrashEntry;
 #[derive(StructOpt, Debug, PartialEq)]
 pub struct Opt {
     #[structopt(parse(from_os_str))]
-    pub paths: Vec<PathBuf>
+    paths: Vec<PathBuf>
 }
 
 pub fn put(opt: Opt) -> Result<Vec<TrashEntry>> {

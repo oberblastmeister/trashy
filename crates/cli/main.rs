@@ -1,3 +1,5 @@
+#![type_length_limit="1065853"]
+
 mod opt;
 
 use std::iter::Inspect;
