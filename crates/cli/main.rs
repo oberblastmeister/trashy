@@ -37,6 +37,7 @@ fn format_err(s: impl std::fmt::Display) -> String {
 fn run() -> Result<()> {
     let opt = Opt::from_args();
     start_logger(opt.verbosity);
+    debug!("Opt: {:?}", opt);
     opt.subcmd.run()?;
     Ok(())
 }

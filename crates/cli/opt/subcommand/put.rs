@@ -10,7 +10,7 @@ pub struct Opt {
     pub paths: Vec<PathBuf>
 }
 
-pub fn trash_put(opt: Opt) -> Result<Vec<TrashEntry>> {
+pub fn put(opt: Opt) -> Result<Vec<TrashEntry>> {
     let paths = &opt.paths;
     if paths.is_empty() {
         return Err(eyre!("No paths were specified to trash!"));

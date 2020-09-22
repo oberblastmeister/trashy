@@ -6,6 +6,7 @@ use subcommand::SubCommand;
 
 #[derive(Debug, StructOpt)]
 pub struct Opt {
+    #[structopt(short = "v", long = "verbose")]
     #[structopt(parse(from_occurrences))]
     pub verbosity: u8,
 

@@ -4,15 +4,18 @@ pub mod trash_entry;
 pub mod trash_info;
 mod utils;
 
+use std::io;
 use std::path::{Path, PathBuf};
 
 use directories::UserDirs;
 use fs_extra::dir;
 use fs_extra::file;
 use lazy_static::lazy_static;
+use log::{error, warn};
 use snafu::{ResultExt, Snafu};
 
 use trash_entry::{read_dir_trash_entries, TrashEntry};
+use utils::{read_dir_path, remove_path};
 
 lazy_static! {
     static ref USER_DIRS: UserDirs = UserDirs::new().expect("Failed to determine user directories");
@@ -29,33 +32,32 @@ pub const TRASH_INFO_EXT: &'_ str = "trashinfo";
 #[derive(Debug, Snafu)]
 pub enum Error {
     #[snafu(display("Failed to create new trash entry struct: {}", source))]
-    TrashEntryNew {
-        source: trash_entry::Error,
-    },
+    TrashEntryNew { source: trash_entry::Error },
 
-    #[snafu(display("Failed to create new trash entry by moving a path and creating a trash info file: {}", source))]
-    TrashEntryCreation {
-        source: trash_entry::Error,
-    },
+    #[snafu(display(
+        "Failed to create new trash entry by moving a path and creating a trash info file: {}",
+        source
+    ))]
+    TrashEntryCreation { source: trash_entry::Error },
 
     #[snafu(display("Failed to read an iterator of trash entries: {}", source))]
-    ReadDirTrashEntry {
-        source: trash_entry::Error,
-    },
+    ReadDirTrashEntry { source: trash_entry::Error },
 
     #[snafu(display("Failed to restore trash entry {}", source))]
-    TrashEntryRestore {
-        source: trash_entry::Error,
-    },
+    TrashEntryRestore { source: trash_entry::Error },
 
     #[snafu(display("Failed to remove trash entry {}", source))]
-    TrashEntryRemove {
-        source: trash_entry::Error,
-    },
+    TrashEntryRemove { source: trash_entry::Error },
 
     #[snafu(context(false))]
     #[snafu(display("Utils error: {}", source))]
-    Utils { source: utils::Error }
+    Utils { source: utils::Error },
+
+    #[snafu(context(false))]
+    ReadDirPath { source: io::Error },
+
+    #[snafu(display("The stray path {} was found that could not be made into a trash entry", path.display()))]
+    StrayPath { path: PathBuf },
 }
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -76,9 +78,31 @@ pub fn remove(name: impl AsRef<Path>) -> Result<()> {
         .context(TrashEntryRemove)?)
 }
 
-pub fn remove_all() -> Result<()> {
-    for trash_entry in read_dir_trash_entries().unwrap() {
-        trash_entry.remove().context(TrashEntryRemove)?
+/// Removes all trash_entries and optionally removes stray files.
+pub fn empty(remove_stray: bool) -> Result<()> {
+    // remove the the correct trash_entries
+    read_dir_trash_entries()
+        .context(ReadDirTrashEntry)?
+        .map(|trash_entry| trash_entry.remove().context(TrashEntryRemove))
+        .inspect(|res| {
+            if let Some(e) = res.as_ref().err() {
+                warn!("{}", e);
+            }
+        })
+        .for_each(|_| ());
+
+    // remove the stray files taht does not have a pair
+    if remove_stray {
+        read_dir_path(&TRASH_INFO_DIR)?
+            .chain(read_dir_path(&TRASH_FILE_DIR)?)
+            .inspect(|path| warn!("{}", StrayPath { path }.build()))
+            .map(|path| remove_path(path))
+            .inspect(|res| {
+                if let Some(e) = res.as_ref().err() {
+                    error!("{}", e);
+                }
+            })
+            .for_each(|_| ());
     }
 
     Ok(())
@@ -91,9 +115,11 @@ pub fn put(paths: &[impl AsRef<Path>]) -> Result<Vec<TrashEntry>> {
         panic!("Attempting to put empty paths");
     }
 
-    let mut existing: Vec<_> = read_dir_trash_entries().context(ReadDirTrashEntry)?.collect();
+    let mut existing: Vec<_> = read_dir_trash_entries()
+        .context(ReadDirTrashEntry)?
+        .collect();
     let old_trash_entries_end = existing.len() - 1;
-    
+
     for path in paths {
         let trash_entry = TrashEntry::create(path, &existing).context(TrashEntryCreation)?;
         existing.push(trash_entry)
@@ -109,8 +135,8 @@ mod tests {
     use super::*;
     use anyhow::{Context, Result};
     use std::fs::File;
-    use tempfile::NamedTempFile;
     use std::io::Write;
+    use tempfile::NamedTempFile;
 
     #[should_panic]
     #[test]

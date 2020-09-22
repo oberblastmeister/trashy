@@ -18,7 +18,7 @@ lazy_static! {
 #[derive(StructOpt, Debug, PartialEq)]
 pub struct Opt {}
 
-pub fn trash_list(_opt: Opt) -> Result<()> {
+pub fn list(_opt: Opt) -> Result<()> {
     let res = read_dir_trash_entries();
     let iter = match res {
         Err(ref e) => match e {
