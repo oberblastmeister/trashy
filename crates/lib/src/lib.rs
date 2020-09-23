@@ -62,6 +62,28 @@ pub enum Error {
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
 
+#[macro_export]
+macro_rules! ok_log {
+    ($res:expr => $log_macro:ident!) => {
+        match $res {
+            Ok(t) => Some(t),
+            Err(e) => {
+                $log_macro!("{}", e);
+                None
+            }
+        }
+    };
+    ($res:expr => $print_func:ident) => {
+        match $res {
+            Ok(t) => Some(t),
+            Err(e) => {
+                $print_func(format!("{}", e));
+                None
+            }
+        }
+    };
+}
+
 /// Helper function
 pub fn restore(name: impl AsRef<Path>) -> Result<()> {
     Ok(TrashEntry::new(name)
@@ -84,11 +106,7 @@ pub fn empty(keep_stray: bool) -> Result<()> {
     read_dir_trash_entries()
         .context(ReadDirTrashEntry)?
         .map(|trash_entry| trash_entry.remove().context(TrashEntryRemove))
-        .inspect(|res| {
-            if let Some(e) = res.as_ref().err() {
-                warn!("{}", e);
-            }
-        })
+        .filter_map(|res| ok_log!(res => error!))
         .for_each(|_| ());
 
     // remove the stray files taht does not have a pair
@@ -97,11 +115,7 @@ pub fn empty(keep_stray: bool) -> Result<()> {
             .chain(read_dir_path(&TRASH_FILE_DIR)?)
             .inspect(|path| warn!("{}", StrayPath { path }.build()))
             .map(|path| remove_path(path))
-            .inspect(|res| {
-                if let Some(e) = res.as_ref().err() {
-                    error!("{}", e);
-                }
-            })
+            .filter_map(|res| ok_log!(res => error!))
             .for_each(|_| ());
     }
 

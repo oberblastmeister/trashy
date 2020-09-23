@@ -10,6 +10,7 @@ use crate::percent_path::{self, PercentPath};
 use crate::trash_info::{self, TrashInfo};
 use crate::utils::{self, convert_to_str, move_path, read_dir_path, remove_path};
 use crate::{TRASH_DIR, TRASH_FILE_DIR, TRASH_INFO_DIR, TRASH_INFO_EXT};
+use crate::ok_log;
 
 /// Represents an entry in the trash directory. Includes the file path and the trash info path.
 #[derive(Debug)]
@@ -73,8 +74,11 @@ impl TrashEntry {
         let name = name.file_name().context(NoFileName { path: name })?;
 
         // the info path is the name and the info dir with an extension
-        let mut info_path = TRASH_INFO_DIR.join(name);
-        info_path.set_extension(&TRASH_INFO_EXT);
+        let info_path = TRASH_INFO_DIR.join(name);
+        let mut info_path_str = info_path.into_os_string();
+        info_path_str.push(".");
+        info_path_str.push(&TRASH_INFO_EXT);
+        let info_path = PathBuf::from(info_path_str);
 
         // same for file path
         let file_path = TRASH_FILE_DIR.join(name);
@@ -183,12 +187,7 @@ pub fn read_dir_trash_entries() -> Result<impl Iterator<Item = TrashEntry>> {
             path: &*TRASH_FILE_DIR,
         })?
         .map(|path| TrashEntry::new(path))
-        .inspect(|res| {
-            if let Some(e) = res.as_ref().err() {
-                warn!("{}", e);
-            }
-        })
-        .filter_map(Result::ok);
+        .filter_map(|res| ok_log!(res => warn!));
     Ok(iter)
 }
 

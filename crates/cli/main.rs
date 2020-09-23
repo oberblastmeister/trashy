@@ -36,7 +36,7 @@ fn format_err(s: impl std::fmt::Display) -> String {
     format!("{}: {}", Style::new().bold().fg(Red).paint("error"), s)
 }
 
-fn run() -> Result<()> {
+fn try_main() -> Result<()> {
     let opt = Opt::from_args();
     start_logger(opt.verbosity);
     debug!("Opt: {:?}", opt);
@@ -45,10 +45,10 @@ fn run() -> Result<()> {
 }
 
 fn main() {
-    match run() {
+    match try_main() {
         Ok(()) => process::exit(0),
         Err(e) => {
-            println!("{}", format_err(e));
+            eprintln!("{}", format_err(e));
             process::exit(1);
         }
     }

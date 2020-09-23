@@ -7,6 +7,7 @@ use log::error;
 use structopt::StructOpt;
 use trash_lib::trash_entry::{read_dir_trash_entries, TrashEntry};
 use trash_lib::trash_info::TrashInfo;
+use trash_lib::ok_log;
 
 #[derive(Debug, PartialEq, StructOpt)]
 pub struct Opt {
@@ -64,11 +65,7 @@ fn restore_in_directory(dir: &Path) -> Result<()> {
                 .restore()
                 .wrap_err(format!("Failed to restore trash_entry"))
         })
-        .inspect(|res| {
-            if let Some(e) = res.as_ref().err() {
-                error!("{}", e);
-            }
-        })
+        .filter_map(|res| ok_log!(res => error!))
         .for_each(|_| ());
 
     Ok(())

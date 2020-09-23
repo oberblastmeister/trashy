@@ -74,6 +74,7 @@ impl TrashInfo {
     /// saves the name with the extension .trashinfo
     pub(super) fn save(self, name: impl AsRef<Path>) -> Result<()> {
         let path = get_trash_info_path(name);
+        
         let mut trash_info_file = OPEN_OPTIONS.open(&path).context(FileOpen { path })?;
         save_trash_info(&mut trash_info_file, self)?;
         Ok(())
@@ -142,9 +143,12 @@ impl PartialOrd for TrashInfo {
 }
 
 fn get_trash_info_path(name: impl AsRef<Path>) -> PathBuf {
-    let mut path = to_directory(name, &*TRASH_INFO_DIR);
-    path.set_extension(TRASH_INFO_EXT);
-    path
+    let path = to_directory(name, &*TRASH_INFO_DIR);
+    let mut path_str = path.into_os_string();
+    // don't set extension, push the append the extension
+    path_str.push(".");
+    path_str.push(TRASH_INFO_EXT);
+    PathBuf::from(path_str)
 }
 
 fn save_trash_info(file: &mut File, trash_info: TrashInfo) -> Result<()> {

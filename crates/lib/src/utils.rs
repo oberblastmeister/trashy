@@ -9,6 +9,7 @@ use snafu::{OptionExt, ResultExt, Snafu};
 
 use crate::{DIR_COPY_OPT, FILE_COPY_OPT};
 use crate::TRASH_INFO_DIR;
+use crate::ok_log;
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -79,17 +80,8 @@ pub(crate) fn remove_path(path: impl AsRef<Path>) -> Result<()> {
 
 pub(crate) fn read_dir_path<'a>(path: &'a Path) -> io::Result<impl Iterator<Item = PathBuf> + 'a> {
     let paths = fs::read_dir(path)?
-        // context of dir_entry errors
         .map(move |dent_res| dent_res.context(ReadDirEntry { path }))
-        // log dir_entry errors
-        .inspect(|res| {
-            if let Some(e) = res.as_ref().err() {
-                warn!("{}", e);
-            }
-        })
-        // filter out errors
-        .filter_map(Result::ok)
-        // convert dir_entry to string
+        .filter_map(|res| ok_log!(res => warn!))
         .map(|d| d.path());
 
     Ok(paths)
@@ -126,9 +118,10 @@ where T: PartialEq + Deref<Target = U>,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::{Context, Result};
+    use anyhow::{Result, anyhow};
     use tempfile::{tempdir, NamedTempFile};
-
+    use log::error;
+    use std::fmt::Display;
 
     #[test]
     fn read_dir_path_test() -> Result<()> {
@@ -173,5 +166,23 @@ mod tests {
     #[test]
     fn to_dir_already_dir_test() {
         assert_eq!(to_directory("/tmp/hello/a_file", "another_directory"), PathBuf::from("another_directory/a_file"));
+    }
+
+    fn print_error(s: impl Display) {
+        eprintln!("{}", s);
+    }
+
+    #[test]
+    fn test_macro_test() {
+        let res: Result<u8> = Ok(5);
+        let op = ok_log!(res => error!);
+        assert_eq!(op, Some(5));
+
+        let res2: Result<()> = Err(anyhow!("this is an error"));
+        let op2 = ok_log!(res2 => error!);
+        assert_eq!(op2, None);
+
+        let res3: Result<()> = Err(anyhow!("this is another error"));
+        let op3 = ok_log!(res3 => print_error);
     }
 }

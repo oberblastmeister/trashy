@@ -9,7 +9,7 @@ use structopt::StructOpt;
 
 use trash_lib::trash_entry::{self, read_dir_trash_entries};
 use trash_lib::trash_info::TrashInfo;
-use trash_lib::{TRASH_FILE_DIR, TRASH_INFO_DIR};
+use trash_lib::{ok_log, TRASH_FILE_DIR, TRASH_INFO_DIR};
 
 lazy_static! {
     static ref LS_COLORS: LsColors = LsColors::from_env().unwrap_or_default(); 
@@ -35,22 +35,12 @@ pub fn list(_opt: Opt) -> Result<()> {
         let trash_info = trash_entry.parse_trash_info();
         trash_info
     })
-    .inspect(|trash_info| {
-        if let Some(e) = trash_info.as_ref().err() {
-            error!("{}", e);
-        }
-    })
-    .filter_map(Result::ok)
+    .filter_map(|res| ok_log!(res => error!))
     .sorted()
     .map(|trash_info| -> Result<Row> {
         row_from_trash_info(trash_info)
     })
-    .inspect(|trash_info| {
-        if let Some(e) = trash_info.as_ref().err() {
-            error!("{}", e);
-        }
-    })
-    .filter_map(|res| res.ok())
+    .filter_map(|res| ok_log!(res => error!))
     .for_each(|row| {
         table.add_row(row);
     });
