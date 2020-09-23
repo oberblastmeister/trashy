@@ -38,7 +38,7 @@ fn try_filter_by_days(days: u64, trash_entry: &TrashEntry) -> Result<bool> {
     // the limit where the deleting will stop
     let limit = Local::today()
         .checked_sub_signed(Duration::days(days as i64))
-        .ok_or(eyre!(""))?
+        .ok_or_else(|| eyre!("Overflow when subtracting {} from a date", days))?
         .naive_local();
     let trash_info = trash_entry.parse_trash_info()?;
     // get the deletion date of the trash_info struct

@@ -2,6 +2,15 @@
 name = "trash-cli"
 version = "0.1.0"
 authors = ["Brian Shu <littlebubu.shu@gmail.com>"]
+description = """
+trash-cli written in rust
+"""
+documentation = "https://github.com/oberblastmeister/trash-cli"
+homepage = "https://github.com/oberblastmeister/trash-cli"
+repository = "https://github.com/oberblastmeister/trash-cli"
+readme = "README.md"
+keywords = ["trash", "remove", "recycle", "bin", "freedesktop"]
+categories = ["command-line-utilities"]
 edition = "2018"
 
 [workspace]

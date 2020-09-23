@@ -5,9 +5,9 @@ use std::path::{Path, PathBuf};
 use eyre::{Result, WrapErr};
 use log::error;
 use structopt::StructOpt;
+use trash_lib::ok_log;
 use trash_lib::trash_entry::{read_dir_trash_entries, TrashEntry};
 use trash_lib::trash_info::TrashInfo;
-use trash_lib::ok_log;
 
 #[derive(Debug, PartialEq, StructOpt)]
 pub struct Opt {
@@ -63,7 +63,7 @@ fn restore_in_directory(dir: &Path) -> Result<()> {
         .map(|trash_entry| {
             trash_entry
                 .restore()
-                .wrap_err(format!("Failed to restore trash_entry"))
+                .wrap_err("Failed to restore trash_entry")
         })
         .filter_map(|res| ok_log!(res => error!))
         .for_each(|_| ());

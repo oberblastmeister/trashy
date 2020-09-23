@@ -9,7 +9,6 @@ use subcommand::{put, SubCommand};
 
 #[derive(Debug, StructOpt)]
 pub struct Opt {
-    // #[structopt(name = "PATHS")]
     #[structopt(parse(from_os_str))]
     pub paths: Vec<PathBuf>,
 
