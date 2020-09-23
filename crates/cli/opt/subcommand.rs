@@ -1,5 +1,5 @@
 mod list;
-mod put;
+pub mod put;
 mod empty;
 mod restore;
 
@@ -27,3 +27,19 @@ impl SubCommand {
         Ok(())
     }
 }
+
+// pub trait OptionalSubcommand {
+//     fn run_or_default(self) -> Result<()>;
+// }
+
+// impl OptionalSubcommand for Option<SubCommand> {
+//     fn run_or_default(self) -> Result<()> {
+//         match self {
+//             Some(subcmd) => subcmd.run()?,
+//             None => {
+//                 let _ = put::put(opt)?;
+//             },
+//         }
+//         Ok(())
+//     }
+// }

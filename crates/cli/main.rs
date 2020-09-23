@@ -1,5 +1,3 @@
-#![type_length_limit="1065853"]
-
 mod opt;
 
 use std::iter::Inspect;
@@ -40,7 +38,7 @@ fn try_main() -> Result<()> {
     let opt = Opt::from_args();
     start_logger(opt.verbosity);
     debug!("Opt: {:?}", opt);
-    opt.subcmd.run()?;
+    opt.run_or_default()?;
     Ok(())
 }
 

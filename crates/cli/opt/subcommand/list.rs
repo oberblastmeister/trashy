@@ -1,4 +1,6 @@
 use std::cmp::Ordering;
+use std::fs;
+use std::path::Path;
 
 use chrono::naive::NaiveDateTime;
 use eyre::{eyre, Result, WrapErr};
@@ -33,43 +35,49 @@ pub fn list(_opt: Opt) -> Result<()> {
     table.add_row(header_row());
 
     iter.map(map_trash_entry)
-    // iter.map(|trash_entry| {
-    //     let trash_info = trash_entry.parse_trash_info();
-    //     trash_info
-    // })
-    .filter_map(|res| ok_log!(res => error!))
-    // .sorted()
-    .sorted_by(|t1, t2| custom_cmp(t1, t2))
-    .map(|trash_info| row_from_trash_info(trash_info))
-    .filter_map(|res| ok_log!(res => error!))
-    .for_each(|row| {
-        table.add_row(row);
-    });
+        .filter_map(|res| ok_log!(res => error!))
+        .sorted_by(custom_cmp)
+        .map(map_to_meta_data)
+        .filter_map(|res| ok_log!(res => error!))
+        .map(|(metadata, trash_info)| row_from_trash_info(trash_info, &metadata))
+        .filter_map(|res| ok_log!(res => error!))
+        .for_each(|row| {
+            table.add_row(row);
+        });
 
     table.printstd();
     Ok(())
 }
 
 fn map_trash_entry(trash_entry: TrashEntry) -> Result<(TrashEntry, TrashInfo)> {
-    let trash_info = trash_entry.parse_trash_info();
-    trash_info
-        .map(|trash_info| (trash_entry, trash_info))
-        .map_err(Into::into)
+    let trash_info = trash_entry.parse_trash_info()?;
+    Ok((trash_entry, trash_info))
 }
 
-fn custom_cmp(t1: &(TrashEntry, TrashInfo), t2: &(TrashEntry, TrashInfo)) -> Ordering {
+fn map_to_meta_data(stuff: (TrashEntry, TrashInfo)) -> Result<(fs::Metadata, TrashInfo)> {
+    let metadata = fs::symlink_metadata(stuff.0.file_path())?;
+    Ok((metadata, stuff.1))
+}
+
+fn custom_cmp<T, U>(t1: &(T, U), t2: &(T, U)) -> Ordering
+where
+    U: Ord,
+{
     t1.1.cmp(&t2.1)
 }
 
-fn row_from_trash_info(trash_info: TrashInfo) -> Result<Row> {
+fn row_from_trash_info(trash_info: TrashInfo, metadata: &fs::Metadata) -> Result<Row> {
     let path = trash_info.percent_path().decoded()?;
-    let path = path.as_ref();
-    let style = LS_COLORS.style_for_path(&path);
-    let ansi_style = style.map(Style::to_ansi_term_style).unwrap_or_default();
-    let colored = format!("{}", ansi_style.paint(path));
+    let colorized_path = colorize_path(path.as_ref(), &metadata);
     let mut res = format_date(trash_info.deletion_date());
-    res.push(Cell::new(&colored));
+    res.push(Cell::new(&colorized_path));
     Ok(Row::new(res))
+}
+
+fn colorize_path(path: &str, metadata: &fs::Metadata) -> String {
+    let style = LS_COLORS.style_for_path_with_metadata(path, Some(metadata));
+    let ansi_style = style.map(Style::to_ansi_term_style).unwrap_or_default();
+    format!("{}", ansi_style.paint(path))
 }
 
 fn header_row() -> Row {
