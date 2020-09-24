@@ -11,6 +11,7 @@ use lscolors::{LsColors, Style};
 use prettytable::{cell, row, Cell, Row, Table};
 use structopt::StructOpt;
 
+use crate::utils::{map_trash_entry_keep, trash_entry_error_context};
 use trash_lib::trash_entry::{self, read_dir_trash_entries, TrashEntry};
 use trash_lib::trash_info::TrashInfo;
 use trash_lib::{ok_log, TRASH_FILE_DIR, TRASH_INFO_DIR};
@@ -34,7 +35,8 @@ pub fn list(_opt: Opt) -> Result<()> {
     let mut table = Table::new();
     table.add_row(header_row());
 
-    iter.map(map_trash_entry)
+    iter
+        .map(map_trash_entry_keep)
         .filter_map(|res| ok_log!(res => error!))
         .sorted_by(custom_cmp)
         .map(map_to_meta_data)
@@ -47,11 +49,6 @@ pub fn list(_opt: Opt) -> Result<()> {
 
     table.printstd();
     Ok(())
-}
-
-fn map_trash_entry(trash_entry: TrashEntry) -> Result<(TrashEntry, TrashInfo)> {
-    let trash_info = trash_entry.parse_trash_info()?;
-    Ok((trash_entry, trash_info))
 }
 
 fn map_to_meta_data(stuff: (TrashEntry, TrashInfo)) -> Result<(fs::Metadata, TrashInfo)> {

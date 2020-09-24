@@ -1,4 +1,5 @@
 mod opt;
+mod utils;
 
 use std::error::Error;
 use std::process;
@@ -49,9 +50,12 @@ fn main() {
 }
 
 // fn report(error: &(dyn Error + 'static)) {
-//     let s = error.to_string;
-//     if let Some(idx) = s.find(':') {
+//     let s = error.to_string();
+//     let lines = s.lines();
+//     if let Some(line) = lines.next() {
+//         if let Some(idx) = s.find(':') {
 
+//         }
 //     }
 // }
 

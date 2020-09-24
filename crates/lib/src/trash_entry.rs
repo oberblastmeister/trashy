@@ -21,25 +21,25 @@ pub struct TrashEntry {
 
 #[derive(Snafu, Debug)]
 pub enum Error {
-    #[snafu(display("The trash info path {} does not exist", path.display()))]
+    #[snafu(display("The trash info path `{}` does not exist", path.display()))]
     ExistsInfoPath { path: PathBuf },
 
-    #[snafu(display("The trash file path {} does not exist", path.display()))]
+    #[snafu(display("The trash file path `{}` does not exist", path.display()))]
     ExistsFilePath { path: PathBuf },
 
-    #[snafu(display("There is not a file name for path {}", path.display()))]
+    #[snafu(display("There is not a file name for path `{}`", path.display()))]
     NoFileName { path: PathBuf },
 
     #[snafu(context(false))]
     DecodePercentPath { source: percent_path::Error },
 
-    #[snafu(display("Failed to read entries from path {}: {}", path.display(), source))]
+    #[snafu(display("Failed to read entries from path `{}`: {}", path.display(), source))]
     ReadDirPath { source: io::Error, path: PathBuf },
 
-    #[snafu(display("The path {} was not found", path.display()))]
+    #[snafu(display("The path `{}` was not found", path.display()))]
     NotFound { path: PathBuf },
 
-    #[snafu(display("Could not parse trash info file with path {}: {}", path.display(), source))]
+    #[snafu(display("Could not parse trash info file with path `{}`: {}", path.display(), source))]
     ParseTrashInfo {
         path: PathBuf,
         source: trash_info::Error,

@@ -35,7 +35,7 @@ pub enum Error {
     TrashEntryNew { source: trash_entry::Error },
 
     #[snafu(display(
-        "Failed to create new trash entry by moving a path and creating a trash info file: {}",
+        "Failed to create a new trash entry by moving a file and creating a trash info file: {}",
         source
     ))]
     TrashEntryCreation { source: trash_entry::Error },
