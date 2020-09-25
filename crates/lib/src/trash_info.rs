@@ -11,10 +11,11 @@ use chrono::prelude::*;
 use fs::File;
 use lazy_static::lazy_static;
 use snafu::{ResultExt, Snafu};
+use crate::utils;
 
 use super::parser::{self, parse_trash_info, TRASH_DATETIME_FORMAT};
 use crate::percent_path::PercentPath;
-use crate::utils::to_directory;
+use crate::utils::{add_trash_info_ext, to_directory};
 use crate::{TRASH_INFO_DIR, TRASH_INFO_EXT};
 
 lazy_static! {
@@ -51,6 +52,9 @@ pub enum Error {
 
     #[snafu(display("The path {} does not exist", path.display()))]
     NonExistentPath { path: PathBuf },
+
+    #[snafu(display("Failed to get a new path in dir `{}` from path `{}`: {}", dir.display(), path.display(), source))]
+    ToDirectory { path: PathBuf, dir: PathBuf, source: utils::Error },
 }
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -73,8 +77,8 @@ impl TrashInfo {
 
     /// saves the name with the extension .trashinfo
     pub(super) fn save(self, name: impl AsRef<Path>) -> Result<()> {
-        let path = get_trash_info_path(name);
-        
+        let path = get_trash_info_path(name)?;
+
         let mut trash_info_file = OPEN_OPTIONS.open(&path).context(FileOpen { path })?;
         save_trash_info(&mut trash_info_file, self)?;
         Ok(())
@@ -142,13 +146,12 @@ impl PartialOrd for TrashInfo {
     }
 }
 
-fn get_trash_info_path(name: impl AsRef<Path>) -> PathBuf {
-    let path = to_directory(name, &*TRASH_INFO_DIR);
-    let mut path_str = path.into_os_string();
-    // don't set extension, push the append the extension
-    path_str.push(".");
-    path_str.push(TRASH_INFO_EXT);
-    PathBuf::from(path_str)
+fn get_trash_info_path(name: impl AsRef<Path>) -> Result<PathBuf> {
+    let path = to_directory(&name, &*TRASH_INFO_DIR).context(ToDirectory {
+        path: name.as_ref(),
+        dir: &*TRASH_INFO_DIR,
+    })?;
+    Ok(add_trash_info_ext(path))
 }
 
 fn save_trash_info(file: &mut File, trash_info: TrashInfo) -> Result<()> {

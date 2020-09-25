@@ -8,7 +8,7 @@ use log::warn;
 use snafu::{OptionExt, ResultExt, Snafu};
 
 use crate::{DIR_COPY_OPT, FILE_COPY_OPT};
-use crate::TRASH_INFO_DIR;
+use crate::{TRASH_INFO_EXT, TRASH_INFO_DIR};
 use crate::ok_log;
 
 #[derive(Debug, Snafu)]
@@ -34,17 +34,20 @@ pub enum Error {
         path: PathBuf,
         source: fs_extra::error::Error,
     },
+
+    #[snafu(display("The path `{}` did not have a file name", path.display()))]
+    NoFileName { path: PathBuf },
 }
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
 
 /// makes the paths parent directory a new directory
-pub fn to_directory(path: impl AsRef<Path>, dir: impl AsRef<Path>) -> PathBuf {
+pub fn to_directory(path: impl AsRef<Path>, dir: impl AsRef<Path>) -> Result<PathBuf> {
     let path = path.as_ref();
     let mut dir = dir.as_ref().to_path_buf();
-    let file_name = path.file_name().expect("BUG: must have filename");
+    let file_name = path.file_name().context(NoFileName { path })?;
     dir.push(file_name);
-    dir
+    Ok(dir)
 }
 
 pub fn convert_to_str(path: &Path) -> Result<&str> {
@@ -85,6 +88,13 @@ pub(crate) fn read_dir_path<'a>(path: &'a Path) -> io::Result<impl Iterator<Item
         .map(|d| d.path());
 
     Ok(paths)
+}
+
+pub fn add_trash_info_ext(path: PathBuf) -> PathBuf {
+    let mut s = path.into_os_string();
+    s.push(".");
+    s.push(TRASH_INFO_EXT);
+    PathBuf::from(s)
 }
 
 #[cfg(test)]
