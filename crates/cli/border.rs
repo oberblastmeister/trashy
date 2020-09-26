@@ -8,6 +8,7 @@ arg_enum! {
         Ascii,
         AsciiGrid,
         Sharp,
+        DoubleSharp,
         Rounded,
         Reinforced,
         Markdown,
@@ -27,6 +28,14 @@ impl From<Border> for format::TableFormat {
                 .separators(&[LinePosition::Top], LineSeparator::new('─', '┬', '┌', '┐'))
                 .separators(&[LinePosition::Title], LineSeparator::new('─', '┼', '├', '┤'))
                 .separators(&[LinePosition::Bottom], LineSeparator::new('─', '┴', '└', '┘'))
+                .padding(1, 1)
+                .build(),
+            Border::DoubleSharp => FormatBuilder::new()
+                .column_separator('║')
+                .borders('║')
+                .separators(&[LinePosition::Top], LineSeparator::new('═', '╦', '╔', '╗'))
+                .separators(&[LinePosition::Title], LineSeparator::new('═', '╠', '├', '╣'))
+                .separators(&[LinePosition::Bottom], LineSeparator::new('═', '╩', '╚', '╝'))
                 .padding(1, 1)
                 .build(),
             Border::Rounded => FormatBuilder::new()
