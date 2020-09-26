@@ -9,9 +9,11 @@ use trash_lib::trash_info::TrashInfo;
 
 #[derive(StructOpt, Debug, PartialEq)]
 pub struct Opt {
+    /// keep stray files (not valid trash entries)
     #[structopt(short = "s", long = "keep-strays")]
     keep_strays: bool,
 
+    /// delete files olders than amount of days
     days: Option<u64>,
 }
 

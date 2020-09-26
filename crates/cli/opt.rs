@@ -2,20 +2,28 @@ mod subcommand;
 
 use std::path::PathBuf;
 
+use structopt::clap::{self, AppSettings};
 use structopt::StructOpt;
 use eyre::Result;
 
 use subcommand::{put, SubCommand};
 
 #[derive(Debug, StructOpt)]
+#[structopt(
+    global_settings(&[AppSettings::ColoredHelp]),
+    about = env!("CARGO_PKG_DESCRIPTION")
+)]
 pub struct Opt {
+    /// The paths to trash if no subcommand is specified (subcommand put is run by default)
     #[structopt(parse(from_os_str))]
     pub paths: Vec<PathBuf>,
 
+    /// How verbose to log. The verbosity is error by default.
     #[structopt(short = "v", long = "verbose")]
     #[structopt(parse(from_occurrences))]
     pub verbosity: u8,
 
+    /// The subcommand to run. If none is specified, will run `trash put` by default
     #[structopt(subcommand)]
     pub subcmd: Option<SubCommand>,
 

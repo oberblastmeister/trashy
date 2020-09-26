@@ -9,10 +9,19 @@ use eyre::{WrapErr, Result};
 
 #[derive(StructOpt, Debug)]
 pub enum SubCommand {
+    /// list valid files in the trash
     List(list::Opt),
+
+    /// Put files into trash. Is run by default if no subcommand is specified.
     Put(put::Opt),
+
+    /// PERMANANTLY removes ALL files in the trash
     Empty(empty::Opt),
+
+    /// Restore files from the trash
     Restore(restore::Opt),
+
+    /// PERMANANTLY removes files from the trash
     Remove(remove::Opt),
 }
 

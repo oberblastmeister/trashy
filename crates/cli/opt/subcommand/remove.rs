@@ -11,6 +11,7 @@ use trash_lib::trash_info::TrashInfo;
 
 #[derive(StructOpt, Debug)]
 pub struct Opt {
+    /// remove files that match this pattern
     pattern: String,
 }
 
