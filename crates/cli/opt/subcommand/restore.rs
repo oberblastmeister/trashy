@@ -2,16 +2,18 @@ use std::borrow::Cow;
 use std::env;
 use std::path::{Path, PathBuf};
 
-use eyre::{Result, WrapErr};
+use eyre::{bail, Result, WrapErr};
 use log::error;
+use prettytable::Table;
 use structopt::StructOpt;
+use trash_lib::ok_log;
 use trash_lib::trash_entry::{read_dir_trash_entries, TrashEntry};
 use trash_lib::trash_info::TrashInfo;
-use trash_lib::ok_log;
 
-use crate::utils::map_trash_entry_keep;
+use crate::border::Border;
+use crate::utils::{map_to_row, map_trash_entry_keep};
 
-#[derive(Debug, PartialEq, StructOpt)]
+#[derive(Debug, StructOpt)]
 pub struct Opt {
     #[structopt(short = "p", long = "path")]
     #[structopt(parse(from_os_str))]
@@ -20,17 +22,39 @@ pub struct Opt {
     #[structopt(short = "d", long = "directory")]
     #[structopt(parse(from_os_str))]
     directory: Option<PathBuf>,
+
+    #[structopt(short = "s", long = "style", default_value = "Sharp", possible_values = &Border::variants(), case_insensitive = true)]
+    border: Border,
 }
 
 pub fn restore(opt: Opt) -> Result<()> {
-    let path = &opt.path;
-
-    if let Some(p) = path {
-        restore_file(&p)?
-    } else {
-        let cwd = env::current_dir()?;
-        restore_in_directory(&cwd)?;
+    match opt {
+        Opt {
+            path: Some(_),
+            directory: Some(_),
+            border: _,
+        } => bail!("Cannot restore both path and in directory"),
+        Opt {
+            path: Some(path),
+            ..
+        } => {
+            restore_file(&path)?;
+        }
+        Opt {
+            directory: Some(directory),
+            border,
+            ..
+        } => restore_in_directory(&directory, border)?,
+        Opt {
+            path: None,
+            directory: None,
+            border,
+        } => restore_in_directory(
+            &env::current_dir().wrap_err("Failed to find current working directory")?,
+            border
+        )?,
     }
+
     Ok(())
 }
 
@@ -38,7 +62,11 @@ fn restore_file(path: &Path) -> Result<()> {
     trash_lib::restore(path).map_err(Into::into)
 }
 
-fn restore_in_directory(dir: &Path) -> Result<()> {
+fn restore_in_directory(dir: &Path, border: Border) -> Result<()> {
+    let mut table = Table::new();
+    table.set_format(border.into());
+    // table.set_titles(title_row());
+
     read_dir_trash_entries()?
         .map(map_trash_entry_keep)
         .filter_map(|res| ok_log!(res => error!))
@@ -50,6 +78,9 @@ fn restore_in_directory(dir: &Path) -> Result<()> {
                 .wrap_err("Failed to restore trash_entry")
         })
         .filter_map(|res| ok_log!(res => error!))
+            // .map(|trash_entry| {
+            //     row_form
+            // })
         .for_each(|_| ());
 
     Ok(())
