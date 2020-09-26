@@ -11,6 +11,7 @@ use lscolors::{LsColors, Style};
 use prettytable::{cell, row, Cell, Row, Table};
 use structopt::StructOpt;
 
+use crate::border::Border;
 use crate::utils::{map_trash_entry_keep, trash_entry_error_context};
 use trash_lib::trash_entry::{self, read_dir_trash_entries, TrashEntry};
 use trash_lib::trash_info::TrashInfo;
@@ -20,10 +21,13 @@ lazy_static! {
     static ref LS_COLORS: LsColors = LsColors::from_env().unwrap_or_default();
 }
 
-#[derive(StructOpt, Debug, PartialEq)]
-pub struct Opt {}
+#[derive(StructOpt, Debug)]
+pub struct Opt {
+    #[structopt(long = "style", default_value = "Rounded", possible_values = &Border::variants(), case_insensitive = true)]
+    pub border: Border,
+}
 
-pub fn list(_opt: Opt) -> Result<()> {
+pub fn list(opt: Opt) -> Result<()> {
     let res = read_dir_trash_entries();
     let iter = match res {
         Err(ref e) => match e {
@@ -33,10 +37,10 @@ pub fn list(_opt: Opt) -> Result<()> {
         Ok(iter) => iter,
     };
     let mut table = Table::new();
-    table.add_row(header_row());
+    table.set_format(opt.border.into());
+    table.set_titles(title_row());
 
-    iter
-        .map(map_trash_entry_keep)
+    iter.map(map_trash_entry_keep)
         .filter_map(|res| ok_log!(res => error!))
         .sorted_by(custom_cmp)
         .map(map_to_meta_data)
@@ -78,7 +82,7 @@ fn colorize_path(path: &str, metadata: &fs::Metadata) -> String {
     format!("{}", ansi_style.paint(path))
 }
 
-fn header_row() -> Row {
+fn title_row() -> Row {
     row!["Year", "Month", "Day", "Time", "Path"]
 }
 

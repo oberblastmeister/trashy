@@ -1,5 +1,6 @@
 mod opt;
 mod utils;
+mod border;
 
 use std::error::Error;
 use std::process;

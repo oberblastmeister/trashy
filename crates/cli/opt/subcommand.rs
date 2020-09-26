@@ -3,6 +3,7 @@ pub mod put;
 mod empty;
 mod restore;
 mod remove;
+mod completion;
 
 use structopt::StructOpt;
 use eyre::{WrapErr, Result};
@@ -23,6 +24,9 @@ pub enum SubCommand {
 
     /// PERMANANTLY removes files from the trash
     Remove(remove::Opt),
+
+    /// Generates completions for shell
+    Completion(completion::Opt)
 }
 
 impl SubCommand {
@@ -35,6 +39,7 @@ impl SubCommand {
             SubCommand::Empty(opt) => empty::empty(opt)?,
             SubCommand::Restore(opt) => restore::restore(opt)?,
             SubCommand::Remove(opt) => remove::remove(opt)?,
+            SubCommand::Completion(opt) => completion::completion(opt),
         }
         Ok(())
     }
