@@ -41,7 +41,7 @@ pub fn list(_opt: Opt) -> Result<()> {
         .sorted_by(custom_cmp)
         .map(map_to_meta_data)
         .filter_map(|res| ok_log!(res => error!))
-        .map(|(metadata, trash_info)| row_from_trash_info(trash_info, &metadata))
+        .map(map_to_row)
         .filter_map(|res| ok_log!(res => error!))
         .for_each(|row| {
             table.add_row(row);
@@ -56,14 +56,15 @@ fn map_to_meta_data(stuff: (TrashEntry, TrashInfo)) -> Result<(fs::Metadata, Tra
     Ok((metadata, stuff.1))
 }
 
-fn custom_cmp<T, U>(t1: &(T, U), t2: &(T, U)) -> Ordering
+fn custom_cmp<T, R, U>(t1: &(T, U), t2: &(R, U)) -> Ordering
 where
     U: Ord,
 {
     t1.1.cmp(&t2.1)
 }
 
-fn row_from_trash_info(trash_info: TrashInfo, metadata: &fs::Metadata) -> Result<Row> {
+fn map_to_row(pair: (fs::Metadata, TrashInfo)) -> Result<Row> {
+    let (metadata, trash_info) = pair;
     let path = trash_info.percent_path().decoded()?;
     let colorized_path = colorize_path(path.as_ref(), &metadata);
     let mut res = format_date(trash_info.deletion_date());

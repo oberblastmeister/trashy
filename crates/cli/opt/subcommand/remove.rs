@@ -1,6 +1,6 @@
-use eyre::Result;
+use eyre::{WrapErr, Result};
 use lazy_static::lazy_static;
-use log::{info, error};
+use log::{error, info};
 use regex::Regex;
 use structopt::StructOpt;
 
@@ -16,15 +16,14 @@ pub struct Opt {
 }
 
 pub fn remove(opt: Opt) -> Result<()> {
+    let re = Regex::new(&opt.pattern).wrap_err(format!("Failed to create regex from string `{}`", &opt.pattern))?;
+
     read_dir_trash_entries()?
         .map(map_trash_entry_keep)
         .filter_map(|res| ok_log!(res => error!))
         .filter(|(trash_entry, trash_info)| {
-            let res = try_filter_by_regex(&opt.pattern, trash_info);
-            match ok_log!(res => error!) {
-                Some(t) => t,
-                None => false,
-            }
+            let res = try_filter_by_regex(&re, trash_info);
+            ok_log!(res => error!).unwrap_or(false)
         })
         .inspect(|(trash_entry, _)| info!("Removing {:?}", trash_entry))
         // .map(|(trash_entry, _trash_info)| trash_entry.remove())
@@ -34,8 +33,7 @@ pub fn remove(opt: Opt) -> Result<()> {
     Ok(())
 }
 
-fn try_filter_by_regex(pattern: &str, trash_info: &TrashInfo) -> Result<bool> {
-    let re = Regex::new(pattern).unwrap();
+fn try_filter_by_regex(regex: &Regex, trash_info: &TrashInfo) -> Result<bool> {
     let percent_path = trash_info.percent_path().decoded()?;
-    Ok(re.is_match(percent_path.as_ref()))
+    Ok(regex.is_match(percent_path.as_ref()))
 }
