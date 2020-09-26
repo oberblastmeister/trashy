@@ -23,7 +23,7 @@ lazy_static! {
 
 #[derive(StructOpt, Debug)]
 pub struct Opt {
-    #[structopt(long = "style", default_value = "Rounded", possible_values = &Border::variants(), case_insensitive = true)]
+    #[structopt(short = "s", long = "style", default_value = "Sharp", possible_values = &Border::variants(), case_insensitive = true)]
     pub border: Border,
 }
 

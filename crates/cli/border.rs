@@ -6,6 +6,7 @@ arg_enum! {
     pub enum Border {
         None,
         Ascii,
+        AsciiGrid,
         Sharp,
         Rounded,
         Reinforced,
@@ -19,6 +20,7 @@ impl From<Border> for format::TableFormat {
         match style {
             Border::None => *format::consts::FORMAT_CLEAN,
             Border::Ascii => *format::consts::FORMAT_NO_LINESEP_WITH_TITLE,
+            Border::AsciiGrid => *format::consts::FORMAT_DEFAULT,
             Border::Sharp => FormatBuilder::new()
                 .column_separator('│')
                 .borders('│')
