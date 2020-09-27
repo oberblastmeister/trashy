@@ -15,11 +15,7 @@ lazy_static = "1.4.0"
 log = "0.4.11"
 fs_extra = "1.2.0"
 itertools = "0.9.0"
-
-[dependencies.snafu]
-version = "0.6.8" 
-guide = false
-backtraces = true
+snafu = "0.6.8"
 
 [dev-dependencies]
 tempfile = "3.1.0"

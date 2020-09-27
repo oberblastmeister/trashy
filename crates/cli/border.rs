@@ -2,7 +2,7 @@ use prettytable::format::{self, FormatBuilder, LinePosition, LineSeparator};
 use structopt::clap::arg_enum;
 
 arg_enum! {
-    #[derive(Debug)]
+    #[derive(Debug, Copy, Clone)]
     pub enum Border {
         None,
         Ascii,
