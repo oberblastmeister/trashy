@@ -235,6 +235,7 @@ mod tests {
         );
     }
 
+    #[ignore]
     #[test]
     fn save_trash_info_test_test() -> Result<()> {
         let trash_info = TrashInfo::new(PercentPath::from_str("this/is/a/path"), None);

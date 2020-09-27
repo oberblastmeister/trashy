@@ -159,6 +159,7 @@ mod tests {
         let _ = put(&nothing);
     }
 
+    #[ignore]
     #[test]
     fn put_test_single() -> Result<()> {
         let mut tempfile = NamedTempFile::new()?;
