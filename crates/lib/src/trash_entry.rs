@@ -284,13 +284,13 @@ mod tests {
 
     #[test]
     fn in_trash_dir_test() {
-        assert_eq!(in_trash_dir("/home/brian/.local/share/Trash"), false);
+        assert_eq!(in_trash_dir(TRASH_DIR.join(".local/share/Trash")), false);
     }
 
     #[test]
     fn in_trash_dir_files() {
         assert_eq!(
-            in_trash_dir("/home/brian/.local/share/Trash/files/a_file"),
+            in_trash_dir(TRASH_DIR.join(".local/share/Trash/files/a_file")),
             true
         );
     }
