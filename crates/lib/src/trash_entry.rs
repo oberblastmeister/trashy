@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::io;
 use std::io::ErrorKind;
+use std::fmt;
 use std::path::{Path, PathBuf};
 
 use log::warn;
@@ -231,7 +232,11 @@ fn contains_contains(slice: &[&str], item: &str) -> bool {
     slice.into_iter().any(|s| s.contains(item))
 }
 
-fn in_trash_dir(path: impl AsRef<Path>) -> bool {
+fn in_trash_dir(path: impl AsRef<Path> + fmt::Debug) -> bool {
+    dbg!(&path.as_ref());
+    dbg!(&path.as_ref().parent());
+    dbg!(&path.as_ref().parent().and_then(|p| p.parent()));
+    
     path.as_ref()
         .parent()
         .and_then(|p| p.parent())
