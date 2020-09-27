@@ -190,19 +190,21 @@ mod tests {
     use tempfile::{tempfile_in, Builder, NamedTempFile};
 
     #[test]
-    fn get_trash_info_path_test() {
+    fn get_trash_info_path_test() -> Result<()> {
         assert_eq!(
-            get_trash_info_path("this_is_a_name"),
+            get_trash_info_path("this_is_a_name")?,
             HOME_DIR.join(".local/share/Trash/info/this_is_a_name.trashinfo")
         );
+        Ok(())
     }
 
     #[test]
-    fn get_trash_info_path_already_extnesion_test() {
+    fn get_trash_info_path_already_extnesion_test() -> Result<()> {
         assert_eq!(
-            get_trash_info_path("already_extension.trashinfo"),
-            HOME_DIR.join(".local/share/Trash/info/already_extension.trashinfo")
+            get_trash_info_path("already_extension.trashinfo")?,
+            HOME_DIR.join(".local/share/Trash/info/already_extension.trashinfo.trashinfo")
         );
+        Ok(())
     }
 
     #[test]

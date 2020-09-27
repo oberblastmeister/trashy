@@ -169,13 +169,15 @@ mod tests {
     }
 
     #[test]
-    fn to_dir_simple_test() {
-        assert_eq!(to_directory("a_file", "a_dir"), PathBuf::from("a_dir/a_file"));
+    fn to_dir_simple_test() -> Result<()> {
+        assert_eq!(to_directory("a_file", "a_dir")?, PathBuf::from("a_dir/a_file"));
+        Ok(())
     }
 
     #[test]
-    fn to_dir_already_dir_test() {
-        assert_eq!(to_directory("/tmp/hello/a_file", "another_directory"), PathBuf::from("another_directory/a_file"));
+    fn to_dir_already_dir_test() -> Result<()> {
+        assert_eq!(to_directory("/tmp/hello/a_file", "another_directory")?, PathBuf::from("another_directory/a_file"));
+        Ok(())
     }
 
     fn print_error(s: impl Display) {
