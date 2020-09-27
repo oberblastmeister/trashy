@@ -1,23 +1,49 @@
-use std::result::Result as StdResult;
 use std::cmp::Ordering;
 use std::fs;
 use std::path::Path;
+use std::convert::TryInto;
+use std::result::Result as StdResult;
 
-use trash_lib::trash_entry::{self, TrashEntry};
 use chrono::naive::NaiveDateTime;
-use lscolors::{LsColors, Style};
+use eyre::{Result, WrapErr};
 use lazy_static::lazy_static;
-use trash_lib::{ok_log, TRASH_FILE_DIR, TRASH_INFO_DIR};
-use prettytable::{cell, row, Cell, Row, Table};
+use lscolors::{LsColors, Style};
+use prettytable::{cell, Cell, Row, Table, row};
+use trash_lib::trash_entry::{self, TrashEntry};
 use trash_lib::trash_info::TrashInfo;
-use eyre::{WrapErr, Result};
+use trash_lib::{ok_log, TRASH_FILE_DIR, TRASH_INFO_DIR};
 
 lazy_static! {
     static ref LS_COLORS: LsColors = LsColors::from_env().unwrap_or_default();
 }
 
-pub fn trash_entry_error_context(res: StdResult<TrashEntry, trash_entry::Error>) -> Result<TrashEntry> {
+pub fn trash_entry_error_context(
+    res: StdResult<TrashEntry, trash_entry::Error>,
+) -> Result<TrashEntry> {
     res.wrap_err("Failed to create trash entry")
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Pair(pub TrashEntry, pub TrashInfo);
+
+impl Pair {
+    pub fn new(trash_entry: TrashEntry) -> Result<Pair> {
+        let trash_info = trash_entry.parse_trash_info()?;
+        let pair = Pair(trash_entry, trash_info);
+        Ok(pair)
+    }
+}
+
+impl PartialOrd for Pair {
+    fn partial_cmp(&self, other: &Pair) -> Option<Ordering> {
+        Some(self.1.cmp(&other.1))
+    }
+}
+
+impl Ord for Pair {
+    fn cmp(&self, other: &Pair) -> Ordering {
+        self.1.cmp(&other.1)
+    }
 }
 
 pub fn map_trash_entry_keep(trash_entry: TrashEntry) -> Result<(TrashEntry, TrashInfo)> {

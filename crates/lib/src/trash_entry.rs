@@ -14,7 +14,7 @@ use crate::{TRASH_DIR, TRASH_FILE_DIR, TRASH_INFO_DIR, TRASH_INFO_EXT};
 use crate::ok_log;
 
 /// Represents an entry in the trash directory. Includes the file path and the trash info path.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct TrashEntry {
     info_path: PathBuf,
     file_path: PathBuf,

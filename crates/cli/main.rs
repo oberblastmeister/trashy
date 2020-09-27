@@ -1,14 +1,12 @@
 mod opt;
 mod utils;
 mod border;
+mod table;
 
-use std::error::Error;
 use std::process;
 
-use ansi_term::Colour::Red;
-use ansi_term::Style;
 use env_logger::Builder;
-use eyre::{EyreHandler, Result};
+use eyre::Result;
 use log::{debug, LevelFilter};
 use structopt::StructOpt;
 

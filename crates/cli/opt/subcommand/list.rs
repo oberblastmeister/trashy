@@ -1,11 +1,11 @@
 use eyre::{eyre, Result};
 use itertools::Itertools;
 use log::error;
-use prettytable::Table;
 use structopt::StructOpt;
 
 use crate::border::Border;
-use crate::utils::{map_trash_entry_keep, title_row, custom_cmp, map_to_row};
+use crate::table::SizedTable;
+use crate::utils::Pair;
 use trash_lib::trash_entry::{self, read_dir_trash_entries};
 use trash_lib::ok_log;
 
@@ -24,19 +24,15 @@ pub fn list(opt: Opt) -> Result<()> {
         },
         Ok(iter) => iter,
     };
-    let mut table = Table::new();
-    table.set_format(opt.border.into());
-    table.set_titles(title_row());
+    let mut table = SizedTable::new(opt.border)?;
 
-    iter.map(map_trash_entry_keep)
+    iter.map(Pair::new)
         .filter_map(|res| ok_log!(res => error!))
-        .sorted_by(custom_cmp)
-        .map(map_to_row)
+        .sorted()
+        .map(|pair| table.add_row(&pair))
         .filter_map(|res| ok_log!(res => error!))
-        .for_each(|row| {
-            table.add_row(row);
-        });
+        .for_each(|_| ());
 
-    table.printstd();
+    table.print();
     Ok(())
 }
