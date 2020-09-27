@@ -19,7 +19,7 @@ use utils::{read_dir_path, remove_path};
 
 lazy_static! {
     static ref USER_DIRS: UserDirs = UserDirs::new().expect("Failed to determine user directories");
-    static ref HOME_DIR: &'static Path = USER_DIRS.home_dir();
+    pub(crate) static ref HOME_DIR: &'static Path = USER_DIRS.home_dir();
     static ref FILE_COPY_OPT: file::CopyOptions = file::CopyOptions::new();
     static ref DIR_COPY_OPT: dir::CopyOptions = dir::CopyOptions::new();
     pub static ref TRASH_DIR: PathBuf = HOME_DIR.join(".local/share/Trash");

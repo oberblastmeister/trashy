@@ -244,6 +244,7 @@ fn in_trash_dir(path: impl AsRef<Path> + fmt::Debug) -> bool {
 mod tests {
     use super::*;
     use crate::utils::{contains_all_elements, temp_file_iter};
+    use crate::HOME_DIR;
     use anyhow::{Context, Result};
     use std::io::Write;
     use tempfile::{tempdir, NamedTempFile};
@@ -280,21 +281,21 @@ mod tests {
 
     #[test]
     fn in_trash_dir_test() {
-        assert_eq!(in_trash_dir(TRASH_DIR.join(".local/share/Trash")), false);
+        assert_eq!(in_trash_dir(HOME_DIR.join(".local/share/Trash")), false);
     }
 
     #[test]
     fn in_trash_dir_files() {
         assert_eq!(
-            in_trash_dir(TRASH_DIR.join(".local/share/Trash/files/a_file")),
+            in_trash_dir(HOME_DIR.join(".local/share/Trash/files/a_file")),
             true
         );
     }
 
     #[test]
-    fn ins_trash_dir_info_test() {
+    fn in_trash_dir_info_test() {
         assert_eq!(
-            in_trash_dir("/home/brian/.local/share/Trash/info/another_file"),
+            in_trash_dir(HOME_DIR.join(".local/share/Trash/info/another_file")),
             true
         );
     }
