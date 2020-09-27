@@ -233,10 +233,6 @@ fn contains_contains(slice: &[&str], item: &str) -> bool {
 }
 
 fn in_trash_dir(path: impl AsRef<Path> + fmt::Debug) -> bool {
-    dbg!(&path.as_ref());
-    dbg!(&path.as_ref().parent());
-    dbg!(&path.as_ref().parent().and_then(|p| p.parent()));
-    
     path.as_ref()
         .parent()
         .and_then(|p| p.parent())
