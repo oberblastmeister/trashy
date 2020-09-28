@@ -40,26 +40,26 @@ pub enum Error {
     #[snafu(display("The path `{}` was not found", path.display()))]
     NotFound { path: PathBuf },
 
-    #[snafu(display("Could not parse trash info file with path `{}`: {}", path.display(), source))]
+    #[snafu(display("Could not parse trash info file with path `{}`", path.display()))]
     ParseTrashInfo {
         path: PathBuf,
         source: trash_info::Error,
     },
 
-    #[snafu(display("Failed to save trash info with name {}: {}", name, source))]
+    #[snafu(display("Failed to save trash info with name {}", name))]
     TrashInfoSave {
         name: String,
         source: trash_info::Error,
     },
 
     #[snafu(context(false))]
-    #[snafu(display("Utils error: {}", source))]
+    #[snafu(display("Utils error"))]
     Utils { source: utils::Error },
 
     #[snafu(display("Moving path {} into the trash directory when it is already there", path.display()))]
     CreationInTrash { path: PathBuf },
 
-    #[snafu(display("Failed to canonicalize path {}: {}", path.display(), source))]
+    #[snafu(display("Failed to canonicalize path {}", path.display()))]
     CanonicalizePath { path: PathBuf, source: io::Error },
 }
 

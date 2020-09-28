@@ -4,8 +4,10 @@ mod border;
 mod table;
 
 use std::process;
+use std::fmt;
 
 use env_logger::Builder;
+use ansi_term::Color::Red;
 use eyre::Result;
 use log::{debug, LevelFilter};
 use structopt::StructOpt;
@@ -42,43 +44,12 @@ fn main() {
     match try_main() {
         Ok(()) => process::exit(0),
         Err(e) => {
-            eprintln!("{}", e);
+            print_err(e);
             process::exit(1);
         }
     }
 }
 
-// fn report(error: &(dyn Error + 'static)) {
-//     let s = error.to_string();
-//     let lines = s.lines();
-//     if let Some(line) = lines.next() {
-//         if let Some(idx) = s.find(':') {
-
-//         }
-//     }
-// }
-
-// struct Handler;
-
-// impl EyreHandler for Handler {
-//     fn debug(
-//         &self,
-//         error: &(dyn Error + 'static),
-//         f: &mut core::fmt::Formatter<'_>,
-//     ) -> core::fmt::Result {
-//         writeln!(
-//             f,
-//             "{}: {}",
-//             Style::new().bold().fg(Red).paint("error"),
-//             error
-//         )
-//         .unwrap();
-//         if let Some(source) = error.source() {
-//             writeln!(f, "\n\nCaused by:").unwrap();
-//             for (i, e) in std::iter::successors(Some(source), |e| e.source()).enumerate() {
-//                 writeln!(f, "   {}: {}", i, e).unwrap();
-//             }
-//         }
-//         Ok(())
-//     }
-// }
+fn print_err(s: impl fmt::Display) {
+    eprintln!("{}: {}", Red.bold().paint("Error"), s);
+}

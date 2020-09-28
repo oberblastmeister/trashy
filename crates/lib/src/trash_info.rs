@@ -34,13 +34,13 @@ lazy_static! {
 
 #[derive(Debug, Snafu)]
 pub enum Error {
-    #[snafu(display("Failed to open file with path {}: {}", path.display(), source))]
+    #[snafu(display("Failed to open file with path {}", path.display()))]
     FileOpen { source: io::Error, path: PathBuf },
 
-    #[snafu(display("Failed to write to trash info file: {}", source))]
+    #[snafu(display("Failed to write to trash info file"))]
     TrashInfoWrite { source: io::Error },
 
-    #[snafu(display("Failed to read path {} to a string: {}", path.display(), source))]
+    #[snafu(display("Failed to read path {} to a string", path.display()))]
     ReadToStr { path: PathBuf, source: io::Error },
 
     #[snafu(context(false))]
@@ -53,7 +53,7 @@ pub enum Error {
     #[snafu(display("The path {} does not exist", path.display()))]
     NonExistentPath { path: PathBuf },
 
-    #[snafu(display("Failed to get a new path in dir `{}` from path `{}`: {}", dir.display(), path.display(), source))]
+    #[snafu(display("Failed to get a new path in dir `{}` from path `{}`", dir.display(), path.display()))]
     ToDirectory { path: PathBuf, dir: PathBuf, source: utils::Error },
 }
 

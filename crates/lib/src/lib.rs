@@ -20,8 +20,19 @@ use utils::{read_dir_path, remove_path};
 lazy_static! {
     static ref USER_DIRS: UserDirs = UserDirs::new().expect("Failed to determine user directories");
     pub(crate) static ref HOME_DIR: &'static Path = USER_DIRS.home_dir();
-    static ref FILE_COPY_OPT: file::CopyOptions = file::CopyOptions::new();
-    static ref DIR_COPY_OPT: dir::CopyOptions = dir::CopyOptions::new();
+    static ref FILE_COPY_OPT: file::CopyOptions = file::CopyOptions {
+        overwrite: true,
+        skip_exist: false,
+        buffer_size: 64000,
+    };
+    static ref DIR_COPY_OPT: dir::CopyOptions = dir::CopyOptions {
+        overwrite: true,
+        skip_exist: false,
+        buffer_size: 64000,
+        copy_inside: false,
+        content_only: false,
+        depth: 0,
+    };
     pub static ref TRASH_DIR: PathBuf = HOME_DIR.join(".local/share/Trash");
     pub static ref TRASH_INFO_DIR: PathBuf = TRASH_DIR.join("info");
     pub static ref TRASH_FILE_DIR: PathBuf = TRASH_DIR.join("files");
@@ -39,17 +50,17 @@ pub enum Error {
     ))]
     TrashEntryCreation { source: trash_entry::Error },
 
-    #[snafu(display("Failed to read an iterator of trash entries: {}", source))]
+    #[snafu(display("Failed to read an iterator of trash entries"))]
     ReadDirTrashEntry { source: trash_entry::Error },
 
-    #[snafu(display("Failed to restore trash entry {}", source))]
+    #[snafu(display("Failed to restore trash entry"))]
     TrashEntryRestore { source: trash_entry::Error },
 
-    #[snafu(display("Failed to remove trash entry {}", source))]
+    #[snafu(display("Failed to remove trash entry"))]
     TrashEntryRemove { source: trash_entry::Error },
 
     #[snafu(context(false))]
-    #[snafu(display("Utils error: {}", source))]
+    #[snafu(display("Utils error"))]
     Utils { source: utils::Error },
 
     #[snafu(context(false))]
