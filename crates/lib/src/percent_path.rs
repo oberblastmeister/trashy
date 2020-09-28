@@ -33,9 +33,8 @@ pub const ASCII_SET: &'static AsciiSet = &CONTROLS
 #[derive(Debug, Snafu)]
 pub enum Error {
     #[snafu(display(
-        "The decoded form of the string `{}` was not well formed in utf-8: {}",
+        "The decoded form of the string `{}` was not well formed in utf-8",
         s,
-        source
     ))]
     Decode { s: String, source: Utf8Error },
 

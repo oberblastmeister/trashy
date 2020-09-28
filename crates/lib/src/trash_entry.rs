@@ -34,7 +34,7 @@ pub enum Error {
     #[snafu(context(false))]
     DecodePercentPath { source: percent_path::Error },
 
-    #[snafu(display("Failed to read entries from path `{}`: {}", path.display(), source))]
+    #[snafu(display("Failed to read entries from path `{}`", path.display()))]
     ReadDirPath { source: io::Error, path: PathBuf },
 
     #[snafu(display("The path `{}` was not found", path.display()))]

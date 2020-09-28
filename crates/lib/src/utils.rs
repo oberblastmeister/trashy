@@ -16,20 +16,20 @@ pub enum Error {
     #[snafu(display("The path {} was not valid utf-8", path.display()))]
     Utf8 { path: PathBuf },
 
-    #[snafu(display("Failed to read path {}: {}", path.display(), source))]
+    #[snafu(display("Failed to read path {}", path.display()))]
     ReadDir { source: io::Error, path: PathBuf },
 
-    #[snafu(display("Failed to read directory entry from path {}: {}", path.display(), source))]
+    #[snafu(display("Failed to read directory entry from path {}", path.display()))]
     ReadDirEntry { source: io::Error, path: PathBuf },
 
-    #[snafu(display("Failed to move path {} to {}: {}", from.display(), to.display(), source))]
+    #[snafu(display("Failed to move path {} to {}", from.display(), to.display()))]
     MovePath {
         source: fs_extra::error::Error,
         from: PathBuf,
         to: PathBuf,
     },
 
-    #[snafu(display("Failed to remove path {}: {}", path.display(), source))]
+    #[snafu(display("Failed to remove path {}", path.display()))]
     RemovePath {
         path: PathBuf,
         source: fs_extra::error::Error,

@@ -31,12 +31,11 @@ pub const TRASH_INFO_EXT: &'_ str = "trashinfo";
 
 #[derive(Debug, Snafu)]
 pub enum Error {
-    #[snafu(display("Failed to create new trash entry struct: {}", source))]
+    #[snafu(display("Failed to create new trash entry struct"))]
     TrashEntryNew { source: trash_entry::Error },
 
     #[snafu(display(
-        "Failed to create a new trash entry by moving a file and creating a trash info file: {}",
-        source
+        "Failed to create a new trash entry by moving a file and creating a trash info file"
     ))]
     TrashEntryCreation { source: trash_entry::Error },
 
