@@ -11,6 +11,7 @@ repository = "https://github.com/oberblastmeister/trash-cli"
 readme = "README.md"
 keywords = ["trash", "remove", "recycle", "bin", "freedesktop"]
 categories = ["command-line-utilities"]
+license = "MIT"
 edition = "2018"
 
 [workspace]

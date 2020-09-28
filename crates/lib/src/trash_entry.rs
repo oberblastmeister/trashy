@@ -30,7 +30,7 @@ pub enum Error {
     #[snafu(display("The trash entry does not have a file for the corisponding info file, the path `{}` does not exist", path.display()))]
     ExistsFilePath { path: PathBuf },
 
-    #[snafu(display("The trash entry does have an info file or a moved file, the paths `{}` and `{}` do not exists", path1.display(), path2.display()))]
+    #[snafu(display("The trash entry does have an info file or a moved file, the paths `{}` and `{}` do not exists", info.display(), file.display()))]
     ExistsNone { info: PathBuf, file: PathBuf },
 
     #[snafu(display("There is not a file name for path `{}`", path.display()))]
