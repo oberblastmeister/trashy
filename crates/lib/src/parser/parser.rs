@@ -59,7 +59,7 @@ fn parse_trash_info_str<'a>(i: &'a str) -> IResult<&str, TrashInfoStr, VerboseEr
     ))
 }
 
-pub fn parse_trash_info<'a>(i: &'a str) -> Result<TrashInfo, Error> {
+pub fn parse_trash_info<'a>(i: &'a str) -> Result<TrashInfo> {
     let (_, trash_info_str) = parse_trash_info_str(i).map_err(|e| NomError::build(e, i))?;
     trash_info_str.try_into()
 }

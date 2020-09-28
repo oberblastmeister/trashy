@@ -43,9 +43,8 @@ pub enum Error {
     #[snafu(display("Failed to read path {} to a string", path.display()))]
     ReadToStr { path: PathBuf, source: io::Error },
 
-    #[snafu(context(false))]
-    #[snafu(display("Failed to parse trash info file:\n{}", source))]
-    ParseTrashInfo { source: parser::Error },
+    #[snafu(display("Failed to parse trash info file from str"))]
+    ParseTrashInfoFromStr { source: parser::Error },
 
     #[snafu(display("Wrong extension for path {}", path.display()))]
     WrongExtension { path: PathBuf },
@@ -118,7 +117,7 @@ impl FromStr for TrashInfo {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<TrashInfo> {
-        let trash_info = parse_trash_info(s)?;
+        let trash_info = parse_trash_info(s).context(ParseTrashInfoFromStr)?;
         Ok(trash_info)
     }
 }
