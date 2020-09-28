@@ -1,6 +1,7 @@
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::borrow::Cow;
 
 use fs_extra::dir::{self, move_dir};
 use fs_extra::file::{self, move_file};
@@ -34,6 +35,9 @@ pub enum Error {
 
     #[snafu(display("The path `{}` did not have a file name", path.display()))]
     NoFileName { path: PathBuf },
+
+    #[snafu(display("The path `{}` has no parent", path.display()))]
+    NoParent { path: PathBuf },
 }
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -57,6 +61,19 @@ pub(crate) fn move_path(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<
     let to = to.as_ref();
 
     if from.is_dir() {
+        // first rename the dir because move_dir does not rename the directory while moving unlike
+        // move_file, so we have to rename it first manually. Also move dir does not work like
+        // move_file. Move dir moves the directory from a path to the inside of another directory.
+        let (from, to) = match (from.file_name(), to.file_name(), from.parent().context(NoParent { path: from })?) {
+            // only rename if the old name and new name are different
+            (Some(name1), Some(name2), parent) if name1 != name2 => {
+                let new_name = parent.join(name2);
+                fs::rename(from, &new_name).unwrap();
+                (Cow::from(from), Cow::from(parent))
+            }
+            (.., parent) => (Cow::from(from), Cow::from(parent)),
+        };
+
         move_dir(from, to, &DIR_COPY_OPT)
     } else if from.is_file() {
         move_file(from, to, &FILE_COPY_OPT)

@@ -20,25 +20,25 @@ use utils::{read_dir_path, remove_path};
 lazy_static! {
     static ref USER_DIRS: UserDirs = UserDirs::new().expect("Failed to determine user directories");
     pub(crate) static ref HOME_DIR: &'static Path = USER_DIRS.home_dir();
-    static ref FILE_COPY_OPT: file::CopyOptions = file::CopyOptions {
-        overwrite: true,
-        skip_exist: false,
-        buffer_size: 64000,
-    };
-    static ref DIR_COPY_OPT: dir::CopyOptions = dir::CopyOptions {
-        overwrite: true,
-        skip_exist: false,
-        buffer_size: 64000,
-        copy_inside: false,
-        content_only: false,
-        depth: 0,
-    };
     pub static ref TRASH_DIR: PathBuf = HOME_DIR.join(".local/share/Trash");
     pub static ref TRASH_INFO_DIR: PathBuf = TRASH_DIR.join("info");
     pub static ref TRASH_FILE_DIR: PathBuf = TRASH_DIR.join("files");
 }
 
 pub const TRASH_INFO_EXT: &'_ str = "trashinfo";
+pub const FILE_COPY_OPT: file::CopyOptions = file::CopyOptions {
+    overwrite: true,
+    skip_exist: false,
+    buffer_size: 64000,
+};
+pub const DIR_COPY_OPT: dir::CopyOptions = dir::CopyOptions {
+    overwrite: true,
+    skip_exist: false,
+    buffer_size: 64000,
+    copy_inside: false,
+    content_only: false,
+    depth: 0,
+};
 
 #[derive(Debug, Snafu)]
 pub enum Error {

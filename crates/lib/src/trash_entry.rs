@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::fmt;
+use std::fs;
 use std::io;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};

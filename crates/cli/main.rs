@@ -50,6 +50,6 @@ fn main() {
     }
 }
 
-fn print_err(s: impl fmt::Display) {
-    eprintln!("{}: {}", Red.bold().paint("Error"), s);
+fn print_err(s: impl fmt::Debug) {
+    eprintln!("{}: {:?}", Red.bold().paint("Error"), s);
 }

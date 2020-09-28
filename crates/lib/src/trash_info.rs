@@ -25,9 +25,9 @@ lazy_static! {
             .read(false) // read access false
             .write(true) // write access true
             .append(false) // do not append to file
-            .truncate(false) // ignored (create_new is true)
-            .create(false) // ignored (create_new is true)
-            .create_new(true); // create a new file and fail if it already exists
+            .truncate(true) // truncate the file if it exists
+            .create(true) // create a new file or open existing
+            .create_new(false); // don't fail if there is an existing file
         open_options
     };
 }
