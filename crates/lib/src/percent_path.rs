@@ -38,9 +38,8 @@ pub enum Error {
     ))]
     Decode { s: String, source: Utf8Error },
 
-    #[snafu(context(false))]
-    #[snafu(display("Utils error: {}", source))]
-    Utils { source: utils::Error },
+    #[snafu(display("Failed to convert path to a string to be able to percent encode it"))]
+    ConvertPathDecode { source: utils::Error },
 }
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -51,7 +50,7 @@ pub struct PercentPath(String);
 impl PercentPath {
     pub(crate) fn from_path(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
-        let s = convert_to_str(path)?;
+        let s = convert_to_str(path).context(ConvertPathDecode)?;
         Ok(Self(utf8_percent_encode(s, ASCII_SET).to_string()))
     }
 

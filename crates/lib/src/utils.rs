@@ -13,11 +13,8 @@ use crate::ok_log;
 
 #[derive(Debug, Snafu)]
 pub enum Error {
-    #[snafu(display("The path {} was not valid utf-8", path.display()))]
+    #[snafu(display("The path `{}` was not valid utf-8", path.display()))]
     Utf8 { path: PathBuf },
-
-    #[snafu(display("Failed to read path {}", path.display()))]
-    ReadDir { source: io::Error, path: PathBuf },
 
     #[snafu(display("Failed to read directory entry from path {}", path.display()))]
     ReadDirEntry { source: io::Error, path: PathBuf },
