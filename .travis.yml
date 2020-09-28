@@ -7,6 +7,10 @@ jobs:
   allow_failures:
     - rust: nightly
   fast_finish: true
+cache: cargo
+before_script:
+  - cargo install --force cargo-audit
+  - cargo generate-lockfile
 script:
   - cargo build --verbose --workspace
   - cargo test --verbose --workspace
