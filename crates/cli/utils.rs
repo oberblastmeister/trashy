@@ -104,3 +104,11 @@ pub fn format_date_compact(date: NaiveDateTime) -> Vec<Cell> {
         Cell::new(&time)
     ]
 }
+
+pub fn sort_iterator<T>(iter: impl Iterator<Item = T>) -> impl Iterator<Item = T>
+where T: Ord
+{
+    let mut v: Vec<_> = iter.collect();
+    v.sort_unstable();
+    v.into_iter()
+}

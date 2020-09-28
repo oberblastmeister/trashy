@@ -11,6 +11,7 @@ repository = "https://github.com/oberblastmeister/trash-cli"
 readme = "README.md"
 keywords = ["trash", "remove", "recycle", "bin", "freedesktop"]
 categories = ["command-line-utilities"]
+license = "MIT"
 edition = "2018"
 
 [workspace]
@@ -30,7 +31,6 @@ prettytable-rs = "0.8.0"
 log = "0.4.11"
 lscolors = "0.7.1"
 eyre = "0.6.0"
-itertools = "0.9.0"
 env_logger = "0.7.1"
 ansi_term = "0.12.1"
 chrono = "0.4.15"

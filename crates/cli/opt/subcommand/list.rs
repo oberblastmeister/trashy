@@ -1,11 +1,10 @@
 use eyre::{eyre, Result};
-use itertools::Itertools;
 use log::{debug, error};
 use structopt::StructOpt;
 
 use crate::border::Border;
 use crate::table::SizedTable;
-use crate::utils::Pair;
+use crate::utils::{sort_iterator, Pair};
 use trash_lib::trash_entry::{self, read_dir_trash_entries};
 use trash_lib::ok_log;
 
@@ -27,9 +26,11 @@ pub fn list(opt: Opt) -> Result<()> {
     debug!("creating a new sized table");
     let mut table = SizedTable::new(opt.border)?;
 
-    iter.map(Pair::new)
-        .filter_map(|res| ok_log!(res => error!))
-        .sorted()
+    let iter = iter.map(Pair::new)
+        .filter_map(|res| ok_log!(res => error!));
+
+
+    sort_iterator(iter)
         .map(|pair| table.add_row(&pair))
         .filter_map(|res| ok_log!(res => error!))
         .for_each(|_| ());
