@@ -1,9 +1,11 @@
+use log::trace;
 use prettytable::{cell, Cell, Row, Table, row};
+use log::info;
 use eyre::{eyre, Result};
 use terminal_size::{terminal_size, Width};
 
 use crate::border::Border;
-use crate::utils::{colorize_path, get_metadata, format_date, Pair};
+use crate::utils::{colorize_path, get_metadata, format_date, Pair, format_date_compact};
 
 pub struct SizedTable {
     size: TableSize,
@@ -13,6 +15,7 @@ pub struct SizedTable {
 impl SizedTable {
     pub fn new(border: Border) -> Result<Self> {
         let size: TableSize = get_terminal_width()?.into();
+        info!("The table size is: {:?}", size);
         let table = size.create_table(border);
         let sized_table = SizedTable {
             size,
@@ -26,12 +29,13 @@ impl SizedTable {
         let metadata = get_metadata(&trash_entry)?;
         let path = trash_info.percent_path().decoded()?;
         let colorized_path = colorize_path(path.as_ref(), &metadata);
+        trace!("Add adding {:?} row", self.size);
         let row = match self.size {
             TableSize::Minimal => {
                 row![colorized_path]
             }
             TableSize::Compact => {
-                let mut res = format_date(trash_info.deletion_date());
+                let mut res = format_date_compact(trash_info.deletion_date());
                 res.push(Cell::new(&colorized_path));
                 Row::new(res)
             }
@@ -88,7 +92,7 @@ impl TableSize {
     fn get_title_row(self) -> Row {
         match self {
             TableSize::Minimal => row!["Path"],
-            TableSize::Compact => row!["Date", "Path"],
+            TableSize::Compact => row!["Date", "Time", "Path"],
             TableSize::Full => row!["Year", "Month", "Day", "Time", "Path"]    
         }
     }

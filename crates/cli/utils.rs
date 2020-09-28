@@ -95,3 +95,12 @@ pub fn format_date(date: NaiveDateTime) -> Vec<Cell> {
         Cell::new(&time),
     ]
 }
+
+pub fn format_date_compact(date: NaiveDateTime) -> Vec<Cell> {
+    let mm_dd = format!("{}", date.format("%m/%d"));
+    let time = format!("{}", date.format("%H:%M:%S"));
+    vec![
+        Cell::new(&mm_dd),
+        Cell::new(&time)
+    ]
+}

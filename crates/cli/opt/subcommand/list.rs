@@ -1,6 +1,6 @@
 use eyre::{eyre, Result};
 use itertools::Itertools;
-use log::error;
+use log::{debug, error};
 use structopt::StructOpt;
 
 use crate::border::Border;
@@ -24,6 +24,7 @@ pub fn list(opt: Opt) -> Result<()> {
         },
         Ok(iter) => iter,
     };
+    debug!("creating a new sized table");
     let mut table = SizedTable::new(opt.border)?;
 
     iter.map(Pair::new)
