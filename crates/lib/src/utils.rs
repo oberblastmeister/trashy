@@ -77,7 +77,7 @@ pub(crate) fn move_path(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<
                 fs::rename(from, &new_from).unwrap();
                 (Cow::from(new_from), Cow::from(to.parent().unwrap()))
             }
-            (.., parent) => (Cow::from(from), Cow::from(to.parent().unwrap())),
+            _ => (Cow::from(from), Cow::from(to.parent().unwrap())),
         };
 
         info!("Moving from {} to inside {}", from.display(), to.display());
