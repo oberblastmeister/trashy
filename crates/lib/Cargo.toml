@@ -1,21 +1,19 @@
 [package]
-name = "trash_lib"
-version = "0.1.0"
 authors = ["Brian Shu <littlebubu.shu@gmail.com>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+name = "trash_lib"
+version = "0.1.0"
 
 [dependencies]
 chrono = "0.4.15"
-nom = "5.1.2"
-percent-encoding = "2.1.0"
 directories = "3.0.1"
+fs_extra = "1.2.0"
 lazy_static = "1.4.0"
 log = "0.4.11"
-fs_extra = "1.2.0"
+nom = "5.1.2"
+percent-encoding = "2.1.0"
 snafu = "0.6.8"
 
 [dev-dependencies]
-tempfile = "3.1.0"
 anyhow = "1.0.32"
+tempfile = "3.1.0"

@@ -5,6 +5,7 @@ use std::io;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
+use log::info;
 use log::warn;
 use snafu::{ensure, OptionExt, ResultExt, Snafu};
 
@@ -126,13 +127,17 @@ impl TrashEntry {
             CreationInTrash { path }.fail()?;
         }
         let name = find_name_trash_entry(path, existing)?;
+        info!("Found name for trash entry: {}", name);
         let name = name.as_ref();
 
         // make sure the path is canonicalized
         let path = &path.canonicalize().context(CanonicalizePath { path })?;
+        info!("Canonicalized path: {}", path.display());
 
         // create the trash info file
+        info!("Creating trash info");
         let trash_info = TrashInfo::new(PercentPath::from_path(path)?, None);
+        info!("Saving trash info with name: {}", name);
         trash_info.save(name).context(TrashInfoSave { name })?;
 
         // move the path the the trash file dir

@@ -5,6 +5,7 @@ use std::borrow::Cow;
 
 use fs_extra::dir::{self, move_dir};
 use fs_extra::file::{self, move_file};
+use log::info;
 use log::warn;
 use snafu::{OptionExt, ResultExt, Snafu};
 
@@ -14,20 +15,20 @@ use crate::ok_log;
 
 #[derive(Debug, Snafu)]
 pub enum Error {
-    #[snafu(display("The path `{}` was not valid utf-8", path.display()))]
+    #[snafu(display("Failed to convert path `{}` to a str because it was not valid utf-8", path.display()))]
     Utf8 { path: PathBuf },
 
-    #[snafu(display("Failed to read directory entry from path {}", path.display()))]
+    #[snafu(display("Failed to read directory entry from path `{}`", path.display()))]
     ReadDirEntry { source: io::Error, path: PathBuf },
 
-    #[snafu(display("Failed to move path {} to {}", from.display(), to.display()))]
+    #[snafu(display("Failed to move path `{}` to `{}`", from.display(), to.display()))]
     MovePath {
         source: fs_extra::error::Error,
         from: PathBuf,
         to: PathBuf,
     },
 
-    #[snafu(display("Failed to remove path {}", path.display()))]
+    #[snafu(display("Failed to remove path `{}`", path.display()))]
     RemovePath {
         path: PathBuf,
         source: fs_extra::error::Error,
@@ -64,16 +65,20 @@ pub(crate) fn move_path(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<
         // first rename the dir because move_dir does not rename the directory while moving unlike
         // move_file, so we have to rename it first manually. Also move dir does not work like
         // move_file. Move dir moves the directory from a path to the inside of another directory.
+        info!("Path {} is a dir", from.display());
         let (from, to) = match (from.file_name(), to.file_name(), from.parent().context(NoParent { path: from })?) {
             // only rename if the old name and new name are different
             (Some(name1), Some(name2), parent) if name1 != name2 => {
+                info!("The parent is {}", parent.display());
                 let new_name = parent.join(name2);
+                info!("Renaming from {} to {}", from.display(), new_name.display());
                 fs::rename(from, &new_name).unwrap();
-                (Cow::from(from), Cow::from(parent))
+                (Cow::from(from), Cow::from(to.parent().unwrap()))
             }
-            (.., parent) => (Cow::from(from), Cow::from(parent)),
+            (.., parent) => (Cow::from(from), Cow::from(to.parent().unwrap())),
         };
 
+        info!("Moving from {} to inside {}", from.display(), to.display());
         move_dir(from, to, &DIR_COPY_OPT)
     } else if from.is_file() {
         move_file(from, to, &FILE_COPY_OPT)
