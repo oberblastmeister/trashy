@@ -5,7 +5,7 @@ use std::path::Path;
 
 use crate::utils::{self, convert_to_str};
 use percent_encoding::{
-    percent_decode_str, utf8_percent_encode, AsciiSet, CONTROLS, NON_ALPHANUMERIC,
+    percent_decode_str, utf8_percent_encode, AsciiSet, CONTROLS
 };
 use snafu::{ResultExt, Snafu};
 

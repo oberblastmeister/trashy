@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use eyre::{WrapErr, Result, eyre};
+use eyre::{eyre, Result};
 use structopt::StructOpt;
 use trash_lib::trash_entry::TrashEntry;
 

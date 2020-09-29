@@ -1,13 +1,12 @@
 use std::borrow::Cow;
 use std::fmt;
-use std::fs;
 use std::io;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
 use log::info;
 use log::warn;
-use snafu::{ensure, OptionExt, ResultExt, Snafu};
+use snafu::{OptionExt, ResultExt, Snafu};
 
 use crate::ok_log;
 use crate::percent_path::{self, PercentPath};
@@ -15,7 +14,7 @@ use crate::trash_info::{self, TrashInfo};
 use crate::utils::{
     self, add_trash_info_ext, convert_to_str, move_path, read_dir_path, remove_path,
 };
-use crate::{TRASH_DIR, TRASH_FILE_DIR, TRASH_INFO_DIR, TRASH_INFO_EXT};
+use crate::{TRASH_DIR, TRASH_FILE_DIR, TRASH_INFO_DIR};
 
 /// Represents an entry in the trash directory. Includes the file path and the trash info path.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -168,7 +167,7 @@ impl TrashEntry {
     }
 
     /// Restores the trash entry
-    pub fn restore(self) -> Result<()> {
+    pub fn restore(&self) -> Result<()> {
         self.is_valid()?;
         let trash_info = TrashInfo::parse_from_path(&self.info_path).context(ParseTrashInfo {
             path: &self.info_path,
@@ -181,10 +180,10 @@ impl TrashEntry {
     }
 
     /// Removes the trash_entry
-    pub fn remove(self) -> Result<()> {
+    pub fn remove(&self) -> Result<()> {
         self.is_valid()?;
-        remove_path(self.info_path).context(RemoveTrashInfo)?;
-        remove_path(self.file_path).context(RemoveTrashInfo)?;
+        remove_path(&self.info_path).context(RemoveTrashInfo)?;
+        remove_path(&self.file_path).context(RemoveTrashInfo)?;
         Ok(())
     }
 

@@ -6,7 +6,7 @@ mod remove;
 mod completion;
 
 use structopt::StructOpt;
-use eyre::{WrapErr, Result};
+use eyre::Result;
 
 #[derive(StructOpt, Debug)]
 pub enum SubCommand {

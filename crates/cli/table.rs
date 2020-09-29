@@ -1,15 +1,15 @@
-use log::trace;
-use prettytable::{cell, Cell, Row, Table, row};
-use log::info;
 use eyre::{eyre, Result};
+use log::info;
+use log::trace;
+use prettytable::{cell, row, Cell, Row, Table};
 use terminal_size::{terminal_size, Width};
 
 use crate::border::Border;
-use crate::utils::{colorize_path, get_metadata, format_date, Pair, format_date_compact};
+use crate::utils::{colorize_path, format_date, format_date_compact, get_metadata, Pair};
 
 pub struct SizedTable {
     size: TableSize,
-    table: Table
+    table: Table,
 }
 
 impl SizedTable {
@@ -17,23 +17,24 @@ impl SizedTable {
         let size: TableSize = get_terminal_width()?.into();
         info!("The table size is: {:?}", size);
         let table = size.create_table(border);
-        let sized_table = SizedTable {
-            size,
-            table
-        };
+        let sized_table = SizedTable { size, table };
         Ok(sized_table)
     }
 
     pub fn add_row(&mut self, pair: &Pair) -> Result<()> {
+        let row = self.get_row(pair)?;
+        self.table.add_row(row);
+        Ok(())
+    }
+
+    fn get_row(&self, pair: &Pair) -> Result<Row> {
         let Pair(trash_entry, trash_info) = pair;
         let metadata = get_metadata(&trash_entry)?;
         let path = trash_info.percent_path().decoded()?;
         let colorized_path = colorize_path(path.as_ref(), &metadata);
         trace!("Add adding {:?} row", self.size);
         let row = match self.size {
-            TableSize::Minimal => {
-                row![colorized_path]
-            }
+            TableSize::Minimal => row![colorized_path],
             TableSize::Compact => {
                 let mut res = format_date_compact(trash_info.deletion_date());
                 res.push(Cell::new(&colorized_path));
@@ -45,12 +46,31 @@ impl SizedTable {
                 Row::new(res)
             }
         };
-        self.table.add_row(row);
-        Ok(())
+        Ok(row)
     }
 
     pub fn print(&self) -> usize {
         self.table.printstd()
+    }
+}
+
+pub struct IndexedTable(SizedTable);
+
+impl IndexedTable {
+    pub fn new(border: Border) -> Result<Self> {
+        Ok(IndexedTable(SizedTable::new(border)?))
+    }
+
+    pub fn add_row(&mut self, pair: &Pair) -> Result<()> {
+        let mut row = self.0.get_row(pair)?;
+        // insert the index
+        row.insert_cell(0, cell!(row.len() + 1));
+        self.0.table.add_row(row);
+        Ok(())
+    }
+
+    pub fn print(&self) -> usize {
+        self.0.print()
     }
 }
 
@@ -88,12 +108,12 @@ impl TableSize {
     fn try_new() -> Result<TableSize> {
         Ok(get_terminal_width()?.into())
     }
-    
+
     fn get_title_row(self) -> Row {
         match self {
             TableSize::Minimal => row!["Path"],
             TableSize::Compact => row!["Date", "Time", "Path"],
-            TableSize::Full => row!["Year", "Month", "Day", "Time", "Path"]    
+            TableSize::Full => row!["Year", "Month", "Day", "Time", "Path"],
         }
     }
 

@@ -1,17 +1,19 @@
-use std::borrow::Cow;
 use std::env;
 use std::path::{Path, PathBuf};
 
 use eyre::{bail, Result, WrapErr};
 use log::error;
-use prettytable::Table;
+use log::info;
 use structopt::StructOpt;
 use trash_lib::ok_log;
-use trash_lib::trash_entry::{read_dir_trash_entries, TrashEntry};
-use trash_lib::trash_info::TrashInfo;
+use trash_lib::trash_entry::read_dir_trash_entries;
 
 use crate::border::Border;
-use crate::utils::{map_to_row, map_trash_entry_keep};
+use crate::print_err;
+use crate::table::IndexedTable;
+use crate::utils::input_number;
+use crate::utils::sort_iterator;
+use crate::utils::Pair;
 
 #[derive(Debug, StructOpt)]
 pub struct Opt {
@@ -35,24 +37,30 @@ pub fn restore(opt: Opt) -> Result<()> {
             border: _,
         } => bail!("Cannot restore both path and in directory"),
         Opt {
-            path: Some(path),
-            ..
+            path: Some(path), ..
         } => {
+            info!("Restoring path {}", path.display());
             restore_file(&path)?;
         }
         Opt {
             directory: Some(directory),
             border,
             ..
-        } => restore_in_directory(&directory, border)?,
+        } => {
+            info!("Restoring in directory {}", directory.display());
+            restore_in_directory(&directory, border)?
+        }
         Opt {
             path: None,
             directory: None,
             border,
-        } => restore_in_directory(
-            &env::current_dir().wrap_err("Failed to find current working directory")?,
-            border
-        )?,
+        } => {
+            info!("Restoring in current working directory");
+            restore_in_directory(
+                &env::current_dir().wrap_err("Failed to find current working directory")?,
+                border,
+            )?;
+        }
     }
 
     Ok(())
@@ -63,25 +71,29 @@ fn restore_file(path: &Path) -> Result<()> {
 }
 
 fn restore_in_directory(dir: &Path, border: Border) -> Result<()> {
-    let mut table = Table::new();
-    table.set_format(border.into());
-    // table.set_titles(title_row());
+    let mut table = IndexedTable::new(border)?;
 
-    read_dir_trash_entries()?
-        .map(map_trash_entry_keep)
+    let trash_entry_iter = read_dir_trash_entries()?
+        .map(Pair::new)
+        .filter_map(|res| ok_log!(res => error!));
+
+    let trash_entries: Vec<_> = sort_iterator(trash_entry_iter)
+        .map(|pair| table.add_row(&pair).map(|_| (pair)))
         .filter_map(|res| ok_log!(res => error!))
-        .filter(|keep| filter_by_in_dir(keep, dir))
-        .map(|(trash_entry, _trash_info)| trash_entry)
-        .map(|trash_entry| {
-            trash_entry
-                .restore()
-                .wrap_err("Failed to restore trash_entry")
-        })
-        .filter_map(|res| ok_log!(res => error!))
-            // .map(|trash_entry| {
-            //     row_form
-            // })
-        .for_each(|_| ());
+        .filter(|pair| filter_by_in_dir(pair, dir))
+        .map(|pair| pair.revert())
+        .collect();
+    table.print();
+
+    let inp = loop {
+        match input_number("Input the index or range or trash entries to restore: ") {
+            Ok(inp) => break inp,
+            Err(e) => print_err(e),
+        }
+    };
+
+    info!("Restoring {:?}", trash_entries[inp as usize]);
+    trash_entries[inp as usize].restore()?;
 
     Ok(())
 }
@@ -94,8 +106,8 @@ fn in_dir(dir: &Path, path: &Path) -> bool {
     dir == parent
 }
 
-fn filter_by_in_dir(keep: &(TrashEntry, TrashInfo), dir: &Path) -> bool {
-    let decoded_res = keep.1.percent_path().decoded();
+fn filter_by_in_dir(pair: &Pair, dir: &Path) -> bool {
+    let decoded_res = pair.1.percent_path().decoded();
     if let Ok(decoded) = decoded_res {
         let decoded_path: &Path = decoded.as_ref().as_ref();
         in_dir(dir, decoded_path)

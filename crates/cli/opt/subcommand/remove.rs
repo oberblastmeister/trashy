@@ -1,5 +1,4 @@
-use eyre::{WrapErr, Result};
-use lazy_static::lazy_static;
+use eyre::{Result, WrapErr};
 use log::{error, info};
 use regex::Regex;
 use structopt::StructOpt;
@@ -16,7 +15,10 @@ pub struct Opt {
 }
 
 pub fn remove(opt: Opt) -> Result<()> {
-    let re = Regex::new(&opt.pattern).wrap_err(format!("Failed to create regex from string `{}`", &opt.pattern))?;
+    let re = Regex::new(&opt.pattern).wrap_err(format!(
+        "Failed to create regex from string `{}`",
+        &opt.pattern
+    ))?;
 
     read_dir_trash_entries()?
         .map(map_trash_entry_keep)

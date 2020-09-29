@@ -1,11 +1,10 @@
-use chrono::{DateTime, Duration, Local};
+use chrono::{Duration, Local};
 use eyre::{eyre, Result};
 use log::error;
 use structopt::StructOpt;
 
 use trash_lib::ok_log;
 use trash_lib::trash_entry::{read_dir_trash_entries, TrashEntry};
-use trash_lib::trash_info::TrashInfo;
 
 #[derive(StructOpt, Debug, PartialEq)]
 pub struct Opt {

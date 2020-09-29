@@ -1,14 +1,14 @@
-mod opt;
-mod utils;
 mod border;
+mod opt;
 mod table;
+mod utils;
 
-use std::process;
 use std::fmt;
+use std::process;
 
-use env_logger::Builder;
 use ansi_term::Color::Red;
 use color_eyre::eyre::Result;
+use env_logger::Builder;
 use log::{debug, LevelFilter};
 use structopt::StructOpt;
 

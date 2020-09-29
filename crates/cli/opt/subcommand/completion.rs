@@ -1,6 +1,6 @@
 use std::io;
 
-use structopt::clap::{self, Shell};
+use structopt::clap::Shell;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]

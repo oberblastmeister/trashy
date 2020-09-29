@@ -5,13 +5,11 @@ use std::path::{Path, PathBuf};
 
 use fs_extra::dir::{self, move_dir};
 use fs_extra::file::{self, move_file};
-use log::info;
-use log::warn;
+use log::{info, warn};
 use snafu::{OptionExt, ResultExt, Snafu};
 
 use crate::ok_log;
-use crate::{DIR_COPY_OPT, FILE_COPY_OPT};
-use crate::{TRASH_INFO_DIR, TRASH_INFO_EXT};
+use crate::{DIR_COPY_OPT, FILE_COPY_OPT, TRASH_INFO_EXT};
 
 #[derive(Debug, Snafu)]
 pub enum Error {

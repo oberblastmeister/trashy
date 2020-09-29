@@ -1,12 +1,10 @@
 mod subcommand;
 
-use std::path::PathBuf;
-
-use structopt::clap::{self, AppSettings};
-use structopt::StructOpt;
 use eyre::Result;
+use structopt::clap::AppSettings;
+use structopt::StructOpt;
 
-use subcommand::{put, SubCommand};
+use subcommand::SubCommand;
 
 #[derive(Debug, StructOpt)]
 #[structopt(

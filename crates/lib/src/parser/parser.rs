@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 use std::convert::TryInto;
-use std::str::FromStr;
 
 use chrono::NaiveDateTime;
 use nom::bytes::complete::{is_not, tag};

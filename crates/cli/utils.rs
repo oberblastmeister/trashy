@@ -1,17 +1,16 @@
 use std::cmp::Ordering;
-use std::fs;
-use std::path::Path;
-use std::convert::TryInto;
+use std::io::stdin;
+use std::io::stdout;
+use std::io::Write;
 use std::result::Result as StdResult;
 
 use chrono::naive::NaiveDateTime;
 use eyre::{Result, WrapErr};
 use lazy_static::lazy_static;
 use lscolors::{LsColors, Style};
-use prettytable::{cell, Cell, Row, Table, row};
+use prettytable::{cell, row, Cell, Row};
 use trash_lib::trash_entry::{self, TrashEntry};
 use trash_lib::trash_info::TrashInfo;
-use trash_lib::{ok_log, TRASH_FILE_DIR, TRASH_INFO_DIR};
 
 lazy_static! {
     static ref LS_COLORS: LsColors = LsColors::from_env().unwrap_or_default();
@@ -31,6 +30,10 @@ impl Pair {
         let trash_info = trash_entry.parse_trash_info()?;
         let pair = Pair(trash_entry, trash_info);
         Ok(pair)
+    }
+
+    pub fn revert(self) -> TrashEntry {
+        self.0
     }
 }
 
@@ -99,16 +102,28 @@ pub fn format_date(date: NaiveDateTime) -> Vec<Cell> {
 pub fn format_date_compact(date: NaiveDateTime) -> Vec<Cell> {
     let mm_dd = format!("{}", date.format("%m/%d"));
     let time = format!("{}", date.format("%H:%M:%S"));
-    vec![
-        Cell::new(&mm_dd),
-        Cell::new(&time)
-    ]
+    vec![Cell::new(&mm_dd), Cell::new(&time)]
 }
 
 pub fn sort_iterator<T>(iter: impl Iterator<Item = T>) -> impl Iterator<Item = T>
-where T: Ord
+where
+    T: Ord,
 {
     let mut v: Vec<_> = iter.collect();
     v.sort_unstable();
     v.into_iter()
+}
+
+pub fn input_number(msg: &str) -> Result<u32> {
+    let mut s = String::new();
+    print!("{}", s);
+    stdout()
+        .flush()
+        .context("Failed to flush stdout to allow input")?;
+    stdin()
+        .read_line(&mut s)
+        .context("Failed to get input from user")?;
+    let s = s.trim();
+    Ok(s.parse()
+        .context(format!("Failed to parse `{}` into a u32", s))?)
 }
