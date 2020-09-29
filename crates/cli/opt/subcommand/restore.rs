@@ -2,14 +2,18 @@ use std::env;
 use std::path::{Path, PathBuf};
 
 use eyre::{bail, Result, WrapErr};
+use log::debug;
 use log::error;
 use log::info;
+use log::trace;
 use structopt::StructOpt;
 use trash_lib::ok_log;
 use trash_lib::trash_entry::read_dir_trash_entries;
 
 use crate::border::Border;
+use crate::exitcode::ExitCode;
 use crate::print_err;
+use crate::print_err_display;
 use crate::table::IndexedTable;
 use crate::utils::input_number;
 use crate::utils::sort_iterator;
@@ -56,10 +60,9 @@ pub fn restore(opt: Opt) -> Result<()> {
             border,
         } => {
             info!("Restoring in current working directory");
-            restore_in_directory(
-                &env::current_dir().wrap_err("Failed to find current working directory")?,
-                border,
-            )?;
+            let cwd = env::current_dir().wrap_err("Failed to find current working directory")?;
+            info!("Cwd is `{}`", cwd.display());
+            restore_in_directory(&cwd, border)?;
         }
     }
 
@@ -78,22 +81,31 @@ fn restore_in_directory(dir: &Path, border: Border) -> Result<()> {
         .filter_map(|res| ok_log!(res => error!));
 
     let trash_entries: Vec<_> = sort_iterator(trash_entry_iter)
+        .filter(|pair| filter_by_in_dir(pair, dir))
         .map(|pair| table.add_row(&pair).map(|_| (pair)))
         .filter_map(|res| ok_log!(res => error!))
-        .filter(|pair| filter_by_in_dir(pair, dir))
         .map(|pair| pair.revert())
         .collect();
-    table.print();
 
-    let inp = loop {
+    if trash_entries.is_empty() {
+        ExitCode::Success.exit_with_msg(format!(
+            "No entries to restore in directory `{}`",
+            dir.display()
+        ))
+    }
+
+    table.print();
+    trace!("The final vector of trash entries is {:?}", trash_entries);
+
+    let idx = loop {
         match input_number("Input the index or range or trash entries to restore: ") {
             Ok(inp) => break inp,
-            Err(e) => print_err(e),
+            Err(e) => print_err_display(e),
         }
-    };
+    } - 1;
 
-    info!("Restoring {:?}", trash_entries[inp as usize]);
-    trash_entries[inp as usize].restore()?;
+    info!("Restoring {:?}", trash_entries[idx as usize]);
+    trash_entries[idx as usize].restore()?;
 
     Ok(())
 }
@@ -108,9 +120,20 @@ fn in_dir(dir: &Path, path: &Path) -> bool {
 
 fn filter_by_in_dir(pair: &Pair, dir: &Path) -> bool {
     let decoded_res = pair.1.percent_path().decoded();
+    trace!(
+        "The original path of the trash entry file: {:?}",
+        decoded_res
+    );
     if let Ok(decoded) = decoded_res {
         let decoded_path: &Path = decoded.as_ref().as_ref();
-        in_dir(dir, decoded_path)
+        let in_dir = in_dir(dir, decoded_path);
+        debug!(
+            "path {} in the dir {}: {}",
+            decoded_path.display(),
+            dir.display(),
+            in_dir
+        );
+        in_dir
     } else {
         false
     }

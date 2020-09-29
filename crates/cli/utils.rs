@@ -117,7 +117,7 @@ where
 
 pub fn input_number(msg: &str) -> Result<u32> {
     let mut s = String::new();
-    print!("{}", s);
+    print!("{}", msg);
     stdout()
         .flush()
         .context("Failed to flush stdout to allow input")?;

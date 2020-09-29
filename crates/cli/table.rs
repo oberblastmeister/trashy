@@ -1,4 +1,5 @@
 use eyre::{eyre, Result};
+use log::debug;
 use log::info;
 use log::trace;
 use prettytable::{cell, row, Cell, Row, Table};
@@ -16,7 +17,7 @@ impl SizedTable {
     pub fn new(border: Border) -> Result<Self> {
         let size: TableSize = get_terminal_width()?.into();
         info!("The table size is: {:?}", size);
-        let table = size.create_table(border);
+        let table = create_table(size.get_title_row(), border);
         let sized_table = SizedTable { size, table };
         Ok(sized_table)
     }
@@ -58,13 +59,17 @@ pub struct IndexedTable(SizedTable);
 
 impl IndexedTable {
     pub fn new(border: Border) -> Result<Self> {
-        Ok(IndexedTable(SizedTable::new(border)?))
+        let size: TableSize = get_terminal_width()?.into();
+        let table = create_table(size.get_title_row_index(), border);
+        Ok(IndexedTable(SizedTable { size, table }))
     }
 
     pub fn add_row(&mut self, pair: &Pair) -> Result<()> {
         let mut row = self.0.get_row(pair)?;
         // insert the index
-        row.insert_cell(0, cell!(row.len() + 1));
+        let index = self.0.table.len() + 1;
+        debug!("current index (1 based): {}", index);
+        row.insert_cell(0, cell!(index));
         self.0.table.add_row(row);
         Ok(())
     }
@@ -117,10 +122,23 @@ impl TableSize {
         }
     }
 
+    fn get_title_row_index(self) -> Row {
+        let mut row = self.get_title_row();
+        row.insert_cell(0, Cell::new("Index"));
+        row
+    }
+
     fn create_table(self, border: Border) -> Table {
         let mut table = Table::new();
         table.set_titles(self.get_title_row());
         table.set_format(border.into());
         table
     }
+}
+
+fn create_table(title_row: Row, border: Border) -> Table {
+    let mut table = Table::new();
+    table.set_titles(title_row);
+    table.set_format(border.into());
+    table
 }

@@ -2,6 +2,7 @@ mod border;
 mod opt;
 mod table;
 mod utils;
+mod exitcode;
 
 use std::fmt;
 use std::process;
@@ -13,6 +14,7 @@ use log::{debug, LevelFilter};
 use structopt::StructOpt;
 
 use opt::Opt;
+use exitcode::ExitCode;
 
 /// Start the logger depending on the verbosity flag
 fn start_logger(verbosity: u8) {
@@ -43,14 +45,15 @@ fn try_main() -> Result<()> {
 
 fn main() {
     match try_main() {
-        Ok(()) => process::exit(0),
-        Err(e) => {
-            print_err(e);
-            process::exit(1);
-        }
+        Ok(()) => ExitCode::Success.exit(),
+        Err(e) => ExitCode::GeneralError.exit_with_msg(format!("{:?}", e)),
     }
 }
 
 fn print_err(s: impl fmt::Debug) {
     eprintln!("{}: {:?}", Red.bold().paint("Error"), s);
+}
+
+fn print_err_display(s: impl fmt::Display) {
+    eprintln!("{}: {}", Red.bold().paint("Error"), s);
 }

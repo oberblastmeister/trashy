@@ -3,6 +3,7 @@ use log::{debug, error};
 use structopt::StructOpt;
 
 use crate::border::Border;
+use crate::exitcode::ExitCode;
 use crate::table::SizedTable;
 use crate::utils::{sort_iterator, Pair};
 use trash_lib::ok_log;
@@ -28,10 +29,15 @@ pub fn list(opt: Opt) -> Result<()> {
 
     let iter = iter.map(Pair::new).filter_map(|res| ok_log!(res => error!));
 
-    sort_iterator(iter)
+    let mut peekable = sort_iterator(iter)
         .map(|pair| table.add_row(&pair))
         .filter_map(|res| ok_log!(res => error!))
-        .for_each(|_| ());
+        .peekable();
+    
+    match peekable.peek() {
+        Some(_) => peekable.for_each(|_| ()),
+        None => ExitCode::Success.exit_with_msg("There are no trash entries to list"),
+    }
 
     table.print();
     Ok(())
