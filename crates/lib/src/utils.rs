@@ -1,7 +1,7 @@
+use std::borrow::Cow;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::borrow::Cow;
 
 use fs_extra::dir::{self, move_dir};
 use fs_extra::file::{self, move_file};
@@ -9,9 +9,9 @@ use log::info;
 use log::warn;
 use snafu::{OptionExt, ResultExt, Snafu};
 
-use crate::{DIR_COPY_OPT, FILE_COPY_OPT};
-use crate::{TRASH_INFO_EXT, TRASH_INFO_DIR};
 use crate::ok_log;
+use crate::{DIR_COPY_OPT, FILE_COPY_OPT};
+use crate::{TRASH_INFO_DIR, TRASH_INFO_EXT};
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -66,14 +66,18 @@ pub(crate) fn move_path(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<
         // move_file, so we have to rename it first manually. Also move dir does not work like
         // move_file. Move dir moves the directory from a path to the inside of another directory.
         info!("Path {} is a dir", from.display());
-        let (from, to) = match (from.file_name(), to.file_name(), from.parent().context(NoParent { path: from })?) {
+        let (from, to) = match (
+            from.file_name(),
+            to.file_name(),
+            from.parent().context(NoParent { path: from })?,
+        ) {
             // only rename if the old name and new name are different
             (Some(name1), Some(name2), parent) if name1 != name2 => {
                 info!("The parent is {}", parent.display());
-                let new_name = parent.join(name2);
-                info!("Renaming from {} to {}", from.display(), new_name.display());
-                fs::rename(from, &new_name).unwrap();
-                (Cow::from(from), Cow::from(to.parent().unwrap()))
+                let new_from = parent.join(name2);
+                info!("Renaming from {} to {}", from.display(), new_from.display());
+                fs::rename(from, &new_from).unwrap();
+                (Cow::from(new_from), Cow::from(to.parent().unwrap()))
             }
             (.., parent) => (Cow::from(from), Cow::from(to.parent().unwrap())),
         };
@@ -123,22 +127,19 @@ use tempfile::NamedTempFile;
 use std::ops::Deref;
 
 #[cfg(test)]
-pub fn temp_file_iter<'a, T>(
-    dir: &'a T,
-    amount: usize,
-) -> impl Iterator<Item = NamedTempFile> + 'a
+pub fn temp_file_iter<'a, T>(dir: &'a T, amount: usize) -> impl Iterator<Item = NamedTempFile> + 'a
 where
     T: AsRef<Path> + ?Sized,
 {
-
     let dir = dir.as_ref();
     (0..amount).map(move |_| NamedTempFile::new_in(dir).expect("Failed to create temp file"))
 }
 
 #[cfg(test)]
 pub fn contains_all_elements<T, U>(v1: Vec<T>, v2: Vec<&U>)
-where T: PartialEq + Deref<Target = U>,
-      U: PartialEq + ?Sized
+where
+    T: PartialEq + Deref<Target = U>,
+    U: PartialEq + ?Sized,
 {
     assert_eq!(v1.len(), v2.len());
     assert!(v1.into_iter().all(|e| v2.contains(&&*e)));
@@ -147,10 +148,10 @@ where T: PartialEq + Deref<Target = U>,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::{Result, anyhow};
-    use tempfile::{tempdir, NamedTempFile};
+    use anyhow::{anyhow, Result};
     use log::error;
     use std::fmt::Display;
+    use tempfile::{tempdir, NamedTempFile};
 
     #[test]
     fn read_dir_path_test() -> Result<()> {
@@ -189,13 +190,19 @@ mod tests {
 
     #[test]
     fn to_dir_simple_test() -> Result<()> {
-        assert_eq!(to_directory("a_file", "a_dir")?, PathBuf::from("a_dir/a_file"));
+        assert_eq!(
+            to_directory("a_file", "a_dir")?,
+            PathBuf::from("a_dir/a_file")
+        );
         Ok(())
     }
 
     #[test]
     fn to_dir_already_dir_test() -> Result<()> {
-        assert_eq!(to_directory("/tmp/hello/a_file", "another_directory")?, PathBuf::from("another_directory/a_file"));
+        assert_eq!(
+            to_directory("/tmp/hello/a_file", "another_directory")?,
+            PathBuf::from("another_directory/a_file")
+        );
         Ok(())
     }
 
