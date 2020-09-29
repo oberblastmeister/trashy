@@ -88,6 +88,7 @@ impl<'a, 'b> TryInto<TrashInfo> for TrashInfoStr<'a, 'b> {
 mod tests {
     use super::*;
     use anyhow::{Context, Result};
+    use std::str::FromStr;
 
     /// Only returns chrono result because if parsing with nom has failed this will return an error
     /// message and panic instead of returning a result.
