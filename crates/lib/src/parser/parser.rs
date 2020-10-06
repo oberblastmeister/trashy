@@ -62,6 +62,11 @@ fn parse_header(i: &str) -> ParseError<&str, &str> {
     tag("[Trash Info]")(i)
 }
 
+fn parse_deletion_date(i: &str) -> ParseError<&str, &str> {
+    let (i, _) = tag("DeletionDate")(i)?;
+    let (i, _) = char('=')(i)?;
+}
+
 type ParseError<I, O, E = Error> = Result<(I, O), E>;
 
 fn tag(tag: &str) -> impl Fn(&str) -> ParseError<&str, &str> + '_ {
@@ -82,6 +87,12 @@ fn char(c: char) -> impl Fn(&str) -> ParseError<&str, char> {
         } else {
             Tag { i }.fail()
         }
+    }
+}
+
+fn is_not(not: &str) -> impl Fn(&str) -> ParseError<&str, &str> {
+    move |i| {
+
     }
 }
 
