@@ -1,26 +1,20 @@
 use std::cmp::Ordering;
-use std::ops::Range;
-use std::ops::Index;
-use regex::Regex;
-use std::str::FromStr;
-use eyre::bail;
 use std::fs;
 use std::io::stdin;
 use std::io::stdout;
 use std::io::Write;
+use std::ops::Range;
 use std::result::Result as StdResult;
 
 use chrono::naive::NaiveDateTime;
-use eyre::{Result, WrapErr, eyre};
-use lazy_static::lazy_static;
+use eyre::{eyre, Result, WrapErr};
+use once_cell::sync::Lazy;
 use lscolors::{LsColors, Style};
 use prettytable::{cell, row, Cell, Row};
 use trash_lib::trash_entry::{self, TrashEntry};
 use trash_lib::trash_info::TrashInfo;
 
-lazy_static! {
-    static ref LS_COLORS: LsColors = LsColors::from_env().unwrap_or_default();
-}
+static LS_COLORS: Lazy<LsColors> = Lazy::new(|| LsColors::from_env().unwrap_or_default());
 
 pub fn trash_entry_error_context(
     res: StdResult<TrashEntry, trash_entry::Error>,
