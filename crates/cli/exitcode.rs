@@ -2,6 +2,7 @@ use std::fmt;
 use std::process;
 
 use crate::print_err;
+use crate::print_err_display;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ExitCode {
@@ -30,7 +31,7 @@ impl ExitCode {
                 println!("{}", msg);
             }
             ExitCode::GeneralError => {
-                print_err(format!("{}", msg));
+                print_err_display(msg);
             }
         }
     }

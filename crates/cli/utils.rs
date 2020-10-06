@@ -1,4 +1,9 @@
 use std::cmp::Ordering;
+use std::ops::Range;
+use std::ops::Index;
+use regex::Regex;
+use std::str::FromStr;
+use eyre::bail;
 use std::fs;
 use std::io::stdin;
 use std::io::stdout;
@@ -6,7 +11,7 @@ use std::io::Write;
 use std::result::Result as StdResult;
 
 use chrono::naive::NaiveDateTime;
-use eyre::{Result, WrapErr};
+use eyre::{Result, WrapErr, eyre};
 use lazy_static::lazy_static;
 use lscolors::{LsColors, Style};
 use prettytable::{cell, row, Cell, Row};
@@ -115,7 +120,7 @@ where
     v.into_iter()
 }
 
-pub fn input_number(msg: &str) -> Result<u32> {
+pub fn input(msg: &str) -> Result<String> {
     let mut s = String::new();
     print!("{}", msg);
     stdout()
@@ -124,7 +129,35 @@ pub fn input_number(msg: &str) -> Result<u32> {
     stdin()
         .read_line(&mut s)
         .context("Failed to get input from user")?;
+    Ok(s)
+}
+
+pub fn input_number(msg: &str) -> Result<u32> {
+    let s = input(msg)?;
     let s = s.trim();
+
     Ok(s.parse()
         .context(format!("Failed to parse `{}` into a u32", s))?)
 }
+
+pub fn input_range(msg: &str) -> Result<Range<usize>> {
+    const ERR: &str = "Failed to parse input into number or range";
+    let s = input(msg)?;
+    let s = s.trim();
+    let mut s = s.split('-');
+    let start: usize = s.next().ok_or(eyre!(ERR))?.parse().wrap_err(eyre!(ERR))?;
+    if let Some(end) = s.next() {
+        let end: usize = end.parse().wrap_err(eyre!(ERR))?;
+        Ok(start - 1..end)
+    } else {
+        Ok(start - 1..start)
+    }
+}
+
+// pub fn index_trash_entries_iter<'a>(input_types: &[InputType], entries: &'a Vec<TrashEntry>) -> impl Iterator<Item = &'a TrashEntry>{
+//     let mut res = Vec::new();
+//     for &input_type in input_types {
+//         res.push(&entries[input_type])
+//     }
+//     res.into_iter().flatten()
+// }

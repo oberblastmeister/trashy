@@ -1,11 +1,11 @@
 mod border;
 mod opt;
 mod table;
+mod restore_index;
 mod utils;
 mod exitcode;
 
 use std::fmt;
-use std::process;
 
 use ansi_term::Color::Red;
 use color_eyre::eyre::Result;

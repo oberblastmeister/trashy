@@ -12,12 +12,10 @@ use trash_lib::trash_entry::read_dir_trash_entries;
 
 use crate::border::Border;
 use crate::exitcode::ExitCode;
-use crate::print_err;
 use crate::print_err_display;
 use crate::table::IndexedTable;
-use crate::utils::input_number;
-use crate::utils::sort_iterator;
-use crate::utils::Pair;
+use crate::utils::{Pair, sort_iterator};
+use crate::restore_index::input_restore_indices;
 
 #[derive(Debug, StructOpt)]
 pub struct Opt {
@@ -97,15 +95,23 @@ fn restore_in_directory(dir: &Path, border: Border) -> Result<()> {
     table.print();
     trace!("The final vector of trash entries is {:?}", trash_entries);
 
-    let idx = loop {
-        match input_number("Input the index or range or trash entries to restore: ") {
+    let indices = loop {
+        match input_restore_indices("Input the index or range or trash entries to restore: ") {
             Ok(inp) => break inp,
             Err(e) => print_err_display(e),
         }
-    } - 1;
+    };
 
-    info!("Restoring {:?}", trash_entries[idx as usize]);
-    trash_entries[idx as usize].restore()?;
+    info!("Indices were {:?}", indices);
+    for idx in indices {
+        trash_entries[idx].into_iter()
+            .map(|entry| {
+                info!("Restoring {:?}", entry);
+                entry.restore()
+            })
+            .filter_map(|res| ok_log!(res => error!))
+            .for_each(|_| ());
+    }
 
     Ok(())
 }
