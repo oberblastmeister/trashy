@@ -7,24 +7,25 @@ mod utils;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use directories::UserDirs;
+use directories::{ProjectDirs, UserDirs};
 use fs_extra::dir;
 use fs_extra::file;
-use lazy_static::lazy_static;
 use log::{error, warn};
+use once_cell::sync::Lazy;
 use snafu::{ResultExt, Snafu};
 
 use trash_entry::{read_dir_trash_entries, TrashEntry};
 use utils::{read_dir_path, remove_path};
 
-lazy_static! {
-    static ref USER_DIRS: UserDirs = UserDirs::new().expect("Failed to determine user directories");
-    pub(crate) static ref HOME_DIR: &'static Path = USER_DIRS.home_dir();
-    pub static ref TRASH_DIR: PathBuf = HOME_DIR.join(".local/share/Trash");
-    pub static ref TRASH_INFO_DIR: PathBuf = TRASH_DIR.join("info");
-    pub static ref TRASH_FILE_DIR: PathBuf = TRASH_DIR.join("files");
-}
-
+static USER_DIRS: Lazy<UserDirs> =
+    Lazy::new(|| UserDirs::new().expect("Failed to determine user directories."));
+static PROJECT_DIRS: Lazy<ProjectDirs> = Lazy::new(|| {
+    ProjectDirs::from("rs", "", "Trash").expect("Failed to determine project directories")
+});
+static HOME_DIR: Lazy<&Path> = Lazy::new(|| &USER_DIRS.home_dir());
+pub static TRASH_DIR: Lazy<&Path> = Lazy::new(|| PROJECT_DIRS.data_dir());
+pub static TRASH_INFO_DIR: Lazy<PathBuf> = Lazy::new(|| TRASH_DIR.join("info"));
+pub static TRASH_FILE_DIR: Lazy<PathBuf> = Lazy::new(|| TRASH_DIR.join("files"));
 pub const TRASH_INFO_EXT: &'_ str = "trashinfo";
 pub const FILE_COPY_OPT: file::CopyOptions = file::CopyOptions {
     overwrite: true,

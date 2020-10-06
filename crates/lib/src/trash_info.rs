@@ -9,7 +9,7 @@ use std::str::FromStr;
 // use chrono::{Local, NaiveDateTime};
 use chrono::prelude::*;
 use fs::File;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use snafu::{ResultExt, Snafu};
 use crate::utils;
 
@@ -18,19 +18,17 @@ use crate::percent_path::PercentPath;
 use crate::utils::{add_trash_info_ext, to_directory};
 use crate::{TRASH_INFO_DIR, TRASH_INFO_EXT};
 
-lazy_static! {
-    static ref OPEN_OPTIONS: OpenOptions = {
-        let mut open_options = OpenOptions::new();
-        open_options
-            .read(false) // read access false
-            .write(true) // write access true
-            .append(false) // do not append to file
-            .truncate(true) // truncate the file if it exists
-            .create(true) // create a new file or open existing
-            .create_new(false); // don't fail if there is an existing file
-        open_options
-    };
-}
+static OPEN_OPTIONS: Lazy<OpenOptions> = Lazy::new(|| {
+    let mut open_options = OpenOptions::new();
+    open_options
+        .read(false) // read access false
+        .write(true) // write access true
+        .append(false) // do not append to file
+        .truncate(true) // truncate the file if it exists
+        .create(true) // create a new file or open existing
+        .create_new(false); // don't fail if there is an existing file
+    open_options
+});
 
 #[derive(Debug, Snafu)]
 pub enum Error {
