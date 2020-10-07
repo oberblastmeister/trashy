@@ -56,7 +56,6 @@ impl PercentPath {
 
     pub(crate) fn from_str(s: &str) -> Self {
         Self(utf8_percent_encode(s, ASCII_SET).to_string())
-        // Self(s.to_string())
     }
 
     pub fn encoded(&self) -> &str {
