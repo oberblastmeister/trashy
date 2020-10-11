@@ -1,6 +1,6 @@
 use eyre::{eyre, Result};
 use log::{debug, error};
-use structopt::StructOpt;
+use clap::Clap;
 
 use crate::border::Border;
 use crate::exitcode::ExitCode;
@@ -9,9 +9,9 @@ use crate::utils::{sort_iterator, Pair};
 use trash_lib::ok_log;
 use trash_lib::trash_entry::{self, read_dir_trash_entries};
 
-#[derive(StructOpt, Debug)]
+#[derive(Clap, Debug)]
 pub struct Opt {
-    #[structopt(short = "s", long = "style", default_value = "Sharp", possible_values = &Border::variants(), case_insensitive = true)]
+    #[clap(short = 's', long = "style", default_value = "Sharp", possible_values = &Border::variants(), case_insensitive = true)]
     pub border: Border,
 }
 

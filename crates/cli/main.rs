@@ -10,7 +10,7 @@ use std::fmt;
 use ansi_term::Color::Red;
 use env_logger::Builder;
 use log::{debug, LevelFilter};
-use structopt::StructOpt;
+use clap::Clap;
 use eyre::Result;
 
 use opt::Opt;
@@ -35,7 +35,7 @@ fn convert_to_level_filter(n: u8) -> LevelFilter {
 }
 
 fn try_main() -> Result<()> {
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
     start_logger(opt.verbosity);
     debug!("Opt: {:?}", opt);
     opt.run_or_default()?;

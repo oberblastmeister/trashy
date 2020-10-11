@@ -1,15 +1,15 @@
 use chrono::{Duration, Local};
 use eyre::{eyre, Result};
 use log::error;
-use structopt::StructOpt;
+use clap::Clap;
 
 use trash_lib::ok_log;
 use trash_lib::trash_entry::{read_dir_trash_entries, TrashEntry};
 
-#[derive(StructOpt, Debug, PartialEq)]
+#[derive(Clap, Debug, PartialEq)]
 pub struct Opt {
     /// keep stray files (not valid trash entries)
-    #[structopt(short = "s", long = "keep-strays")]
+    #[clap(short = 's', long = "keep-strays")]
     keep_strays: bool,
 
     /// delete files olders than amount of days

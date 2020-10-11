@@ -1,14 +1,14 @@
 use eyre::{Result, WrapErr};
 use log::{error, info};
 use regex::Regex;
-use structopt::StructOpt;
+use clap::Clap;
 
 use crate::utils::map_trash_entry_keep;
 use trash_lib::ok_log;
 use trash_lib::trash_entry::read_dir_trash_entries;
 use trash_lib::trash_info::TrashInfo;
 
-#[derive(StructOpt, Debug)]
+#[derive(Clap, Debug)]
 pub struct Opt {
     /// remove files that match this pattern
     pattern: String,

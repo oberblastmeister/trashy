@@ -5,10 +5,10 @@ mod restore;
 mod remove;
 mod completion;
 
-use structopt::StructOpt;
+use clap::Clap;
 use eyre::Result;
 
-#[derive(StructOpt, Debug)]
+#[derive(Clap, Debug)]
 pub enum SubCommand {
     /// list valid files in the trash
     List(list::Opt),

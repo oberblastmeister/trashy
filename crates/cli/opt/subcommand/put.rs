@@ -1,32 +1,32 @@
 use std::path::PathBuf;
 
 use eyre::{eyre, Result};
-use structopt::StructOpt;
+use clap::Clap;
 use trash_lib::trash_entry::TrashEntry;
 
-#[derive(StructOpt, Debug, PartialEq)]
+#[derive(Clap, Debug, PartialEq)]
 pub struct Opt {
-    #[structopt(parse(from_os_str), conflicts_with("subcmd"))]
+    #[clap(parse(from_os_str))]
     pub paths: Vec<PathBuf>,
 
     // compatibility
     /// ignored (for GNU rm compatibility)
-    #[structopt(short, long)]
+    #[clap(short, long)]
     pub directory: bool,
 
     /// ignored (for GNU rm compatibility)
-    #[structopt(short, long)]
+    #[clap(short, long)]
     pub force: bool,
 
     /// ignored (for GNU rm compatibility)
-    #[structopt(short, long)]
+    #[clap(short, long)]
     pub interactive: bool,
 
     /// ignored (for GNU rm compatibility)
-    #[structopt(short, long = "R")]
+    #[clap(short, long = "R")]
     pub recursive: bool,
 
-    #[structopt(long = "recursive")]
+    #[clap(long = "recursive")]
     pub recursive_long: bool,
 }
 

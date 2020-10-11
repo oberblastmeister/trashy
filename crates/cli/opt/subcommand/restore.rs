@@ -6,7 +6,7 @@ use log::debug;
 use log::error;
 use log::info;
 use log::trace;
-use structopt::StructOpt;
+use clap::Clap;
 use trash_lib::ok_log;
 use trash_lib::trash_entry::read_dir_trash_entries;
 
@@ -17,17 +17,17 @@ use crate::table::IndexedTable;
 use crate::utils::{Pair, sort_iterator};
 use crate::restore_index::input_restore_indices;
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Clap)]
 pub struct Opt {
-    #[structopt(short = "p", long = "path")]
-    #[structopt(parse(from_os_str))]
+    #[clap(short = 'p', long = "path")]
+    #[clap(parse(from_os_str))]
     path: Option<PathBuf>,
 
-    #[structopt(short = "d", long = "directory")]
-    #[structopt(parse(from_os_str))]
+    #[clap(short = 'd', long = "directory")]
+    #[clap(parse(from_os_str))]
     directory: Option<PathBuf>,
 
-    #[structopt(short = "s", long = "style", default_value = "Sharp", possible_values = &Border::variants(), case_insensitive = true)]
+    #[clap(short = 's', long = "style", default_value = "Sharp", possible_values = &Border::variants(), case_insensitive = true)]
     border: Border,
 }
 

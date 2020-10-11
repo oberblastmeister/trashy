@@ -1,15 +1,25 @@
 use std::io;
 
-use structopt::clap::Shell;
-use structopt::StructOpt;
+use clap::{Clap, IntoApp};
+use clap_generate::generate;
+use clap_generate::generators::{Bash, Elvish, Fish, PowerShell, Zsh};
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Clap)]
 pub struct Opt {
     /// shell to generate copmletions for
-    #[structopt(possible_values = &Shell::variants())]
-    pub shell: Shell,
+    #[clap(possible_values = &["bash", "elvish", "fish", "powershell", "zsh"])]
+    pub shell: String,
 }
 
 pub fn completion(opt: Opt) {
-    crate::Opt::clap().gen_completions_to(env!("CARGO_PKG_NAME"), opt.shell, &mut io::stdout());
+    // crate::Opt::clap()
+    let mut app = crate::Opt::into_app();
+
+    match &*opt.shell {
+        "bash" => generate::<Bash, _>(&mut app, "trash", &mut io::stdout()),
+        "fish" => generate::<Fish, _>(&mut app, "trash", &mut io::stdout()),
+        "powershell" => generate::<PowerShell, _>(&mut app, "trash", &mut io::stdout()),
+        "zsh" => generate::<Zsh, _>(&mut app, "trash", &mut io::stdout()),
+        _ => panic!("wrong shell"),
+    }
 }
