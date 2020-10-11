@@ -19,11 +19,8 @@ use utils::{read_dir_path, remove_path};
 
 static USER_DIRS: Lazy<UserDirs> =
     Lazy::new(|| UserDirs::new().expect("Failed to determine user directories."));
-static PROJECT_DIRS: Lazy<ProjectDirs> = Lazy::new(|| {
-    ProjectDirs::from("rs", "", "Trash").expect("Failed to determine project directories")
-});
 static HOME_DIR: Lazy<&Path> = Lazy::new(|| &USER_DIRS.home_dir());
-pub static TRASH_DIR: Lazy<&Path> = Lazy::new(|| PROJECT_DIRS.data_dir());
+pub static TRASH_DIR: Lazy<PathBuf> = Lazy::new(|| HOME_DIR.join(".local/share/Trash"));
 pub static TRASH_INFO_DIR: Lazy<PathBuf> = Lazy::new(|| TRASH_DIR.join("info"));
 pub static TRASH_FILE_DIR: Lazy<PathBuf> = Lazy::new(|| TRASH_DIR.join("files"));
 pub const TRASH_INFO_EXT: &'_ str = "trashinfo";

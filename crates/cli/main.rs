@@ -8,10 +8,10 @@ mod exitcode;
 use std::fmt;
 
 use ansi_term::Color::Red;
-use color_eyre::eyre::Result;
 use env_logger::Builder;
 use log::{debug, LevelFilter};
 use structopt::StructOpt;
+use eyre::Result;
 
 use opt::Opt;
 use exitcode::ExitCode;
@@ -35,7 +35,6 @@ fn convert_to_level_filter(n: u8) -> LevelFilter {
 }
 
 fn try_main() -> Result<()> {
-    color_eyre::install()?;
     let opt = Opt::from_args();
     start_logger(opt.verbosity);
     debug!("Opt: {:?}", opt);

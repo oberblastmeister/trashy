@@ -26,7 +26,7 @@ pub enum Error {
     },
 }
 
-#[derive(Debug, Snafu)]
+#[derive(Debug, Snafu, PartialEq)]
 pub enum ParseError {
     Tag { tag: String },
     Char { c: String },
@@ -56,13 +56,11 @@ fn char(c: char) -> impl Fn(&str) -> ParseResult<&str, char> {
 
 fn is_not(not: char) -> impl Fn(&str) -> ParseResult<&str, &str> {
     move |i| {
-        let mut end = 1;
-        for c in i.chars() {
-            if c == not {
-                break;
-            }
-            end += 1;
-        }
+        let end = i
+            .char_indices()
+            .find_map(|(idx, c)| if c == not { Some(idx) } else { None })
+            .unwrap_or(i.len());
+
         Ok((&i[end..], &i[..end]))
     }
 }
@@ -179,22 +177,74 @@ mod tests {
     }
 
     #[test]
+    fn tag_test() -> Result<()> {
+        let s = "let a=1";
+        assert_eq!(tag("let")(s), Ok((" a=1", "let")));
+        Ok(())
+    }
+
+    #[test]
+    fn tag2_test() {
+        assert_eq!(tag("let")("leta=1"), Ok(("a=1", "let")));
+    }
+
+    #[test]
+    fn tag_none_test() {
+        assert_eq!(tag("let")("a=1"), Err(Tag { tag: "let" }.build()));
+    }
+
+    #[test]
+    fn tag_end_test() {
+        assert_eq!(tag("end")("thisistheend"), Err(Tag { tag: "end" }.build()));
+    }
+
+    #[test]
+    fn char_test() {
+        assert_eq!(char('=')("=hello"), Ok(("hello", '=')));
+    }
+
+    #[test]
+    fn char_none_test() {
+        assert_eq!(char('=')("a=b"), Err(Char { c: '=' }.build()));
+    }
+
+    #[test]
+    fn is_not_test() {
+        assert_eq!(is_not('=')("var=b"), Ok(("=b", "var")));
+    }
+
+    #[test]
+    fn is_not_all_test() {
+        assert_eq!(is_not('=')("variable"), Ok(("", "variable")));
+    }
+
+    #[test]
+    fn all_consuming_test() {
+        assert_eq!(all_consuming(tag("="))("=b"), Err(Eof.build()));
+    }
+
+    #[test]
+    fn all_consuming2_test() {
+        assert_eq!(
+            all_consuming(is_not('\n'))("hello\nperson"),
+            Err(Eof.build())
+        );
+    }
+    #[test]
+
     fn parse_header_line_test() {
-        assert_eq!(parse_header_line("[Trash Info]"), Ok(("", "Trash Info")));
+        assert_eq!(parse_header("[Trash Info]"), Ok(("", "[Trash Info]")));
     }
 
     #[test]
     fn tag_whitespace_test() {
-        assert_eq!(
-            tag::<&str, &str, VerboseError<&str>>("Trash Info")("Trash Info "),
-            Ok((" ", "Trash Info"))
-        );
+        assert_eq!(tag("Trash Info")("Trash Info "), Ok((" ", "Trash Info")));
     }
 
     #[test]
     fn value_path_test() {
         assert_eq!(
-            parse_path_line("Path=/home/brian/.config"),
+            parse_path("Path=/home/brian/.config"),
             Ok(("", "/home/brian/.config"))
         );
     }
@@ -202,12 +252,11 @@ mod tests {
     #[test]
     fn value_path_whitespace_test() {
         assert_eq!(
-            parse_path_line("Path= /home/brian/.config"),
+            parse_path("Path= /home/brian/.config"),
             Ok(("", " /home/brian/.config"))
         );
     }
 
-    #[ignore]
     #[test]
     fn trash_info_parse_test() {
         test_parse_trash_info_run(
