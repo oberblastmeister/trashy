@@ -24,7 +24,7 @@ path = "crates/cli/main.rs"
 name = "trash"
 
 [dependencies]
-trash_lib = { path = "crates/lib" }
+trash_lib = { version = "0.1.0", path = "crates/lib" }
 prettytable-rs = "0.8.0"
 log = "0.4.11"
 lscolors = "0.7.1"
