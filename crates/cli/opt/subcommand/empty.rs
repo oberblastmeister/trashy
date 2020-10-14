@@ -1,7 +1,7 @@
 use chrono::{Duration, Local};
+use clap::Clap;
 use eyre::{eyre, Result};
 use log::error;
-use clap::Clap;
 
 use trash_lib::ok_log;
 use trash_lib::trash_entry::{read_dir_trash_entries, TrashEntry};

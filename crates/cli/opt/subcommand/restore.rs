@@ -1,34 +1,37 @@
 use std::env;
 use std::path::{Path, PathBuf};
 
+use clap::{ArgEnum, Clap};
 use eyre::{bail, Result, WrapErr};
 use log::debug;
 use log::error;
 use log::info;
 use log::trace;
-use clap::{ArgEnum, Clap};
 use trash_lib::ok_log;
 use trash_lib::trash_entry::read_dir_trash_entries;
 
 use crate::border::Border;
 use crate::exitcode::ExitCode;
 use crate::print_err_display;
-use crate::table::IndexedTable;
-use crate::utils::{Pair, sort_iterator};
 use crate::restore_index::input_restore_indices;
+use crate::table::IndexedTable;
+use crate::utils::{sort_iterator, Pair};
 
 #[derive(Debug, Clap)]
 pub struct Opt {
-    #[clap(short = 'p', long = "path")]
-    #[clap(parse(from_os_str))]
+    #[clap(parse(from_os_str), short = 'p', long = "path")]
     path: Option<PathBuf>,
 
-    #[clap(short = 'd', long = "directory")]
-    #[clap(parse(from_os_str))]
+    #[clap(parse(from_os_str), short = 'd', long = "directory")]
     directory: Option<PathBuf>,
 
-    #[clap(arg_enum)]
-    #[clap(short = 's', long = "style", default_value = "Sharp", case_insensitive = true)]
+    #[clap(
+        arg_enum,
+        short = 's',
+        long = "style",
+        default_value = "Sharp",
+        case_insensitive = true
+    )]
     border: Border,
 }
 
@@ -105,7 +108,8 @@ fn restore_in_directory(dir: &Path, border: Border) -> Result<()> {
 
     info!("Indices were {:?}", indices);
     for idx in indices {
-        trash_entries[idx].into_iter()
+        trash_entries[idx]
+            .into_iter()
             .map(|entry| {
                 info!("Restoring {:?}", entry);
                 entry.restore()

@@ -1,7 +1,6 @@
 use std::fmt;
 use std::process;
 
-use crate::print_err;
 use crate::print_err_display;
 
 #[derive(Debug, Clone, Copy, PartialEq)]

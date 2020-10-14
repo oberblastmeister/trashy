@@ -11,7 +11,7 @@ repository = "https://github.com/oberblastmeister/trash-cli"
 readme = "README.md"
 keywords = ["trash", "remove", "recycle", "bin", "freedesktop"]
 categories = ["command-line-utilities"]
-license = "MIT"
+license = "MIT/Apache-2.0"
 edition = "2018"
 
 [workspace]
@@ -41,4 +41,4 @@ clap_generate = "3.0.0-beta.2"
 [dependencies.clap]
 version = "3.0.0-beta.2"
 default-features = false
-features = ["color", "derive"]
+features = ["color", "derive", "suggestions", "wrap_help"]

@@ -1,9 +1,9 @@
+mod completion;
+mod empty;
 mod list;
 pub mod put;
-mod empty;
-mod restore;
 mod remove;
-mod completion;
+mod restore;
 
 use clap::Clap;
 use eyre::Result;
@@ -26,7 +26,7 @@ pub enum SubCommand {
     Remove(remove::Opt),
 
     /// Generates completions for shell
-    Completion(completion::Opt)
+    Completion(completion::Opt),
 }
 
 impl SubCommand {
@@ -35,7 +35,7 @@ impl SubCommand {
             SubCommand::List(opt) => list::list(opt)?,
             SubCommand::Put(opt) => {
                 put::put(opt)?;
-            },
+            }
             SubCommand::Empty(opt) => empty::empty(opt)?,
             SubCommand::Restore(opt) => restore::restore(opt)?,
             SubCommand::Remove(opt) => remove::remove(opt)?,
