@@ -6,7 +6,7 @@ use log::debug;
 use log::error;
 use log::info;
 use log::trace;
-use clap::Clap;
+use clap::{ArgEnum, Clap};
 use trash_lib::ok_log;
 use trash_lib::trash_entry::read_dir_trash_entries;
 
@@ -27,7 +27,8 @@ pub struct Opt {
     #[clap(parse(from_os_str))]
     directory: Option<PathBuf>,
 
-    #[clap(short = 's', long = "style", default_value = "Sharp", possible_values = &Border::variants(), case_insensitive = true)]
+    #[clap(arg_enum)]
+    #[clap(short = 's', long = "style", default_value = "Sharp", case_insensitive = true)]
     border: Border,
 }
 

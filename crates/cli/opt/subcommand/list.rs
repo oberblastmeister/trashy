@@ -1,6 +1,6 @@
+use clap::Clap;
 use eyre::{eyre, Result};
 use log::{debug, error};
-use clap::Clap;
 
 use crate::border::Border;
 use crate::exitcode::ExitCode;
@@ -11,7 +11,8 @@ use trash_lib::trash_entry::{self, read_dir_trash_entries};
 
 #[derive(Clap, Debug)]
 pub struct Opt {
-    #[clap(short = 's', long = "style", default_value = "Sharp", possible_values = &Border::variants(), case_insensitive = true)]
+    #[clap(arg_enum)]
+    #[clap(short = 's', long = "style", default_value = "Sharp", case_insensitive = true)]
     pub border: Border,
 }
 
@@ -33,7 +34,7 @@ pub fn list(opt: Opt) -> Result<()> {
         .map(|pair| table.add_row(&pair))
         .filter_map(|res| ok_log!(res => error!))
         .peekable();
-    
+
     match peekable.peek() {
         Some(_) => peekable.for_each(|_| ()),
         None => ExitCode::Success.exit_with_msg("There are no trash entries to list"),
