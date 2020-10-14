@@ -25,7 +25,6 @@ name = "trash"
 
 [dependencies]
 trash_lib = { path = "crates/lib" }
-structopt = "0.3.17"
 prettytable-rs = "0.8.0"
 log = "0.4.11"
 lscolors = "0.7.1"
