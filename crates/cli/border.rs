@@ -1,7 +1,5 @@
-use std::str::FromStr;
-
-use prettytable::format::{self, FormatBuilder, LinePosition, LineSeparator};
 use clap::ArgEnum;
+use prettytable::format::{self, FormatBuilder, LinePosition, LineSeparator};
 
 #[derive(Debug, Copy, Clone, ArgEnum)]
 pub enum Border {
@@ -15,38 +13,6 @@ pub enum Border {
     Markdown,
     Grid,
 }
-
-// impl FromStr for Border {
-//     type Err = &'static str;
-
-//     fn from_str(s: &str) -> Result<Self, Self::Err> {
-//         match s {
-//             "None" => Ok(Border::None),
-//             "Ascii" => Ok(Border::Ascii),
-//             "AsciiGrid" => Ok(Border::AsciiGrid),
-//             "Sharp" => Ok(Border::Sharp),
-//             "DoubleSharp" => Ok(Border::DoubleSharp),
-//             "Rounded" => Ok(Border::Rounded),
-//             "Reinforced" => Ok(Border::Reinforced),
-//             "Markdown" => Ok(Border::Markdown),
-//             "Grid" => Ok(Border::Grid),
-//         }
-//     }
-// }
-// arg_enum! {
-//     #[derive(Debug, Copy, Clone)]
-//     pub enum Border {
-//         None,
-//         Ascii,
-//         AsciiGrid,
-//         Sharp,
-//         DoubleSharp,
-//         Rounded,
-//         Reinforced,
-//         Markdown,
-//         Grid,
-//     }
-// }
 
 impl From<Border> for format::TableFormat {
     fn from(style: Border) -> Self {

@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use eyre::{eyre, Result};
 use clap::Clap;
+use eyre::{eyre, Result};
 use trash_lib::trash_entry::TrashEntry;
 
 #[derive(Clap, Debug, PartialEq)]

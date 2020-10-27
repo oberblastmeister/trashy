@@ -1,12 +1,10 @@
 use std::convert::TryInto;
 use std::result::Result as StdResult;
-use std::str::FromStr;
 
 use chrono::NaiveDateTime;
-use percent_encoding::percent_decode_str;
 use snafu::{ResultExt, Snafu};
 
-use crate::percent_path::{self, PercentPath};
+use crate::percent_path::PercentPath;
 use crate::trash_info::TrashInfo;
 
 pub const TRASH_DATETIME_FORMAT: &'static str = "%Y-%m-%dT%H:%M:%S";

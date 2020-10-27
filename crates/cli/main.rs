@@ -1,20 +1,20 @@
 mod border;
-mod opt;
-mod table;
-mod restore_index;
-mod utils;
 mod exitcode;
+mod opt;
+mod restore_index;
+mod table;
+mod utils;
 
 use std::fmt;
 
 use ansi_term::Color::Red;
-use env_logger::Builder;
-use log::{debug, LevelFilter};
 use clap::Clap;
+use env_logger::Builder;
 use eyre::Result;
+use log::{debug, LevelFilter};
 
-use opt::Opt;
 use exitcode::ExitCode;
+use opt::Opt;
 
 /// Start the logger depending on the verbosity flag
 fn start_logger(verbosity: u8) {

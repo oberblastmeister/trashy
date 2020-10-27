@@ -7,11 +7,11 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 // use chrono::{Local, NaiveDateTime};
+use crate::utils;
 use chrono::prelude::*;
 use fs::File;
 use once_cell::sync::Lazy;
 use snafu::{ResultExt, Snafu};
-use crate::utils;
 
 use super::parser::{self, parse_trash_info, TRASH_DATETIME_FORMAT};
 use crate::percent_path::PercentPath;
@@ -51,7 +51,11 @@ pub enum Error {
     NonExistentPath { path: PathBuf },
 
     #[snafu(display("Failed to get a new path in dir `{}` from path `{}`", dir.display(), path.display()))]
-    ToDirectory { path: PathBuf, dir: PathBuf, source: utils::Error },
+    ToDirectory {
+        path: PathBuf,
+        dir: PathBuf,
+        source: utils::Error,
+    },
 }
 
 type Result<T, E = Error> = ::std::result::Result<T, E>;

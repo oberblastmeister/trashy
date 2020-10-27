@@ -4,9 +4,7 @@ use std::fmt;
 use std::path::Path;
 
 use crate::utils::{self, convert_to_str};
-use percent_encoding::{
-    percent_decode_str, utf8_percent_encode, AsciiSet, CONTROLS
-};
+use percent_encoding::{percent_decode_str, utf8_percent_encode, AsciiSet, CONTROLS};
 use snafu::{ResultExt, Snafu};
 
 /// The excluded characters that must be escaped with percents in the percent path of each trash
@@ -32,10 +30,7 @@ pub const ASCII_SET: &'static AsciiSet = &CONTROLS
 
 #[derive(Debug, Snafu)]
 pub enum Error {
-    #[snafu(display(
-        "The decoded form of the string `{}` was not well formed in utf-8",
-        s,
-    ))]
+    #[snafu(display("The decoded form of the string `{}` was not well formed in utf-8", s,))]
     Decode { s: String, source: Utf8Error },
 
     #[snafu(display("Failed to convert path to a string to be able to percent encode it"))]

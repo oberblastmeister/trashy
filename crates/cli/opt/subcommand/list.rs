@@ -12,7 +12,12 @@ use trash_lib::trash_entry::{self, read_dir_trash_entries};
 #[derive(Clap, Debug)]
 pub struct Opt {
     #[clap(arg_enum)]
-    #[clap(short = 's', long = "style", default_value = "Sharp", case_insensitive = true)]
+    #[clap(
+        short = 's',
+        long = "style",
+        default_value = "Sharp",
+        case_insensitive = true
+    )]
     pub border: Border,
 }
 

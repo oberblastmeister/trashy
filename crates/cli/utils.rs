@@ -8,8 +8,8 @@ use std::result::Result as StdResult;
 
 use chrono::naive::NaiveDateTime;
 use eyre::{eyre, Result, WrapErr};
-use once_cell::sync::Lazy;
 use lscolors::{LsColors, Style};
+use once_cell::sync::Lazy;
 use prettytable::{cell, row, Cell, Row};
 use trash_lib::trash_entry::{self, TrashEntry};
 use trash_lib::trash_info::TrashInfo;

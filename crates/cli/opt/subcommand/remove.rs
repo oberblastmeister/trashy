@@ -1,7 +1,7 @@
+use clap::Clap;
 use eyre::{Result, WrapErr};
 use log::{error, info};
 use regex::Regex;
-use clap::Clap;
 
 use crate::utils::map_trash_entry_keep;
 use trash_lib::ok_log;

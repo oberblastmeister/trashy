@@ -1,21 +1,22 @@
 use std::env;
 use std::path::{Path, PathBuf};
 
+use clap::Clap;
 use eyre::{bail, Result, WrapErr};
 use log::debug;
 use log::error;
 use log::info;
 use log::trace;
-use clap::{ArgEnum, Clap};
 use trash_lib::ok_log;
 use trash_lib::trash_entry::read_dir_trash_entries;
+use crate::utils::input;
 
 use crate::border::Border;
 use crate::exitcode::ExitCode;
 use crate::print_err_display;
+use crate::restore_index::RestoreIndex;
 use crate::table::IndexedTable;
-use crate::utils::{Pair, sort_iterator};
-use crate::restore_index::input_restore_indices;
+use crate::utils::{sort_iterator, Pair};
 
 #[derive(Debug, Clap)]
 pub struct Opt {
@@ -28,7 +29,12 @@ pub struct Opt {
     directory: Option<PathBuf>,
 
     #[clap(arg_enum)]
-    #[clap(short = 's', long = "style", default_value = "Sharp", case_insensitive = true)]
+    #[clap(
+        short = 's',
+        long = "style",
+        default_value = "Sharp",
+        case_insensitive = true
+    )]
     border: Border,
 }
 
@@ -97,21 +103,28 @@ fn restore_in_directory(dir: &Path, border: Border) -> Result<()> {
     trace!("The final vector of trash entries is {:?}", trash_entries);
 
     let indices = loop {
-        match input_restore_indices("Input the index or range or trash entries to restore: ") {
-            Ok(inp) => break inp,
+        match input("Input the index or range of trash entries to restore: ") {
+            Ok(inp) => match RestoreIndex::get_multiple(&inp) {
+                Ok(indices) => break indices,
+                Err(e) => print_err_display(e),
+            },
             Err(e) => print_err_display(e),
         }
     };
 
-    info!("Indices were {:?}", indices);
+    info!("Indices are {:?}", indices);
+
     for idx in indices {
-        trash_entries[idx].into_iter()
-            .map(|entry| {
-                info!("Restoring {:?}", entry);
-                entry.restore()
-            })
-            .filter_map(|res| ok_log!(res => error!))
-            .for_each(|_| ());
+        match idx {
+            RestoreIndex::Point(p) => {
+                trash_entries[p].restore()?
+            }
+            RestoreIndex::Range(range) => {
+                trash_entries[range].into_iter().map(|trash_entry| trash_entry.restore())
+                    .filter_map(|res| ok_log!(res => error!))
+                    .for_each(|_| ());
+            }
+        }
     }
 
     Ok(())
