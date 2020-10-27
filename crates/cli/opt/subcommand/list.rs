@@ -11,8 +11,8 @@ use trash_lib::trash_entry::{self, read_dir_trash_entries};
 
 #[derive(Clap, Debug)]
 pub struct Opt {
-    #[clap(arg_enum)]
     #[clap(
+        arg_enum,
         short = 's',
         long = "style",
         default_value = "Sharp",

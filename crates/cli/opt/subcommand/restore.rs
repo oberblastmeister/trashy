@@ -1,7 +1,7 @@
 use std::env;
 use std::path::{Path, PathBuf};
 
-use clap::Clap;
+use clap::{ArgEnum, Clap};
 use eyre::{bail, Result, WrapErr};
 use log::debug;
 use log::error;
@@ -20,16 +20,14 @@ use crate::utils::{sort_iterator, Pair};
 
 #[derive(Debug, Clap)]
 pub struct Opt {
-    #[clap(short = 'p', long = "path")]
-    #[clap(parse(from_os_str))]
+    #[clap(parse(from_os_str), short = 'p', long = "path")]
     path: Option<PathBuf>,
 
-    #[clap(short = 'd', long = "directory")]
-    #[clap(parse(from_os_str))]
+    #[clap(parse(from_os_str), short = 'd', long = "directory")]
     directory: Option<PathBuf>,
 
-    #[clap(arg_enum)]
     #[clap(
+        arg_enum,
         short = 's',
         long = "style",
         default_value = "Sharp",

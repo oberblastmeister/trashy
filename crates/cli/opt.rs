@@ -1,22 +1,17 @@
 mod subcommand;
 
+use clap::{AppSettings, Clap};
 use eyre::Result;
-use clap::Clap;
-
 use subcommand::SubCommand;
 
 #[derive(Debug, Clap)]
-// #[clap(
-//     global_settings(&[AppSettings::ColoredHelp]),
-//     about = env!("CARGO_PKG_DESCRIPTION")
-// )]
+#[clap(version = env!("CARGO_PKG_VERSION"), about = env!("CARGO_PKG_DESCRIPTION"), author = env!("CARGO_PKG_AUTHORS"))]
 pub struct Opt {
     #[clap(flatten)]
     put_opt: subcommand::put::Opt,
 
     /// How verbose to log. The verbosity is error by default.
-    #[clap(short = 'v', long = "verbose")]
-    #[clap(parse(from_occurrences))]
+    #[clap(short = 'v', long = "verbose", parse(from_occurrences))]
     pub verbosity: u8,
 
     /// The subcommand to run. If none is specified, will run `trash put` by default

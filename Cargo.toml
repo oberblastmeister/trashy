@@ -1,5 +1,5 @@
 [package]
-name = "trash-cli"
+name = "trashy"
 version = "0.1.0"
 authors = ["Brian Shu <littlebubu.shu@gmail.com>"]
 description = """
@@ -11,7 +11,7 @@ repository = "https://github.com/oberblastmeister/trash-cli"
 readme = "README.md"
 keywords = ["trash", "remove", "recycle", "bin", "freedesktop"]
 categories = ["command-line-utilities"]
-license = "MIT"
+license = "MIT/Apache-2.0"
 edition = "2018"
 
 [workspace]
@@ -24,7 +24,7 @@ path = "crates/cli/main.rs"
 name = "trash"
 
 [dependencies]
-trash_lib = { path = "crates/lib" }
+trash_lib = { version = "0.1.0", path = "crates/lib" }
 prettytable-rs = "0.8.0"
 log = "0.4.11"
 lscolors = "0.7.1"
@@ -41,4 +41,4 @@ clap_generate = "3.0.0-beta.2"
 [dependencies.clap]
 version = "3.0.0-beta.2"
 default-features = false
-features = ["color", "derive"]
+features = ["color", "derive", "suggestions", "wrap_help"]
