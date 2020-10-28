@@ -1,9 +1,8 @@
-use std::ops::{Range, Index};
-use std::slice;
-use std::str::FromStr;
 use std::cmp;
+use std::ops::Range;
+use std::str::FromStr;
 
-use eyre::{eyre, Context, Result, bail};
+use eyre::{bail, eyre, Context, Result};
 
 use crate::utils::input;
 
@@ -19,40 +18,44 @@ impl FromStr for RestoreIndex {
 
     /// converts from a one based index including the end to 0 based index excluding the end
     fn from_str(s: &str) -> Result<RestoreIndex> {
+        if s.is_empty() {
+            bail!("Could not parse empty string into RestoreIndex");
+        }
         let mut split = s.split('-');
-        let start = match split.next() {
-            Some(start) => start.parse::<usize>().wrap_err(format!(
-                "Failed to parse `{}` before - into a number",
-                start
-            ))?,
-            None => {
-                let n = s.parse::<usize>().wrap_err(format!(
-                    "Failed to parse `{}` into number after trying range",
-                    s
-                ))?;
-                return Ok(RestoreIndex::Point(n));
-            }
-        } - 1;
+        let start = split.next().expect("BUG: must have at least one");
+        let start = start.parse::<usize>().wrap_err(format!(
+            "Failed to parse `{}` before - into a number",
+            start
+        ))? - 1;
 
-        let end = split
-            .next()
-            .ok_or(eyre!("Expected something after `-`"))?;
-        let end = end
-            .parse::<usize>()
-            .wrap_err(format!("Failed to parse `{}` into a number", end))?;
+        let end = match split.next() {
+            Some(end) => end
+                .parse::<usize>()
+                .wrap_err(format!("Failed to parse `{}` after - into a number", end))?,
+            None => {
+                return Ok(RestoreIndex::Point(start));
+            }
+        };
+
         Ok(RestoreIndex::Range(start..end))
     }
 }
 
 impl RestoreIndex {
-    pub fn get_multiple(s: &str) -> Result<Vec<RestoreIndex>> {
+    pub fn get_multiple_non_overlapping(s: &str) -> Result<Vec<RestoreIndex>> {
+        if s.is_empty() {
+            bail!("Could not parse empty string into restore indexes")
+        }
         let mut res = Vec::new();
         for s in s.split_whitespace() {
             let restore_index = s.parse::<RestoreIndex>()?;
             if res.is_empty() {
                 res.push(restore_index)
             } else {
-                if res.iter().any(|existing| existing.is_overlapping(&restore_index)) {
+                if res
+                    .iter()
+                    .any(|existing| existing.is_overlapping(&restore_index))
+                {
                     bail!("Overlapping range found: {:?}", restore_index);
                 }
                 res.push(restore_index)
@@ -80,20 +83,142 @@ impl Overlap for Range<usize> {
 
 impl Overlap for RestoreIndex {
     fn is_overlapping(&self, other: &Self) -> bool {
-        if self == other { return false };
         match (self, other) {
-            (RestoreIndex::Point(p), RestoreIndex::Range(range)) => {
-                range.contains(p)
-            }
-            (RestoreIndex::Range(range), RestoreIndex::Point(p)) => {
-                range.contains(p)
-            }
+            (RestoreIndex::Point(p), RestoreIndex::Range(range)) => range.contains(p),
+            (RestoreIndex::Range(range), RestoreIndex::Point(p)) => range.contains(p),
             (RestoreIndex::Range(range1), RestoreIndex::Range(range2)) => {
                 range1.is_overlapping(range2)
             }
-            (RestoreIndex::Point(p1), RestoreIndex::Point(p2)) => {
-                p1.is_overlapping(p2)
-            }
+            (RestoreIndex::Point(p1), RestoreIndex::Point(p2)) => p1.is_overlapping(p2),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use RestoreIndex::*;
+
+    fn test_parse_restore_index(s: &str, actual: RestoreIndex) {
+        assert_eq!(
+            s.parse::<RestoreIndex>()
+                .expect(&format!("Failed to parse str `{}` into a restore index", s)),
+            actual
+        );
+    }
+
+    #[test]
+    fn from_str() {
+        test_parse_restore_index("123-1234", Range(122..1234));
+    }
+
+    #[test]
+    fn point_from_str_test() {
+        test_parse_restore_index("5", Point(4));
+    }
+
+    #[test]
+    fn another_point_from_str_multiple_char_test() {
+        test_parse_restore_index("12347", Point(12346));
+    }
+
+    #[should_panic]
+    #[test]
+    fn missing_end_test() {
+        "2340958-".parse::<RestoreIndex>().unwrap();
+    }
+
+    #[should_panic]
+    #[test]
+    fn missing_beginning_test() {
+        "-123434".parse::<RestoreIndex>().unwrap();
+    }
+
+    #[should_panic]
+    #[test]
+    fn too_many_dashes_test() {
+        "123---1234".parse::<RestoreIndex>().unwrap();
+    }
+
+    #[should_panic]
+    #[test]
+    fn not_a_number_test() {
+        "hello".parse::<RestoreIndex>().unwrap();
+    }
+
+    #[should_panic]
+    #[test]
+    fn parse_nothing_test() {
+        "".parse::<RestoreIndex>().unwrap();
+    }
+
+    #[test]
+    fn is_overlapping_same_range_test() {
+        assert!((1..1).is_overlapping(&(1..1)));
+    }
+
+    #[test]
+    fn is_overlapping2_range_test() {
+        assert!((1..10).is_overlapping(&(1..4)));
+    }
+
+    #[test]
+    fn is_not_overlapping_range_test() {
+        assert!(!(1..4).is_overlapping(&(10..1234)));
+    }
+
+    #[test]
+    fn is_overlapping_test() {
+        assert!(Range(1..3).is_overlapping(&Range(1..3)));
+    }
+
+    #[test]
+    fn is_overlapping2_test() {
+        assert!(Range(1..9).is_overlapping(&Range(3..6)));
+    }
+
+    #[test]
+    fn is_not_overlapping_test() {
+        assert!(!Range(1..3).is_overlapping(&Range(5..10)));
+    }
+
+    #[test]
+    fn is_overlapping_same_test() {
+        assert!(Range(1..1).is_overlapping(&Range(1..1)));
+    }
+
+    #[test]
+    fn is_overlapping_different_test() {
+        assert!(Point(5).is_overlapping(&(Range(1..15))));
+    }
+
+    #[test]
+    fn is_overlapping_different2_test() {
+        assert!(Range(3..8).is_overlapping(&Point(4)));
+    }
+
+    #[test]
+    fn is_overlapping_points_test() {
+        assert!(Point(4).is_overlapping(&Point(4)));
+    }
+
+    #[test]
+    fn get_multiple_test() {
+        assert_eq!(
+            RestoreIndex::get_multiple_non_overlapping("4 40 3 9-12").unwrap(),
+            vec![Point(3), Point(39), Point(2), Range(8..12),]
+        );
+    }
+
+    #[should_panic]
+    #[test]
+    fn get_multiple_overlapping_test() {
+        RestoreIndex::get_multiple_non_overlapping("4 30 5-13 7-8 9").unwrap();
+    }
+
+    #[should_panic]
+    #[test]
+    fn get_multiple_none() {
+        RestoreIndex::get_multiple_non_overlapping("").unwrap();
     }
 }

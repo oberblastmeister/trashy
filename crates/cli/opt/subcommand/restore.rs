@@ -1,6 +1,8 @@
 use std::env;
+use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::utils::input;
 use clap::{ArgEnum, Clap};
 use eyre::{bail, Result, WrapErr};
 use log::debug;
@@ -9,7 +11,6 @@ use log::info;
 use log::trace;
 use trash_lib::ok_log;
 use trash_lib::trash_entry::read_dir_trash_entries;
-use crate::utils::input;
 
 use crate::border::Border;
 use crate::exitcode::ExitCode;
@@ -50,10 +51,17 @@ pub fn restore(opt: Opt) -> Result<()> {
             restore_file(&path)?;
         }
         Opt {
-            directory: Some(directory),
+            directory: Some(ref directory),
             border,
             ..
         } => {
+            if !directory.is_dir() {
+                bail!("The path `{}` is not a directory", directory.display());
+            }
+            let directory = fs::canonicalize(directory).wrap_err(format!(
+                "Failed to canonicalize directory `{}`",
+                directory.display()
+            ))?;
             info!("Restoring in directory {}", directory.display());
             restore_in_directory(&directory, border)?
         }
@@ -76,6 +84,8 @@ fn restore_file(path: &Path) -> Result<()> {
     trash_lib::restore(path).map_err(Into::into)
 }
 
+/// Restore thing in a directory. Must take absolute dir path instead of relative path to avoid
+/// issues. Path must be a directory
 fn restore_in_directory(dir: &Path, border: Border) -> Result<()> {
     let mut table = IndexedTable::new(border)?;
 
@@ -84,7 +94,7 @@ fn restore_in_directory(dir: &Path, border: Border) -> Result<()> {
         .filter_map(|res| ok_log!(res => error!));
 
     let trash_entries: Vec<_> = sort_iterator(trash_entry_iter)
-        .filter(|pair| filter_by_in_dir(pair, dir))
+        .filter(|pair| filter_by_in_dir(pair, &dir))
         .map(|pair| table.add_row(&pair).map(|_| (pair)))
         .filter_map(|res| ok_log!(res => error!))
         .map(|pair| pair.revert())
@@ -102,7 +112,7 @@ fn restore_in_directory(dir: &Path, border: Border) -> Result<()> {
 
     let indices = loop {
         match input("Input the index or range of trash entries to restore: ") {
-            Ok(inp) => match RestoreIndex::get_multiple(&inp) {
+            Ok(inp) => match RestoreIndex::get_multiple_non_overlapping(&inp) {
                 Ok(indices) => break indices,
                 Err(e) => print_err_display(e),
             },
@@ -114,11 +124,11 @@ fn restore_in_directory(dir: &Path, border: Border) -> Result<()> {
 
     for idx in indices {
         match idx {
-            RestoreIndex::Point(p) => {
-                trash_entries[p].restore()?
-            }
+            RestoreIndex::Point(p) => trash_entries[p].restore()?,
             RestoreIndex::Range(range) => {
-                trash_entries[range].into_iter().map(|trash_entry| trash_entry.restore())
+                trash_entries[range]
+                    .into_iter()
+                    .map(|trash_entry| trash_entry.restore())
                     .filter_map(|res| ok_log!(res => error!))
                     .for_each(|_| ());
             }
