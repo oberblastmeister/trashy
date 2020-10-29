@@ -11,6 +11,15 @@ use trash_lib::trash_entry::{self, read_dir_trash_entries};
 
 #[derive(Clap, Debug)]
 pub struct Opt {
+    /// Wheather to colorize output, default true
+    #[clap(short, long)]
+    dont_colorize: bool,
+
+    /// Wheather to shorten output, default true
+    #[clap(short, long)]
+    dont_shorten: bool,
+
+    /// The border to use
     #[clap(
         arg_enum,
         short = 's',
@@ -19,6 +28,7 @@ pub struct Opt {
         case_insensitive = true
     )]
     pub border: Border,
+
 }
 
 pub fn list(opt: Opt) -> Result<()> {
@@ -36,7 +46,7 @@ pub fn list(opt: Opt) -> Result<()> {
     let iter = iter.map(Pair::new).filter_map(|res| ok_log!(res => error!));
 
     let mut peekable = sort_iterator(iter)
-        .map(|pair| table.add_row(&pair))
+        .map(|pair| table.add_row(&pair, opt.dont_colorize, opt.dont_shorten))
         .filter_map(|res| ok_log!(res => error!))
         .peekable();
 

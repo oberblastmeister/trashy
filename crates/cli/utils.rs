@@ -1,9 +1,8 @@
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::fs;
-use std::io::stdin;
-use std::io::stdout;
-use std::io::Write;
-use std::ops::Range;
+use std::io::{stdin, stdout, Write};
+use std::path::{Path, PathBuf};
 use std::result::Result as StdResult;
 
 use chrono::naive::NaiveDateTime;
@@ -13,6 +12,7 @@ use once_cell::sync::Lazy;
 use prettytable::{cell, row, Cell, Row};
 use trash_lib::trash_entry::{self, TrashEntry};
 use trash_lib::trash_info::TrashInfo;
+use trash_lib::HOME_DIR;
 
 static LS_COLORS: Lazy<LsColors> = Lazy::new(|| LsColors::from_env().unwrap_or_default());
 
@@ -34,6 +34,12 @@ impl Pair {
 
     pub fn revert(self) -> TrashEntry {
         self.0
+    }
+
+    pub fn split(self) -> (TrashEntry, TrashInfo) {
+        match self {
+            Self(trash_entry, trash_info) => (trash_entry, trash_info),
+        }
     }
 }
 
@@ -66,15 +72,15 @@ where
     t1.1.cmp(&t2.1)
 }
 
-pub fn map_to_row(pair: (TrashEntry, TrashInfo)) -> Result<Row> {
-    let (trash_entry, trash_info) = pair;
-    let metadata = get_metadata(&trash_entry)?;
-    let path = trash_info.percent_path().decoded()?;
-    let colorized_path = colorize_path(path.as_ref(), &metadata);
-    let mut res = format_date(trash_info.deletion_date());
-    res.push(Cell::new(&colorized_path));
-    Ok(Row::new(res))
-}
+// pub fn map_to_row(pair: (TrashEntry, TrashInfo)) -> Result<Row> {
+//     let (trash_entry, trash_info) = pair;
+//     let metadata = get_metadata(&trash_entry)?;
+//     let path = trash_info.percent_path().decoded()?;
+//     let colorized_path = colorize_path(path.as_ref(), &metadata);
+//     let mut res = format_date(trash_info.deletion_date());
+//     res.push(Cell::new(&colorized_path));
+//     Ok(Row::new(res))
+// }
 
 pub fn colorize_path(path: &str, metadata: &fs::Metadata) -> String {
     let style = LS_COLORS.style_for_path_with_metadata(path, Some(metadata));
@@ -126,32 +132,49 @@ pub fn input(msg: &str) -> Result<String> {
     Ok(s)
 }
 
-pub fn input_number(msg: &str) -> Result<u32> {
-    let s = input(msg)?;
-    let s = s.trim();
+pub fn shorten_path<'a, T>(path: T) -> Result<String>
+where
+    T: AsRef<Path> + 'a,
+{
+    let path = path.as_ref();
+    let path_str = path.to_str().ok_or_else(|| eyre!("Failed"))?;
+    let home_dir = HOME_DIR.to_string_lossy();
 
-    Ok(s.parse()
-        .context(format!("Failed to parse `{}` into a u32", s))?)
+    Ok(match path_str.find(&*home_dir) {
+        Some(start_idx) if start_idx == 0 => {
+            format!("{}{}", "~", &path_str[home_dir.len()..])
+        }
+        _ => path.to_string_lossy().into_owned(),
+    })
 }
 
-pub fn input_range(msg: &str) -> Result<Range<usize>> {
-    const ERR: &str = "Failed to parse input into number or range";
-    let s = input(msg)?;
-    let s = s.trim();
-    let mut s = s.split('-');
-    let start: usize = s.next().ok_or(eyre!(ERR))?.parse().wrap_err(eyre!(ERR))?;
-    if let Some(end) = s.next() {
-        let end: usize = end.parse().wrap_err(eyre!(ERR))?;
-        Ok(start - 1..end)
-    } else {
-        Ok(start - 1..start)
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn shorten_path_test() {
+        assert_eq!(
+            shorten_path(&format!("{}/project/brian", HOME_DIR.to_str().unwrap())).unwrap(),
+            Cow::from("~/project/brian")
+        );
+    }
+
+    #[test]
+    fn short_path_not_beginning_test() {
+        assert_eq!(
+            shorten_path(&format!(
+                "{}/project/{}/code",
+                HOME_DIR.to_str().unwrap(),
+                HOME_DIR.to_str().unwrap()
+            )).unwrap(),
+            format!("~/project/{}/code", HOME_DIR.to_str().unwrap())
+        );
+    }
+
+    #[test]
+    fn shorten_path_none_test() {
+        let path = &format!("projects/{}/code", HOME_DIR.to_str().unwrap());
+        assert_eq!(shorten_path(path).unwrap(), Cow::from(path));
     }
 }
-
-// pub fn index_trash_entries_iter<'a>(input_types: &[InputType], entries: &'a Vec<TrashEntry>) -> impl Iterator<Item = &'a TrashEntry>{
-//     let mut res = Vec::new();
-//     for &input_type in input_types {
-//         res.push(&entries[input_type])
-//     }
-//     res.into_iter().flatten()
-// }

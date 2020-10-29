@@ -21,11 +21,21 @@ use crate::utils::{sort_iterator, Pair};
 
 #[derive(Debug, Clap)]
 pub struct Opt {
+    /// The optional path to restore
     #[clap(parse(from_os_str), short = 'p', long = "path")]
     path: Option<PathBuf>,
 
+    /// Optionally restore inside of a directory
     #[clap(parse(from_os_str), short = 'd', long = "directory")]
     directory: Option<PathBuf>,
+
+    /// Wheather to colorize output, default true
+    #[clap(short, long)]
+    dont_colorize: bool,
+
+    /// Wheather to shorten output, default true
+    #[clap(short, long)]
+    dont_shorten: bool,
 
     #[clap(
         arg_enum,
@@ -43,6 +53,7 @@ pub fn restore(opt: Opt) -> Result<()> {
             path: Some(_),
             directory: Some(_),
             border: _,
+            ..
         } => bail!("Cannot restore both path and in directory"),
         Opt {
             path: Some(path), ..
@@ -53,6 +64,8 @@ pub fn restore(opt: Opt) -> Result<()> {
         Opt {
             directory: Some(ref directory),
             border,
+            dont_colorize,
+            dont_shorten,
             ..
         } => {
             if !directory.is_dir() {
@@ -63,17 +76,22 @@ pub fn restore(opt: Opt) -> Result<()> {
                 directory.display()
             ))?;
             info!("Restoring in directory {}", directory.display());
-            restore_in_directory(&directory, border)?
+            restore_in_directory(&directory, border, dont_colorize, dont_shorten)?
         }
         Opt {
             path: None,
             directory: None,
             border,
+            dont_colorize,
+            dont_shorten,
         } => {
             info!("Restoring in current working directory");
             let cwd = env::current_dir().wrap_err("Failed to find current working directory")?;
+            debug!("Dont_colorize: {:?}", dont_colorize);
+            debug!("Dont_shorten: {:?}", dont_shorten);
+
             info!("Cwd is `{}`", cwd.display());
-            restore_in_directory(&cwd, border)?;
+            restore_in_directory(&cwd, border, dont_colorize, dont_shorten)?;
         }
     }
 
@@ -86,7 +104,7 @@ fn restore_file(path: &Path) -> Result<()> {
 
 /// Restore thing in a directory. Must take absolute dir path instead of relative path to avoid
 /// issues. Path must be a directory
-fn restore_in_directory(dir: &Path, border: Border) -> Result<()> {
+fn restore_in_directory(dir: &Path, border: Border, dont_colorize: bool, dont_shorten: bool) -> Result<()> {
     let mut table = IndexedTable::new(border)?;
 
     let trash_entry_iter = read_dir_trash_entries()?
@@ -95,7 +113,7 @@ fn restore_in_directory(dir: &Path, border: Border) -> Result<()> {
 
     let trash_entries: Vec<_> = sort_iterator(trash_entry_iter)
         .filter(|pair| filter_by_in_dir(pair, &dir))
-        .map(|pair| table.add_row(&pair).map(|_| (pair)))
+        .map(|pair| table.add_row(&pair, dont_colorize, dont_shorten).map(|_| (pair)))
         .filter_map(|res| ok_log!(res => error!))
         .map(|pair| pair.revert())
         .collect();

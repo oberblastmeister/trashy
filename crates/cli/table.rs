@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use eyre::{eyre, Result};
 use log::debug;
 use log::info;
@@ -6,7 +8,8 @@ use prettytable::{cell, row, Cell, Row, Table};
 use terminal_size::{terminal_size, Width};
 
 use crate::border::Border;
-use crate::utils::{colorize_path, format_date, format_date_compact, get_metadata, Pair};
+use crate::utils::{colorize_path, format_date, format_date_compact, get_metadata, Pair, shorten_path};
+use trash_lib::HOME_DIR;
 
 pub struct SizedTable {
     size: TableSize,
@@ -22,28 +25,42 @@ impl SizedTable {
         Ok(sized_table)
     }
 
-    pub fn add_row(&mut self, pair: &Pair) -> Result<()> {
-        let row = self.get_row(pair)?;
+    pub fn add_row(&mut self, pair: &Pair, dont_colorize: bool, dont_shorten: bool) -> Result<()> {
+        let row = self.get_row(pair, dont_colorize, dont_shorten)?;
         self.table.add_row(row);
         Ok(())
     }
 
-    fn get_row(&self, pair: &Pair) -> Result<Row> {
-        let Pair(trash_entry, trash_info) = pair;
-        let metadata = get_metadata(&trash_entry)?;
+    fn get_row(&self, pair: &Pair, dont_colorize: bool, dont_shorten: bool) -> Result<Row> {
+        let Pair(ref trash_entry, ref trash_info) = pair;
+
         let path = trash_info.percent_path().decoded()?;
-        let colorized_path = colorize_path(path.as_ref(), &metadata);
-        trace!("Add adding {:?} row", self.size);
+
+        let mut displayed_path = if !dont_shorten {
+            let path = path.as_ref();
+            Cow::from(shorten_path(path).unwrap())
+        } else {
+            path
+        };
+
+        displayed_path = if !dont_colorize {
+            let metadata = get_metadata(&trash_entry)?;
+            Cow::from(colorize_path(displayed_path.as_ref(), &metadata))
+        } else {
+            displayed_path
+        };
+
+        trace!("Add adding size {:?} row", self.size);
         let row = match self.size {
-            TableSize::Minimal => row![colorized_path],
+            TableSize::Minimal => row![displayed_path],
             TableSize::Compact => {
                 let mut res = format_date_compact(trash_info.deletion_date());
-                res.push(Cell::new(&colorized_path));
+                res.push(Cell::new(&displayed_path));
                 Row::new(res)
             }
             TableSize::Full => {
                 let mut res = format_date(trash_info.deletion_date());
-                res.push(Cell::new(&colorized_path));
+                res.push(Cell::new(&displayed_path));
                 Row::new(res)
             }
         };
@@ -64,8 +81,8 @@ impl IndexedTable {
         Ok(IndexedTable(SizedTable { size, table }))
     }
 
-    pub fn add_row(&mut self, pair: &Pair) -> Result<()> {
-        let mut row = self.0.get_row(pair)?;
+    pub fn add_row(&mut self, pair: &Pair, dont_colorize: bool, dont_shorten: bool) -> Result<()> {
+        let mut row = self.0.get_row(pair, dont_colorize, dont_shorten)?;
         // insert the index
         let index = self.0.table.len() + 1;
         debug!("current index (1 based): {}", index);
