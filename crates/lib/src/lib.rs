@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use directories::{ProjectDirs, UserDirs};
 use fs_extra::dir;
 use fs_extra::file;
-use log::{error, warn};
+use log::{error, info, warn};
 use once_cell::sync::Lazy;
 use snafu::{ResultExt, Snafu};
 
@@ -140,7 +140,15 @@ pub fn put(paths: &[impl AsRef<Path>]) -> Result<Vec<TrashEntry>> {
     let mut existing: Vec<_> = read_dir_trash_entries()
         .context(ReadDirTrashEntry)?
         .collect();
-    let old_trash_entries_end = existing.len() - 1;
+    info!("Existing trash entries: {:?}", existing);
+    let old_trash_entries_end = {
+        let existing_len = existing.len();
+        if existing_len == 0 {
+            existing_len
+        } else {
+            existing_len - 1
+        }
+    };
 
     for path in paths {
         let trash_entry = TrashEntry::create(path, &existing).context(TrashEntryCreation)?;
