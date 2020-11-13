@@ -52,7 +52,7 @@ pub fn list(opt: Opt) -> Result<()> {
 
     match peekable.peek() {
         Some(_) => peekable.for_each(|_| ()),
-        None => ExitCode::Success.exit_with_msg("There are no trash entries to list"),
+        None => ExitCode::Success.exit_with_msg("The trash is empty."),
     }
 
     table.print();

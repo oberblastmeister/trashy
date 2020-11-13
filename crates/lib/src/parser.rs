@@ -2,6 +2,7 @@ use std::convert::TryInto;
 use std::result::Result as StdResult;
 
 use chrono::NaiveDateTime;
+use log::debug;
 use snafu::{ResultExt, Snafu};
 
 use crate::percent_path::PercentPath;
@@ -95,6 +96,7 @@ fn parse_path(i: &str) -> ParseResult<&str, &str> {
     Ok((i, o))
 }
 
+#[derive(Debug, Clone, PartialEq)]
 struct TrashInfoStr<'a, 'b> {
     path: &'a str,
     deletion_date: &'b str,
@@ -130,7 +132,9 @@ fn parse_trash_info_str(i: &str) -> Result<TrashInfoStr, ParseError> {
 
 pub fn parse_trash_info(s: &str) -> Result<TrashInfo> {
     let trash_info_str = parse_trash_info_str(s).context(Parse { input: s })?;
+    debug!("Trash info str part: {:?}", trash_info_str);
     let trash_info = trash_info_str.try_into()?;
+    debug!("Trash info with proper types: {:?}", trash_info);
     Ok(trash_info)
 }
 

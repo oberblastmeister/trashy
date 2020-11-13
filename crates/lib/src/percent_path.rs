@@ -1,4 +1,4 @@
-use core::str::Utf8Error;
+use std::str::{FromStr, Utf8Error};
 use std::borrow::Cow;
 use std::fmt;
 use std::path::Path;
@@ -43,14 +43,15 @@ type Result<T, E = Error> = ::std::result::Result<T, E>;
 pub struct PercentPath(String);
 
 impl PercentPath {
+    /// Create a new percent path from a str.
+    pub fn from_str(s: &str) -> Self {
+        Self(utf8_percent_encode(s, ASCII_SET).to_string())
+    }
+
     pub(crate) fn from_path(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
         let s = convert_to_str(path).context(ConvertPathDecode)?;
         Ok(Self(utf8_percent_encode(s, ASCII_SET).to_string()))
-    }
-
-    pub(crate) fn from_str(s: &str) -> Self {
-        Self(utf8_percent_encode(s, ASCII_SET).to_string())
     }
 
     pub fn encoded(&self) -> &str {
@@ -67,5 +68,24 @@ impl PercentPath {
 impl fmt::Display for PercentPath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encode_spaces_test() {
+        let percent_path = PercentPath::from_str("/this is a path/");
+        assert_eq!(percent_path, PercentPath(String::from("/this%20is%20a%20path/")));
+    }
+
+    #[test]
+    fn decode_spaces_test() {
+        let s = "/this is a path/";
+        let percent_path = PercentPath::from_str("/this is a path/");
+        let percent_path = percent_path.decoded().unwrap();
+        assert_eq!(percent_path, s);
     }
 }

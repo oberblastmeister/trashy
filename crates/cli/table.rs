@@ -34,7 +34,10 @@ impl SizedTable {
     fn get_row(&self, pair: &Pair, dont_colorize: bool, dont_shorten: bool) -> Result<Row> {
         let Pair(ref trash_entry, ref trash_info) = pair;
 
-        let path = trash_info.percent_path().decoded()?;
+        let path = trash_info.percent_path();
+        trace!("Path before decoded: {}", path);
+        let path = path.decoded()?;
+        trace!("After decoded path: {}", path);
 
         let mut displayed_path = if !dont_shorten {
             let path = path.as_ref();
@@ -42,6 +45,7 @@ impl SizedTable {
         } else {
             path
         };
+        trace!("After displayed path (shorten stuff): {}", displayed_path);
 
         displayed_path = if !dont_colorize {
             let metadata = get_metadata(&trash_entry)?;
@@ -49,6 +53,7 @@ impl SizedTable {
         } else {
             displayed_path
         };
+        trace!("After colorized path: {}", displayed_path);
 
         trace!("Add adding size {:?} row", self.size);
         let row = match self.size {

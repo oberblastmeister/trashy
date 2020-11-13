@@ -10,6 +10,7 @@ use std::str::FromStr;
 use crate::utils;
 use chrono::prelude::*;
 use fs::File;
+use log::debug;
 use once_cell::sync::Lazy;
 use snafu::{ResultExt, Snafu};
 
@@ -89,6 +90,7 @@ impl TrashInfo {
         let path = path.as_ref();
         validate_path(path)?;
         let contents = fs::read_to_string(path).context(ReadToStr { path })?;
+        debug!("Contens of trash info file {}:\n {}", path.display(), contents);
         let trimmed = contents.trim_end_matches('\n');
 
         let trash_info = trimmed.parse::<TrashInfo>()?;
