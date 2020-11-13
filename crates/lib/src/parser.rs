@@ -123,7 +123,7 @@ fn parse_trash_info_str(i: &str) -> Result<TrashInfoStr, ParseError> {
     let (i, _) = char('\n')(i)?;
     let (i, path) = parse_path(i)?;
     let (i, _) = char('\n')(i)?;
-    let (i, deletion_date) = all_consuming(parse_deletion_date)(i)?;
+    let (_, deletion_date) = all_consuming(parse_deletion_date)(i)?;
     Ok(TrashInfoStr {
         path,
         deletion_date,

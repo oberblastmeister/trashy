@@ -2,9 +2,7 @@ use std::cmp;
 use std::ops::Range;
 use std::str::FromStr;
 
-use eyre::{bail, eyre, Context, Result};
-
-use crate::utils::input;
+use eyre::{bail, Context, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RestoreIndex {

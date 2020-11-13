@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::utils::input;
-use clap::{ArgEnum, Clap};
+use clap::Clap;
 use eyre::{bail, Result, WrapErr};
 use log::debug;
 use log::error;

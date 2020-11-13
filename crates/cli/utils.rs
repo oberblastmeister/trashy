@@ -1,26 +1,18 @@
-use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::fs;
 use std::io::{stdin, stdout, Write};
-use std::path::{Path, PathBuf};
-use std::result::Result as StdResult;
+use std::path::Path;
 
 use chrono::naive::NaiveDateTime;
 use eyre::{eyre, Result, WrapErr};
 use lscolors::{LsColors, Style};
 use once_cell::sync::Lazy;
 use prettytable::{cell, row, Cell, Row};
-use trash_lib::trash_entry::{self, TrashEntry};
+use trash_lib::trash_entry::TrashEntry;
 use trash_lib::trash_info::TrashInfo;
 use trash_lib::HOME_DIR;
 
 static LS_COLORS: Lazy<LsColors> = Lazy::new(|| LsColors::from_env().unwrap_or_default());
-
-pub fn trash_entry_error_context(
-    res: StdResult<TrashEntry, trash_entry::Error>,
-) -> Result<TrashEntry> {
-    res.wrap_err("Failed to create trash entry")
-}
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Pair(pub TrashEntry, pub TrashInfo);
@@ -34,12 +26,6 @@ impl Pair {
 
     pub fn revert(self) -> TrashEntry {
         self.0
-    }
-
-    pub fn split(self) -> (TrashEntry, TrashInfo) {
-        match self {
-            Self(trash_entry, trash_info) => (trash_entry, trash_info),
-        }
     }
 }
 
@@ -63,13 +49,6 @@ pub fn map_trash_entry_keep(trash_entry: TrashEntry) -> Result<(TrashEntry, Tras
 pub fn get_metadata(trash_entry: &TrashEntry) -> Result<fs::Metadata> {
     let metadata = fs::symlink_metadata(trash_entry.file_path())?;
     Ok(metadata)
-}
-
-pub fn custom_cmp<T, R, U>(t1: &(T, U), t2: &(R, U)) -> Ordering
-where
-    U: Ord,
-{
-    t1.1.cmp(&t2.1)
 }
 
 // pub fn map_to_row(pair: (TrashEntry, TrashInfo)) -> Result<Row> {

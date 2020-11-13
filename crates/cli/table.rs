@@ -9,7 +9,6 @@ use terminal_size::{terminal_size, Width};
 
 use crate::border::Border;
 use crate::utils::{colorize_path, format_date, format_date_compact, get_metadata, Pair, shorten_path};
-use trash_lib::HOME_DIR;
 
 pub struct SizedTable {
     size: TableSize,

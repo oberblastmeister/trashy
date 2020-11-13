@@ -1,4 +1,4 @@
-use std::str::{FromStr, Utf8Error};
+use std::str::Utf8Error;
 use std::borrow::Cow;
 use std::fmt;
 use std::path::Path;

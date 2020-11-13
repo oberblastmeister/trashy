@@ -1,6 +1,6 @@
 mod subcommand;
 
-use clap::{AppSettings, Clap};
+use clap::Clap;
 use eyre::Result;
 use subcommand::SubCommand;
 

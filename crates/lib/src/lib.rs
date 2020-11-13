@@ -7,7 +7,7 @@ mod utils;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use directories::{ProjectDirs, UserDirs};
+use directories::UserDirs;
 use fs_extra::dir;
 use fs_extra::file;
 use log::debug;
