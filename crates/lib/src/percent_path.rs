@@ -43,9 +43,15 @@ type Result<T, E = Error> = ::std::result::Result<T, E>;
 pub struct PercentPath(String);
 
 impl PercentPath {
-    /// Create a new percent path from a str.
+    /// Create a new percent path from a str. Will encode all characters from the string.
     pub fn from_str(s: &str) -> Self {
         Self(utf8_percent_encode(s, ASCII_SET).to_string())
+    }
+
+    /// Use only if the string is already percent encoded. Use inside of the parser because the
+    /// trash info file should have already encoded the path.
+    pub(crate) fn new(s: &str) -> Self {
+        Self(s.to_string())
     }
 
     pub(crate) fn from_path(path: impl AsRef<Path>) -> Result<Self> {
