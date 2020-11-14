@@ -5,6 +5,7 @@ pub mod trash_info;
 mod utils;
 
 use std::io;
+use std::sync::{Mutex, Arc};
 use std::path::{Path, PathBuf};
 
 use directories::UserDirs;
@@ -14,6 +15,7 @@ use log::debug;
 use log::{error, warn};
 use once_cell::sync::Lazy;
 use snafu::{ResultExt, Snafu};
+use rayon::prelude::*;
 
 use trash_entry::{read_dir_trash_entries, TrashEntry};
 use utils::{read_dir_path, remove_path};
@@ -112,21 +114,34 @@ pub fn remove(name: impl AsRef<Path>) -> Result<()> {
 /// Removes all trash_entries and optionally removes stray files.
 pub fn empty(keep_stray: bool) -> Result<()> {
     // remove the the correct trash_entries
+    if !keep_stray {
+        utils::empty_dirs(&[&*TRASH_FILE_DIR, &*TRASH_INFO_DIR])?;
+        return Ok(());
+    }
+
     read_dir_trash_entries()
         .context(ReadDirTrashEntry)?
         .map(|trash_entry| trash_entry.remove().context(TrashEntryRemove))
         .filter_map(|res| ok_log!(res => error!))
         .for_each(|_| ());
 
-    // remove the stray files taht does not have a pair
+    Ok(())
+}
+
+/// Same as empty but removes everything in parallel
+pub fn empty_parallel(keep_stray: bool) -> Result<()> {
+    // just remove everything
     if !keep_stray {
-        read_dir_path(&TRASH_INFO_DIR)?
-            .chain(read_dir_path(&TRASH_FILE_DIR)?)
-            .inspect(|path| warn!("{}", StrayPath { path }.build()))
-            .map(|path| remove_path(path))
-            .filter_map(|res| ok_log!(res => error!))
-            .for_each(|_| ());
+        utils::empty_dir_parallel(&[&*TRASH_FILE_DIR, &*TRASH_INFO_DIR])?;
+        return Ok(());
     }
+
+    let entries: Vec<_> = read_dir_trash_entries().context(ReadDirTrashEntry)?.collect();
+    entries
+        .into_par_iter()
+        .map(|trash_entry| trash_entry.remove().context(TrashEntryRemove))
+        .filter_map(|res| ok_log!(res => error!))
+        .for_each(|_| ());
 
     Ok(())
 }
@@ -158,6 +173,37 @@ pub fn put(paths: &[impl AsRef<Path>]) -> Result<Vec<TrashEntry>> {
 
     Ok(existing)
 }
+
+// pub fn put_parallel(paths: &[impl AsRef<Path> + Sized]) -> Result<Vec<TrashEntry>> {
+//     if paths.is_empty() {
+//         panic!("Attempting to put empty paths");
+//     }
+
+//     let existing: Vec<_> = read_dir_trash_entries()
+//         .context(ReadDirTrashEntry)?
+//         .collect();
+
+//     // in case there are no existing trash entries there, prevent integer overflow
+//     let old_trash_entries_end = existing.len().checked_sub(1);
+//     debug!("Old trash entries end: {:?}", old_trash_entries_end);
+
+//     let existing = Arc::new(Mutex::new(existing));
+
+//     paths.into_par_iter()
+//         .for_each(move |p| {
+//             let existing = Arc::clone(&existing);
+//             let existing = existing.lock();
+//             let trash_entry = TrashEntry::create(path, &existing).context(TrashEntryCreation)?;
+//             existing.push(trash_entry)
+//         });
+
+//     // in case integer overflow happened
+//     if let Some(old_trash_entries_end) = old_trash_entries_end {
+//         existing.drain(..old_trash_entries_end);
+//     }
+
+//     Ok(existing)
+// }
 
 #[cfg(test)]
 mod tests {

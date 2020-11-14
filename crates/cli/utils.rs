@@ -130,6 +130,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::borrow::Cow;
 
     #[test]
     fn shorten_path_test() {

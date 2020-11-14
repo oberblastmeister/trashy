@@ -5,7 +5,9 @@ use std::path::{Path, PathBuf};
 
 use fs_extra::dir::{self, move_dir};
 use fs_extra::file::{self, move_file};
+use log::error;
 use log::{info, warn};
+use rayon::prelude::*;
 use snafu::{OptionExt, ResultExt, Snafu};
 
 use crate::ok_log;
@@ -109,6 +111,47 @@ pub(crate) fn read_dir_path<'a>(path: &'a Path) -> io::Result<impl Iterator<Item
         .map(|d| d.path());
 
     Ok(paths)
+}
+
+pub(crate) fn read_dir_path_multiple<'a, P>(
+    dirs: &'a [&'a P],
+) -> io::Result<impl Iterator<Item = PathBuf> + 'a>
+where
+    P: AsRef<Path>,
+{
+    let iter = dirs
+        .into_iter()
+        .map(|dir| {
+            let dir = dir.as_ref();
+            read_dir_path(dir)
+        })
+        .filter_map(|res| ok_log!(res => error!))
+        .flatten();
+    Ok(iter)
+}
+
+pub(crate) fn empty_dirs<P>(dirs: &[&P]) -> io::Result<()>
+where
+    P: AsRef<Path>,
+{
+    read_dir_path_multiple(dirs)?
+        .map(|path| remove_path(path))
+        .filter_map(|res| ok_log!(res => error!))
+        .for_each(|_| ());
+    Ok(())
+}
+
+pub(crate) fn empty_dir_parallel<P>(dirs: &[&P]) -> io::Result<()>
+where
+    P: AsRef<Path>,
+{
+    let paths: Vec<_> = read_dir_path_multiple(dirs)?.collect();
+    paths
+        .into_par_iter()
+        .map(remove_path)
+        .filter_map(|res| ok_log!(res => error!))
+        .for_each(|_| ());
+    Ok(())
 }
 
 pub fn add_trash_info_ext(path: PathBuf) -> PathBuf {
