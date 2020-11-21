@@ -7,11 +7,13 @@ use fs_extra::dir::{self, move_dir};
 use fs_extra::file::{self, move_file};
 use log::error;
 use log::{info, warn};
-use rayon::prelude::*;
 use snafu::{OptionExt, ResultExt, Snafu};
 
 use crate::ok_log;
 use crate::{DIR_COPY_OPT, FILE_COPY_OPT, TRASH_INFO_EXT};
+
+#[cfg(feature = "rayon")]
+use rayon::prelude::*;
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -141,6 +143,7 @@ where
     Ok(())
 }
 
+#[cfg(feature = "rayon")]
 pub(crate) fn empty_dir_parallel<P>(dirs: &[&P]) -> io::Result<()>
 where
     P: AsRef<Path>,

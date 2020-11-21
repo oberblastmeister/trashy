@@ -5,8 +5,6 @@ pub mod trash_info;
 mod utils;
 
 use std::io;
-use std::sync::{Mutex, Arc};
-use std::path::{Path, PathBuf};
 
 use directories::UserDirs;
 use fs_extra::dir;
@@ -15,7 +13,14 @@ use log::debug;
 use log::{error, warn};
 use once_cell::sync::Lazy;
 use snafu::{ResultExt, Snafu};
-use rayon::prelude::*;
+
+#[cfg(feature = "rayon")]
+use {
+    rayon::prelude::*,
+    std::sync::{Mutex, Arc},
+};
+
+use std::path::{Path, PathBuf};
 
 use trash_entry::{read_dir_trash_entries, TrashEntry};
 use utils::{read_dir_path, remove_path};
@@ -129,6 +134,7 @@ pub fn empty(keep_stray: bool) -> Result<()> {
 }
 
 /// Same as empty but removes everything in parallel
+#[cfg(feature = "rayon")]
 pub fn empty_parallel(keep_stray: bool) -> Result<()> {
     // just remove everything
     if !keep_stray {
