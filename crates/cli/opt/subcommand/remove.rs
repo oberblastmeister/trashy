@@ -24,7 +24,7 @@ pub fn remove(opt: Opt) -> Result<()> {
         .map(map_trash_entry_keep)
         .filter_map(|res| ok_log!(res => error!))
         .filter(|(trash_entry, trash_info)| {
-            let res = try_filter_by_regex(&re, trash_info);
+            let res = filter_by_regex(&re, trash_info);
             ok_log!(res => error!).unwrap_or(false)
         })
         .inspect(|(trash_entry, _)| info!("Removing {:?}", trash_entry))
@@ -35,7 +35,7 @@ pub fn remove(opt: Opt) -> Result<()> {
     Ok(())
 }
 
-fn try_filter_by_regex(regex: &Regex, trash_info: &TrashInfo) -> Result<bool> {
+fn filter_by_regex(regex: &Regex, trash_info: &TrashInfo) -> Result<bool> {
     let percent_path = trash_info.percent_path().decoded()?;
     Ok(regex.is_match(percent_path.as_ref()))
 }
