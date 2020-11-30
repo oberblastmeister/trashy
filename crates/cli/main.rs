@@ -4,6 +4,7 @@ mod opt;
 mod restore_index;
 mod table;
 mod utils;
+mod rustyline;
 
 use std::fmt;
 

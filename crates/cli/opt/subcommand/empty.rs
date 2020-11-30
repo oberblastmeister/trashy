@@ -12,7 +12,7 @@ pub struct Opt {
     #[clap(short = 's', long = "keep-strays")]
     keep_strays: bool,
 
-    /// delete files olders than amount of days
+    /// delete files older than amount of days
     days: Option<u64>,
 }
 
@@ -44,6 +44,7 @@ fn try_filter_by_days(days: u64, trash_entry: &TrashEntry) -> Result<bool> {
     let trash_info = trash_entry.parse_trash_info()?;
     // get the deletion date of the trash_info struct
     let deletion_date = trash_info.deletion_date().date();
-    // check if the deletion date
+
+    // check if the deletion return if the deletion date is less than the limit, if it is, delete
     Ok(deletion_date < limit)
 }

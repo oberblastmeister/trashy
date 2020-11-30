@@ -28,8 +28,8 @@ pub fn remove(opt: Opt) -> Result<()> {
             ok_log!(res => error!).unwrap_or(false)
         })
         .inspect(|(trash_entry, _)| info!("Removing {:?}", trash_entry))
-        // .map(|(trash_entry, _trash_info)| trash_entry.remove())
-        // .filter_map(|res| ok_log!(res => error!))
+        .map(|(trash_entry, _trash_info)| trash_entry.remove())
+        .filter_map(|res| ok_log!(res => error!))
         .for_each(|_| ());
 
     Ok(())
