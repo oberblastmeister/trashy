@@ -1,6 +1,7 @@
 mod border;
 mod exitcode;
 mod print;
+mod config;
 mod opt;
 mod restore_index;
 mod rustyline;

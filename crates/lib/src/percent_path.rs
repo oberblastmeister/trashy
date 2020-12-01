@@ -1,7 +1,7 @@
-use std::str::Utf8Error;
 use std::borrow::Cow;
 use std::fmt;
 use std::path::Path;
+use std::str::Utf8Error;
 
 use crate::utils::{self, convert_to_str};
 use percent_encoding::{percent_decode_str, utf8_percent_encode, AsciiSet, CONTROLS};
@@ -9,7 +9,7 @@ use snafu::{ResultExt, Snafu};
 
 /// The excluded characters that must be escaped with percents in the percent path of each trash
 /// info file.
-pub const ASCII_SET: &'static AsciiSet = &CONTROLS
+pub const ASCII_SET: &AsciiSet = &CONTROLS
     // space
     .add(b' ')
     // delims
@@ -84,7 +84,10 @@ mod tests {
     #[test]
     fn encode_spaces_test() {
         let percent_path = PercentPath::from_str("/this is a path/");
-        assert_eq!(percent_path, PercentPath(String::from("/this%20is%20a%20path/")));
+        assert_eq!(
+            percent_path,
+            PercentPath(String::from("/this%20is%20a%20path/"))
+        );
     }
 
     #[test]
