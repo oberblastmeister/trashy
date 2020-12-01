@@ -1,19 +1,21 @@
 use std::fmt;
 use std::process;
 
-use crate::print_err_display;
+use crate::print;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ExitCode {
     Success,
-    GeneralError,
+    Error,
+    Interrupted,
 }
 
 impl From<ExitCode> for i32 {
     fn from(value: ExitCode) -> i32 {
         match value {
             ExitCode::Success => 0,
-            ExitCode::GeneralError => 1,
+            ExitCode::Error => 1,
+            ExitCode::Interrupted => 130,
         }
     }
 }
@@ -29,18 +31,16 @@ impl ExitCode {
             ExitCode::Success => {
                 println!("{}", msg);
             }
-            ExitCode::GeneralError => {
-                print_err_display(msg);
+            ExitCode::Error => {
+                print::err_display(msg);
+            }
+            ExitCode::Interrupted => {
+                println!("Interrupted")
             }
         }
     }
 
     pub fn exit(self) -> ! {
-        match self {
-            ExitCode::Success => {
-                process::exit(self.into());
-            }
-            ExitCode::GeneralError => process::exit(self.into()),
-        }
+        process::exit(self.into())
     }
 }
