@@ -1,20 +1,18 @@
 mod border;
 mod exitcode;
+mod print;
 mod opt;
 mod restore_index;
+mod rustyline;
 mod table;
 mod utils;
-mod rustyline;
 
-use std::fmt;
-
-use ansi_term::Color::Red;
 use clap::Clap;
 use env_logger::Builder;
 use eyre::Result;
 use log::{debug, LevelFilter};
 
-use exitcode::ExitCode;
+pub use exitcode::ExitCode;
 use opt::Opt;
 
 /// Start the logger depending on the verbosity flag
@@ -46,14 +44,6 @@ fn try_main() -> Result<()> {
 fn main() {
     match try_main() {
         Ok(()) => ExitCode::Success.exit(),
-        Err(e) => ExitCode::GeneralError.exit_with_msg(format!("{:?}", e)),
+        Err(e) => ExitCode::Error.exit_with_msg(format!("{:?}", e)),
     }
-}
-
-fn print_err(s: impl fmt::Debug) {
-    eprintln!("{}: {:?}", Red.bold().paint("Error"), s);
-}
-
-fn print_err_display(s: impl fmt::Display) {
-    eprintln!("{}: {}", Red.bold().paint("Error"), s);
 }

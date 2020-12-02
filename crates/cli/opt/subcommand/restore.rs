@@ -12,8 +12,8 @@ use trash_lib::trash_entry::read_dir_trash_entries;
 
 use crate::border::Border;
 use crate::exitcode::ExitCode;
-use crate::print_err_display;
 use crate::restore_index::RestoreIndex;
+use crate::rustyline::ReadLine;
 use crate::table::IndexedTable;
 use crate::utils::{sort_iterator, Pair};
 
@@ -136,7 +136,8 @@ fn restore_in_directory(
     trace!("The final vector of trash entries is {:?}", trash_entries);
 
     println!("Input the index or range of trash entries to restore:");
-    let indices = rustyline::input_parse_loop(">> ", RestoreIndex::get_multiple_non_overlapping)?;
+    let indices =
+        ReadLine::new().read_parse_loop(">> ", RestoreIndex::get_multiple_non_overlapping)?;
 
     info!("Indices are {:?}", indices);
 

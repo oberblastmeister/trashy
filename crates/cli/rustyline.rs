@@ -1,43 +1,50 @@
+use std::fmt;
+use std::result::Result as StdResult;
+
 use eyre::Result;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
-use std::fmt;
-use std::process;
 
-pub fn input(prompt: &str) -> Result<Option<String>> {
-    let mut rl = Editor::<()>::new();
-    // Todo: load history
+use crate::print;
+use crate::ExitCode;
 
-    loop {
-        let readline = rl.readline(prompt);
-        match readline {
-            Ok(line) => {
-                // Todo, add history
-                break Ok(Some(line));
-            }
-            Err(ReadlineError::Interrupted) => {
-                println!("CTRL-C");
-                break Ok(None);
-            }
-            Err(ReadlineError::Eof) => {
-                println!("")
-            }
-            e @ Err(_) => break e.map_err(Into::into).map(Option::Some),
-        }
+pub struct ReadLine(Editor<()>);
+
+impl ReadLine {
+    pub fn new() -> ReadLine {
+        ReadLine(Editor::new())
     }
-}
 
-pub fn input_parse_loop<T>(prompt: &str, parser: impl Fn(&str) -> Result<T>) -> Result<T> {
-    loop {
-        match input(prompt) {
-            Ok(None) => process::exit(0),
-            Ok(Some(inp)) => match parser(&inp) {
-                Ok(t) => break Ok(t),
-                Err(e) => {
-                    crate::print_err_display(e);
+    pub fn read(&mut self, prompt: &str) -> StdResult<String, ReadlineError> {
+        self.0.readline(prompt)
+    }
+
+    /// will exit if the user has clicked Ctrl-C or Ctrl-D or typed exit. If the user has given
+    /// something that the parser function will return Err, the loop start over and asks the user
+    /// to type again.
+    pub fn read_parse_loop<T, E>(
+        &mut self,
+        prompt: &str,
+        parser: impl Fn(&str) -> StdResult<T, E>,
+    ) -> Result<T>
+    where
+        E: fmt::Display,
+    {
+        loop {
+            match self.read(prompt) {
+                Ok(ref cmd) if cmd == "exit" => ExitCode::Success.exit(),
+                Ok(line) => match parser(&line) {
+                    Ok(t) => break Ok(t),
+                    Err(e) => {
+                        print::err_display(e);
+                    }
+                },
+                Err(ReadlineError::Interrupted) => {
+                    ExitCode::Interrupted.exit_with_msg("Ctrl-C");
                 }
-            },
-            Err(e) => crate::print_err_display(e),
+                Err(ReadlineError::Eof) => ExitCode::Success.exit_with_msg("exited"),
+                Err(e) => return Err(e.into()),
+            }
         }
     }
 }
