@@ -8,7 +8,9 @@ use prettytable::{cell, row, Cell, Row, Table};
 use terminal_size::{terminal_size, Width};
 
 use crate::border::Border;
-use crate::utils::{colorize_path, format_date, format_date_compact, get_metadata, Pair, shorten_path};
+use crate::utils::{
+    colorize_path, format_date, format_date_compact, get_metadata, shorten_path, Pair,
+};
 
 pub struct SizedTable {
     size: TableSize,
@@ -139,7 +141,7 @@ impl TableSize {
         match self {
             TableSize::Minimal => row!["Path"],
             TableSize::Compact => row!["Date", "Time", "Path"],
-            TableSize::Full => row!["Year", "Month", "Day", "Time", "Path"],
+            TableSize::Full => row!["Month", "Day", "Time", "Path"],
         }
     }
 

@@ -144,12 +144,12 @@ fn restore_in_directory(
         match idx {
             RestoreIndex::Point(p) => trash_entries
                 .get(p)
-                .ok_or_else(|| eyre!("{} is nto a valid index", p))?
+                .ok_or_else(|| eyre!("{} is not a valid index that is in bounds", p))?
                 .restore()?,
             RestoreIndex::Range(range) => {
                 let slice = trash_entries
                     .get(range.clone())
-                    .ok_or_else(|| eyre!("{}-{} is not a valid range", &range.start, &range.end))?;
+                    .ok_or_else(|| eyre!("{}-{} is not a valid range that is in bounds", &range.start, &range.end))?;
                 slice
                     .into_iter()
                     .map(|trash_entry| trash_entry.restore())

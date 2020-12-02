@@ -20,7 +20,7 @@ pub fn input(prompt: &str) -> Result<Option<String>> {
                 break Ok(None);
             }
             Err(ReadlineError::Eof) => {
-                println!("CTRL-D")
+                println!("")
             }
             e @ Err(_) => break e.map_err(Into::into).map(Option::Some),
         }
