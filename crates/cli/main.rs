@@ -1,8 +1,11 @@
 mod border;
 mod exitcode;
-mod print;
+#[cfg(not(feature = "readline"))]
+mod input;
 mod opt;
+mod print;
 mod restore_index;
+#[cfg(feature = "readline")]
 mod rustyline;
 mod table;
 mod utils;

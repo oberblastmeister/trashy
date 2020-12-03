@@ -41,11 +41,6 @@ impl Ord for Pair {
     }
 }
 
-pub fn map_trash_entry_keep(trash_entry: TrashEntry) -> Result<(TrashEntry, TrashInfo)> {
-    let trash_info = trash_entry.parse_trash_info()?;
-    Ok((trash_entry, trash_info))
-}
-
 pub fn get_metadata(trash_entry: &TrashEntry) -> Result<fs::Metadata> {
     let metadata = fs::symlink_metadata(trash_entry.file_path())?;
     Ok(metadata)
@@ -65,10 +60,6 @@ pub fn colorize_path(path: &str, metadata: &fs::Metadata) -> String {
     let style = LS_COLORS.style_for_path_with_metadata(path, Some(metadata));
     let ansi_style = style.map(Style::to_ansi_term_style).unwrap_or_default();
     format!("{}", ansi_style.paint(path))
-}
-
-pub fn title_row() -> Row {
-    row!["Year", "Month", "Day", "Time", "Path"]
 }
 
 pub fn format_date(date: NaiveDateTime) -> Vec<Cell> {
@@ -96,18 +87,6 @@ where
     let mut v: Vec<_> = iter.collect();
     v.sort_unstable();
     v.into_iter()
-}
-
-pub fn input(msg: &str) -> Result<String> {
-    let mut s = String::new();
-    print!("{}", msg);
-    stdout()
-        .flush()
-        .context("Failed to flush stdout to allow input")?;
-    stdin()
-        .read_line(&mut s)
-        .context("Failed to get input from user")?;
-    Ok(s)
 }
 
 pub fn shorten_path<'a, T>(path: T) -> Result<String>
@@ -146,7 +125,8 @@ mod tests {
                 "{}/project/{}/code",
                 HOME_DIR.to_str().unwrap(),
                 HOME_DIR.to_str().unwrap()
-            )).unwrap(),
+            ))
+            .unwrap(),
             format!("~/project/{}/code", HOME_DIR.to_str().unwrap())
         );
     }

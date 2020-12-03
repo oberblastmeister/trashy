@@ -154,7 +154,7 @@ impl PartialOrd for TrashInfo {
 }
 
 fn get_trash_info_path(name: impl AsRef<Path>) -> Result<PathBuf> {
-    let path = to_directory(&name, &*TRASH_INFO_DIR).context(ToDirectory {
+    let path = to_directory(&name, &*TRASH_INFO_DIR).with_context(|| ToDirectory {
         path: name.as_ref(),
         dir: &*TRASH_INFO_DIR,
     })?;

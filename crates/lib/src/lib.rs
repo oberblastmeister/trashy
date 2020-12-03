@@ -17,7 +17,7 @@ use snafu::{ResultExt, Snafu};
 #[cfg(feature = "rayon")]
 use {
     rayon::prelude::*,
-    std::sync::{Mutex, Arc},
+    std::sync::{Arc, Mutex},
 };
 
 use std::path::{Path, PathBuf};
@@ -141,7 +141,9 @@ pub fn empty_parallel(keep_stray: bool) -> Result<()> {
         return Ok(());
     }
 
-    let entries: Vec<_> = read_dir_trash_entries().context(ReadDirTrashEntry)?.collect();
+    let entries: Vec<_> = read_dir_trash_entries()
+        .context(ReadDirTrashEntry)?
+        .collect();
     entries
         .into_par_iter()
         .map(|trash_entry| trash_entry.remove().context(TrashEntryRemove))

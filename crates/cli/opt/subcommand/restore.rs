@@ -2,23 +2,22 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::rustyline;
-use crate::table;
-use crate::utils::input;
+use crate::{restore_index::RestoreIndexMultiple, table};
 use clap::Clap;
 use eyre::{bail, eyre, Result, WrapErr};
 use log::{debug, error, info, trace};
 use trash_lib::ok_log;
 use trash_lib::trash_entry::read_dir_trash_entries;
 
-use crate::border::Border;
 use crate::exitcode::ExitCode;
 use crate::restore_index::RestoreIndex;
+#[cfg(feature = "readline")]
 use crate::rustyline::ReadLine;
 use crate::table::IndexedTable;
 use crate::utils::{sort_iterator, Pair};
 
 #[derive(Debug, Clap)]
+// wo wthis
 pub struct Opt {
     /// The optional path to restore
     #[clap(parse(from_os_str), short = 'p', long = "path")]
@@ -47,12 +46,8 @@ pub fn restore(opt: Opt) -> Result<()> {
         }
         Opt {
             directory: Some(directory),
-            path,
             table_opt,
-            // ref table_opt,
-            // dont_colorize,
-            // dont_shorten,
-            // ..
+            ..
         } => {
             if !directory.is_dir() {
                 bail!("The path `{}` is not a directory", directory.display());
@@ -68,14 +63,10 @@ pub fn restore(opt: Opt) -> Result<()> {
             path: None,
             directory: None,
             table_opt,
-            // dont_colorize,
-            // dont_shorten,
             ..
         } => {
             info!("Restoring in current working directory");
             let cwd = env::current_dir().wrap_err("Failed to find current working directory")?;
-            // debug!("Dont_colorize: {:?}", dont_colorize);
-            // debug!("Dont_shorten: {:?}", dont_shorten);
 
             info!("Cwd is `{}`", cwd.display());
             restore_in_directory(&cwd, table_opt)?;
@@ -91,12 +82,7 @@ fn restore_file(path: &Path) -> Result<()> {
 
 /// Restore thing in a directory. Must take absolute dir path instead of relative path to avoid
 /// issues. Path must be a directory
-fn restore_in_directory(
-    dir: &Path,
-    table_opt: table::Opt,
-    // dont_colorize: bool,
-    // dont_shorten: bool,
-) -> Result<()> {
+fn restore_in_directory(dir: &Path, table_opt: table::Opt) -> Result<()> {
     let mut table = IndexedTable::new(table_opt)?;
 
     let trash_entry_iter = read_dir_trash_entries()?
@@ -121,8 +107,11 @@ fn restore_in_directory(
     trace!("The final vector of trash entries is {:?}", trash_entries);
 
     println!("Input the index or range of trash entries to restore:");
-    let indices =
-        ReadLine::new().read_parse_loop(">> ", RestoreIndex::get_multiple_non_overlapping)?;
+
+    #[cfg(feature = "readline")]
+    let indices: RestoreIndexMultiple = ReadLine::new().read_parse_loop(">> ")?;
+
+    // #[cfg(not(feature = "readline"))]
 
     info!("Indices are {:?}", indices);
 
@@ -141,7 +130,7 @@ fn restore_in_directory(
                     )
                 })?;
                 slice
-                    .into_iter()
+                    .iter()
                     .map(|trash_entry| trash_entry.restore())
                     .filter_map(|res| ok_log!(res => error!))
                     .for_each(|_| ());

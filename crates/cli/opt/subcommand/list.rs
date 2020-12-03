@@ -2,9 +2,8 @@ use clap::Clap;
 use eyre::{eyre, Result};
 use log::{debug, error};
 
-use crate::border::Border;
 use crate::exitcode::ExitCode;
-use crate::table::{self, SizedTable, TableSize};
+use crate::table::{self, SizedTable};
 use crate::utils::{sort_iterator, Pair};
 use trash_lib::ok_log;
 use trash_lib::trash_entry::{self, read_dir_trash_entries};

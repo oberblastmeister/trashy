@@ -1,5 +1,7 @@
-use std::fmt;
+//! Only compiled when the feature `readline` is enabled
+
 use std::result::Result as StdResult;
+use std::{fmt, str::FromStr};
 
 use eyre::Result;
 use rustyline::error::ReadlineError;
@@ -22,22 +24,17 @@ impl ReadLine {
     /// will exit if the user has clicked Ctrl-C or Ctrl-D or typed exit. If the user has given
     /// something that the parser function will return Err, the loop start over and asks the user
     /// to type again.
-    pub fn read_parse_loop<T, E>(
-        &mut self,
-        prompt: &str,
-        parser: impl Fn(&str) -> StdResult<T, E>,
-    ) -> Result<T>
+    pub fn read_parse_loop<T, E>(&mut self, prompt: &str) -> Result<T>
     where
+        T: FromStr<Err = E>,
         E: fmt::Display,
     {
         loop {
             match self.read(prompt) {
                 Ok(ref cmd) if cmd == "exit" => ExitCode::Success.exit(),
-                Ok(line) => match parser(&line) {
+                Ok(line) => match line.parse() {
                     Ok(t) => break Ok(t),
-                    Err(e) => {
-                        print::err_display(e);
-                    }
+                    Err(e) => print::err_display(e),
                 },
                 Err(ReadlineError::Interrupted) => {
                     ExitCode::Interrupted.exit_with_msg("Ctrl-C");

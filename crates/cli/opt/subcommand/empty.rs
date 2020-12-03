@@ -7,8 +7,8 @@ use regex::Regex;
 use trash_lib::trash_entry::{read_dir_trash_entries, TrashEntry};
 use trash_lib::{ok_log, trash_info::TrashInfo};
 
-use crate::utils::Pair;
 use crate::table;
+use crate::utils::Pair;
 
 #[derive(Clap, Debug)]
 pub struct Opt {

@@ -44,6 +44,7 @@ pub struct PercentPath(String);
 
 impl PercentPath {
     /// Create a new percent path from a str. Will encode all characters from the string.
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Self {
         Self(utf8_percent_encode(s, ASCII_SET).to_string())
     }

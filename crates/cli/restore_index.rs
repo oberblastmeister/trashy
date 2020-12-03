@@ -1,6 +1,6 @@
-use std::cmp;
 use std::ops::Range;
 use std::str::FromStr;
+use std::{cmp, vec};
 
 use eyre::{bail, Context, Result};
 
@@ -39,8 +39,13 @@ impl FromStr for RestoreIndex {
     }
 }
 
-impl RestoreIndex {
-    pub fn get_multiple_non_overlapping(s: &str) -> Result<Vec<RestoreIndex>> {
+#[derive(Debug, Clone)]
+pub struct RestoreIndexMultiple(Vec<RestoreIndex>);
+
+impl FromStr for RestoreIndexMultiple {
+    type Err = eyre::Report;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.is_empty() {
             bail!("Could not parse empty string into restore indexes")
         }
@@ -59,7 +64,16 @@ impl RestoreIndex {
                 res.push(restore_index)
             }
         }
-        Ok(res)
+        Ok(RestoreIndexMultiple(res))
+    }
+}
+
+impl IntoIterator for RestoreIndexMultiple {
+    type Item = RestoreIndex;
+    type IntoIter = vec::IntoIter<RestoreIndex>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
@@ -203,7 +217,7 @@ mod tests {
     #[test]
     fn get_multiple_test() {
         assert_eq!(
-            RestoreIndex::get_multiple_non_overlapping("4 40 3 9-12").unwrap(),
+            "4 40 3 9-12".parse::<RestoreIndexMultiple>().unwrap().0,
             vec![Point(3), Point(39), Point(2), Range(8..12),]
         );
     }
@@ -211,12 +225,12 @@ mod tests {
     #[should_panic]
     #[test]
     fn get_multiple_overlapping_test() {
-        RestoreIndex::get_multiple_non_overlapping("4 30 5-13 7-8 9").unwrap();
+        "4 30 5-13 7-8 9".parse::<RestoreIndexMultiple>().unwrap();
     }
 
     #[should_panic]
     #[test]
     fn get_multiple_none() {
-        RestoreIndex::get_multiple_non_overlapping("").unwrap();
+        "".parse::<RestoreIndexMultiple>().unwrap();
     }
 }
