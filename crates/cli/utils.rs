@@ -72,12 +72,11 @@ pub fn title_row() -> Row {
 }
 
 pub fn format_date(date: NaiveDateTime) -> Vec<Cell> {
-    let year = format!("{}", date.format("%y"));
     let month = format!("{}", date.format("%b"));
     let day = format!("{}", date.format("%d"));
     let time = format!("{}", date.format("%H:%M:%S"));
     vec![
-        Cell::new(&year),
+        // Cell::new(&year),
         Cell::new(&month),
         Cell::new(&day),
         Cell::new(&time),
