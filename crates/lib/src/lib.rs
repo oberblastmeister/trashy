@@ -10,7 +10,7 @@ use directories::UserDirs;
 use fs_extra::dir;
 use fs_extra::file;
 use log::debug;
-use log::{error, warn};
+use log::error;
 use once_cell::sync::Lazy;
 use snafu::{ResultExt, Snafu};
 
@@ -23,7 +23,6 @@ use {
 use std::path::{Path, PathBuf};
 
 use trash_entry::{read_dir_trash_entries, TrashEntry};
-use utils::{read_dir_path, remove_path};
 
 static USER_DIRS: Lazy<UserDirs> =
     Lazy::new(|| UserDirs::new().expect("Failed to determine user directories."));
@@ -214,8 +213,7 @@ pub fn put(paths: &[impl AsRef<Path>]) -> Result<Vec<TrashEntry>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::{Context, Result};
-    use std::fs::File;
+    use eyre::Result;
     use std::io::Write;
     use tempfile::NamedTempFile;
 

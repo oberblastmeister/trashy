@@ -69,7 +69,7 @@ pub struct TrashInfo {
 
 impl TrashInfo {
     pub(super) fn new(percent_path: PercentPath, deletion_date: Option<NaiveDateTime>) -> Self {
-        let deletion_date = deletion_date.unwrap_or(Local::now().naive_local());
+        let deletion_date = deletion_date.unwrap_or_else(|| Local::now().naive_local());
 
         TrashInfo {
             percent_path,
@@ -90,7 +90,11 @@ impl TrashInfo {
         let path = path.as_ref();
         validate_path(path)?;
         let contents = fs::read_to_string(path).context(ReadToStr { path })?;
-        debug!("Contens of trash info file {}:\n {}", path.display(), contents);
+        debug!(
+            "Contens of trash info file {}:\n {}",
+            path.display(),
+            contents
+        );
         let trimmed = contents.trim_end_matches('\n');
 
         let trash_info = trimmed.parse::<TrashInfo>()?;
@@ -167,10 +171,7 @@ fn save_trash_info(file: &mut File, trash_info: TrashInfo) -> Result<()> {
 /// Checks if the extension is correct or no extension
 fn check_extension(path: impl AsRef<Path>) -> bool {
     let path = path.as_ref();
-    match path.extension() {
-        Some(ext) if ext == TRASH_INFO_EXT => true,
-        _ => false,
-    }
+    matches!(path.extension(), Some(ext) if ext == TRASH_INFO_EXT)
 }
 
 fn validate_path(path: impl AsRef<Path>) -> Result<()> {
@@ -188,7 +189,7 @@ fn validate_path(path: impl AsRef<Path>) -> Result<()> {
 mod tests {
     use super::*;
     use crate::HOME_DIR;
-    use anyhow::Result;
+    use eyre::Result;
     use std::io::{Read, Seek, SeekFrom, Write};
     use tempfile::{tempfile_in, Builder, NamedTempFile};
 

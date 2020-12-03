@@ -19,7 +19,6 @@ rayon = { version = "1.5.0", optional = true }
 snafu = "0.6.8"
 
 [dev-dependencies]
-anyhow = "1.0.32"
 eyre = "0.6.3"
 tempfile = "3.1.0"
 xshell = "0.1.6"

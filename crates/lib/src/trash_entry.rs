@@ -208,7 +208,7 @@ pub fn read_dir_trash_entries() -> Result<impl Iterator<Item = TrashEntry>> {
         .context(ReadDirPath {
             path: &*TRASH_FILE_DIR,
         })?
-        .map(|path| TrashEntry::new(path))
+        .map(TrashEntry::new)
         .filter_map(|res| ok_log!(res => warn!));
     Ok(iter)
 }
@@ -219,7 +219,7 @@ where
 {
     let path = convert_to_str(path.as_ref()).context(ConvertPathFindingName)?;
     let existing_names: Vec<_> = existing
-        .into_iter()
+        .iter()
         .map(|trash_entry| {
             trash_entry
                 .file_path
@@ -254,7 +254,7 @@ where
 }
 
 fn contains_contains(slice: &[&str], item: &str) -> bool {
-    slice.into_iter().any(|s| s.contains(item))
+    slice.iter().any(|s| s.contains(item))
 }
 
 fn in_trash_dir(path: impl AsRef<Path> + fmt::Debug) -> bool {
@@ -270,7 +270,7 @@ mod tests {
     use super::*;
     use crate::utils::{contains_all_elements, temp_file_iter};
     use crate::HOME_DIR;
-    use anyhow::{Context, Result};
+    use eyre::Result;
     use std::io::Write;
     use tempfile::{tempdir, NamedTempFile};
 

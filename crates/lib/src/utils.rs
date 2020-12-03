@@ -122,7 +122,7 @@ where
     P: AsRef<Path>,
 {
     let iter = dirs
-        .into_iter()
+        .iter()
         .map(|dir| {
             let dir = dir.as_ref();
             read_dir_path(dir)
@@ -137,7 +137,7 @@ where
     P: AsRef<Path>,
 {
     read_dir_path_multiple(dirs)?
-        .map(|path| remove_path(path))
+        .map(remove_path)
         .filter_map(|res| ok_log!(res => error!))
         .for_each(|_| ());
     Ok(())
@@ -192,7 +192,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::{anyhow, Result};
+    use eyre::{eyre, Result};
     use log::error;
     use std::fmt::Display;
     use tempfile::{tempdir, NamedTempFile};
@@ -260,11 +260,11 @@ mod tests {
         let op = ok_log!(res => error!);
         assert_eq!(op, Some(5));
 
-        let res2: Result<()> = Err(anyhow!("this is an error"));
+        let res2: Result<()> = Err(eyre!("this is an error"));
         let op2 = ok_log!(res2 => error!);
         assert_eq!(op2, None);
 
-        let res3: Result<()> = Err(anyhow!("this is another error"));
+        let res3: Result<()> = Err(eyre!("this is another error"));
         let op3 = ok_log!(res3 => print_error);
     }
 }

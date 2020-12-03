@@ -8,7 +8,7 @@ use snafu::{ResultExt, Snafu};
 use crate::percent_path::PercentPath;
 use crate::trash_info::TrashInfo;
 
-pub const TRASH_DATETIME_FORMAT: &'static str = "%Y-%m-%dT%H:%M:%S";
+pub const TRASH_DATETIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S";
 
 type ParseResult<I, O, E = ParseError> = StdResult<(I, O), E>;
 type Result<T, E = Error> = StdResult<T, E>;
@@ -58,7 +58,7 @@ fn is_not(not: char) -> impl Fn(&str) -> ParseResult<&str, &str> {
         let end = i
             .char_indices()
             .find_map(|(idx, c)| if c == not { Some(idx) } else { None })
-            .unwrap_or(i.len());
+            .unwrap_or_else(|| i.len());
 
         Ok((&i[end..], &i[..end]))
     }
@@ -70,7 +70,7 @@ where
 {
     move |i| {
         let (i, o) = f(i)?;
-        if i.len() == 0 {
+        if i.is_empty() {
             Ok((i, o))
         } else {
             Eof.fail()
@@ -106,7 +106,7 @@ impl<'a, 'b> TryInto<TrashInfo> for TrashInfoStr<'a, 'b> {
     type Error = Error;
 
     fn try_into(self: TrashInfoStr<'a, 'b>) -> Result<TrashInfo> {
-        let percent_path = PercentPath::new(self.path.as_ref());
+        let percent_path = PercentPath::new(self.path);
         let deletion_date =
             NaiveDateTime::parse_from_str(&self.deletion_date, TRASH_DATETIME_FORMAT).context(
                 Chrono {
@@ -141,7 +141,7 @@ pub fn parse_trash_info(s: &str) -> Result<TrashInfo> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::{Context, Result};
+    use eyre::Result;
     use std::str::FromStr;
 
     /// Only returns chrono result because if parsing with nom has failed this will return an error
