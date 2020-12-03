@@ -4,31 +4,15 @@ use log::{debug, error};
 
 use crate::border::Border;
 use crate::exitcode::ExitCode;
-use crate::table::SizedTable;
+use crate::table::{self, SizedTable, TableSize};
 use crate::utils::{sort_iterator, Pair};
 use trash_lib::ok_log;
 use trash_lib::trash_entry::{self, read_dir_trash_entries};
 
 #[derive(Clap, Debug)]
 pub struct Opt {
-    /// Wheather to colorize output, default true
-    #[clap(short, long)]
-    dont_colorize: bool,
-
-    /// Wheather to shorten output, default true
-    #[clap(short, long)]
-    dont_shorten: bool,
-
-    /// The border to use
-    #[clap(
-        arg_enum,
-        short = 's',
-        long = "style",
-        default_value = "Sharp",
-        case_insensitive = true
-    )]
-    pub border: Border,
-
+    #[clap(flatten)]
+    pub table_opt: table::Opt,
 }
 
 pub fn list(opt: Opt) -> Result<()> {
@@ -41,12 +25,12 @@ pub fn list(opt: Opt) -> Result<()> {
         Ok(iter) => iter,
     };
     debug!("creating a new sized table");
-    let mut table = SizedTable::new(opt.border)?;
+    let mut table = SizedTable::new(opt.table_opt)?;
 
     let iter = iter.map(Pair::new).filter_map(|res| ok_log!(res => error!));
 
     let mut peekable = sort_iterator(iter)
-        .map(|pair| table.add_row(&pair, opt.dont_colorize, opt.dont_shorten))
+        .map(|pair| table.add_row(&pair))
         .filter_map(|res| ok_log!(res => error!))
         .peekable();
 

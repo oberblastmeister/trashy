@@ -8,8 +8,9 @@ use trash_lib::trash_entry::{read_dir_trash_entries, TrashEntry};
 use trash_lib::{ok_log, trash_info::TrashInfo};
 
 use crate::utils::Pair;
+use crate::table;
 
-#[derive(Clap, Debug, PartialEq)]
+#[derive(Clap, Debug)]
 pub struct Opt {
     /// keep stray files (not valid trash entries)
     #[clap(short = 's', long)]
@@ -30,6 +31,9 @@ pub struct Opt {
     /// skips asking for confirmation before deleting all files
     #[clap(long)]
     noconfirm: bool,
+
+    #[clap(flatten)]
+    table_opt: table::Opt,
 }
 
 type DynIterator<'a> = &'a mut dyn Iterator<Item = TrashEntry>;

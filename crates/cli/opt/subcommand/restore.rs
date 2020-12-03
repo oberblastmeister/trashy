@@ -3,6 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::rustyline;
+use crate::table;
 use crate::utils::input;
 use clap::Clap;
 use eyre::{bail, eyre, Result, WrapErr};
@@ -27,25 +28,8 @@ pub struct Opt {
     #[clap(parse(from_os_str), short = 'd', long = "directory")]
     directory: Option<PathBuf>,
 
-    /// Wheather to colorize output, default true
-    #[clap(short, long)]
-    dont_colorize: bool,
-
-    /// Wheather to shorten output, default true
-    #[clap(short, long)]
-    dont_shorten: bool,
-
-    #[clap(
-        arg_enum,
-        short = 's',
-        long = "style",
-        default_value = "Sharp",
-        case_insensitive = true
-    )]
-    border: Border,
-
-    #[clap(short, long)]
-    all: bool,
+    #[clap(flatten)]
+    table_opt: table::Opt,
 }
 
 pub fn restore(opt: Opt) -> Result<()> {
@@ -53,7 +37,6 @@ pub fn restore(opt: Opt) -> Result<()> {
         Opt {
             path: Some(_),
             directory: Some(_),
-            border: _,
             ..
         } => bail!("Cannot restore both path and in directory"),
         Opt {
@@ -63,37 +46,39 @@ pub fn restore(opt: Opt) -> Result<()> {
             restore_file(&path)?;
         }
         Opt {
-            directory: Some(ref directory),
-            border,
-            dont_colorize,
-            dont_shorten,
-            ..
+            directory: Some(directory),
+            path,
+            table_opt,
+            // ref table_opt,
+            // dont_colorize,
+            // dont_shorten,
+            // ..
         } => {
             if !directory.is_dir() {
                 bail!("The path `{}` is not a directory", directory.display());
             }
-            let directory = fs::canonicalize(directory).wrap_err(format!(
+            let directory = fs::canonicalize(&directory).wrap_err(format!(
                 "Failed to canonicalize directory `{}`",
                 directory.display()
             ))?;
             info!("Restoring in directory {}", directory.display());
-            restore_in_directory(&directory, border, dont_colorize, dont_shorten)?
+            restore_in_directory(&directory, table_opt)?
         }
         Opt {
             path: None,
             directory: None,
-            border,
-            dont_colorize,
-            dont_shorten,
+            table_opt,
+            // dont_colorize,
+            // dont_shorten,
             ..
         } => {
             info!("Restoring in current working directory");
             let cwd = env::current_dir().wrap_err("Failed to find current working directory")?;
-            debug!("Dont_colorize: {:?}", dont_colorize);
-            debug!("Dont_shorten: {:?}", dont_shorten);
+            // debug!("Dont_colorize: {:?}", dont_colorize);
+            // debug!("Dont_shorten: {:?}", dont_shorten);
 
             info!("Cwd is `{}`", cwd.display());
-            restore_in_directory(&cwd, border, dont_colorize, dont_shorten)?;
+            restore_in_directory(&cwd, table_opt)?;
         }
     }
 
@@ -108,11 +93,11 @@ fn restore_file(path: &Path) -> Result<()> {
 /// issues. Path must be a directory
 fn restore_in_directory(
     dir: &Path,
-    border: Border,
-    dont_colorize: bool,
-    dont_shorten: bool,
+    table_opt: table::Opt,
+    // dont_colorize: bool,
+    // dont_shorten: bool,
 ) -> Result<()> {
-    let mut table = IndexedTable::new(border)?;
+    let mut table = IndexedTable::new(table_opt)?;
 
     let trash_entry_iter = read_dir_trash_entries()?
         .map(Pair::new)
@@ -120,11 +105,7 @@ fn restore_in_directory(
 
     let trash_entries: Vec<_> = sort_iterator(trash_entry_iter)
         .filter(|pair| filter_by_in_dir(pair, &dir))
-        .map(|pair| {
-            table
-                .add_row(&pair, dont_colorize, dont_shorten)
-                .map(|_| (pair))
-        })
+        .map(|pair| table.add_row(&pair).map(|_| (pair)))
         .filter_map(|res| ok_log!(res => error!))
         .map(|pair| pair.revert())
         .collect();

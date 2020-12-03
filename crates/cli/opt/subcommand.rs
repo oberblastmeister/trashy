@@ -2,7 +2,6 @@ mod completion;
 mod empty;
 mod list;
 pub mod put;
-mod remove;
 mod restore;
 
 use clap::Clap;
@@ -16,14 +15,11 @@ pub enum SubCommand {
     /// Put files into trash. Is run by default if no subcommand is specified.
     Put(put::Opt),
 
-    /// PERMANANTLY removes ALL files in the trash
+    /// PERMANANTLY removes files in the trash
     Empty(empty::Opt),
 
     /// Restore files from the trash
     Restore(restore::Opt),
-
-    /// PERMANANTLY removes files from the trash
-    Remove(remove::Opt),
 
     /// Generates completions for shell
     Completion(completion::Opt),
@@ -38,7 +34,6 @@ impl SubCommand {
             }
             SubCommand::Empty(opt) => empty::empty(opt)?,
             SubCommand::Restore(opt) => restore::restore(opt)?,
-            SubCommand::Remove(opt) => remove::remove(opt)?,
             SubCommand::Completion(opt) => completion::completion(opt),
         }
         Ok(())
