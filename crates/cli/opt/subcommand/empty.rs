@@ -12,7 +12,7 @@ use crate::utils::Pair;
 #[derive(Clap, Debug, PartialEq)]
 pub struct Opt {
     /// keep stray files (not valid trash entries)
-    #[clap(short = 's', long = "keep-strays")]
+    #[clap(short = 's', long)]
     keep_strays: bool,
 
     /// delete files older than amount of days, can be used with regex

@@ -43,6 +43,9 @@ pub struct Opt {
         case_insensitive = true
     )]
     border: Border,
+
+    #[clap(short, long)]
+    all: bool,
 }
 
 pub fn restore(opt: Opt) -> Result<()> {
@@ -82,6 +85,7 @@ pub fn restore(opt: Opt) -> Result<()> {
             border,
             dont_colorize,
             dont_shorten,
+            ..
         } => {
             info!("Restoring in current working directory");
             let cwd = env::current_dir().wrap_err("Failed to find current working directory")?;
@@ -148,9 +152,13 @@ fn restore_in_directory(
                 .ok_or_else(|| eyre!("{} is not a valid index that is in bounds", p))?
                 .restore()?,
             RestoreIndex::Range(range) => {
-                let slice = trash_entries
-                    .get(range.clone())
-                    .ok_or_else(|| eyre!("{}-{} is not a valid range that is in bounds", &range.start, &range.end))?;
+                let slice = trash_entries.get(range.clone()).ok_or_else(|| {
+                    eyre!(
+                        "{}-{} is not a valid range that is in bounds",
+                        &range.start,
+                        &range.end
+                    )
+                })?;
                 slice
                     .into_iter()
                     .map(|trash_entry| trash_entry.restore())
