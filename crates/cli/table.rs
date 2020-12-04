@@ -2,16 +2,15 @@ use std::borrow::Cow;
 
 use clap::{ArgEnum, Clap};
 use eyre::{eyre, Result};
-use log::debug;
-use log::info;
-use log::trace;
+use log::{debug, trace};
 use prettytable::{cell, row, Cell, Row, Table};
 use terminal_size::{terminal_size, Width};
 
 use crate::border::Border;
 use crate::utils::{
-    colorize_path, format_date, format_date_compact, get_metadata, shorten_path, Pair,
+    get_metadata, Pair,
 };
+use crate::utils::{date, path};
 
 pub struct SizedTable {
     opt: Opt,
@@ -20,9 +19,13 @@ pub struct SizedTable {
 
 impl SizedTable {
     pub fn new(opt: Opt) -> Result<Self> {
-        let size: TableSize = get_terminal_width()?.into();
-        info!("The table size is: {:?}", size);
-        let table = create_table(size.get_title_row(), opt.border);
+        let title_row = if !opt.no_title {
+            Some(opt.size.get_title_row())
+        } else {
+            None
+        };
+
+        let table = create_table(title_row, opt.border);
         let sized_table = SizedTable { opt, table };
         Ok(sized_table)
     }
@@ -43,7 +46,7 @@ impl SizedTable {
 
         let mut displayed_path = if !self.opt.absolute {
             let path = path.as_ref();
-            Cow::from(shorten_path(path).unwrap())
+            Cow::from(path::shorten(path).unwrap())
         } else {
             path
         };
@@ -51,7 +54,7 @@ impl SizedTable {
 
         displayed_path = if !self.opt.dont_colorize {
             let metadata = get_metadata(&trash_entry)?;
-            Cow::from(colorize_path(displayed_path.as_ref(), &metadata))
+            Cow::from(path::colorize(displayed_path.as_ref(), &metadata))
         } else {
             displayed_path
         };
@@ -61,12 +64,12 @@ impl SizedTable {
         let row = match self.opt.size {
             TableSize::Minimal => row![displayed_path],
             TableSize::Compact => {
-                let mut res = format_date_compact(trash_info.deletion_date());
+                let mut res = date::format(trash_info.deletion_date());
                 res.push(Cell::new(&displayed_path));
                 Row::new(res)
             }
             TableSize::Full => {
-                let mut res = format_date(trash_info.deletion_date());
+                let mut res = date::format(trash_info.deletion_date());
                 res.push(Cell::new(&displayed_path));
                 Row::new(res)
             }
@@ -83,8 +86,12 @@ pub struct IndexedTable(SizedTable);
 
 impl IndexedTable {
     pub fn new(opt: Opt) -> Result<Self> {
-        let size: TableSize = get_terminal_width()?.into();
-        let table = create_table(size.get_title_row_index(), opt.border);
+        let title_row = if !opt.no_title {
+            Some(opt.size.get_title_row_index())
+        } else {
+            None
+        };
+        let table = create_table(title_row, opt.border);
         Ok(IndexedTable(SizedTable { opt, table }))
     }
 
@@ -160,9 +167,11 @@ impl TableSize {
     }
 }
 
-fn create_table(title_row: Row, border: Border) -> Table {
+fn create_table(title_row: Option<Row>, border: Border) -> Table {
     let mut table = Table::new();
-    table.set_titles(title_row);
+    if let Some(title) = title_row {
+        table.set_titles(title);
+    }
     table.set_format(border.into());
     table
 }
@@ -198,4 +207,7 @@ pub struct Opt {
     /// Wheater to get the absolute path instead of shortening the output
     #[clap(short, long)]
     absolute: bool,
+
+    #[clap(short = 't', long, env = "TRASHY_NO_TITLE")]
+    no_title: bool,
 }
