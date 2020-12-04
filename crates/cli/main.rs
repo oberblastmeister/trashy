@@ -39,7 +39,7 @@ fn convert_to_level_filter(n: u8) -> LevelFilter {
 fn try_main() -> Result<()> {
     let opt = Opt::parse();
     start_logger(opt.verbosity);
-    debug!("Opt: {:?}", opt);
+    debug!("Opt: {:#?}", opt);
     opt.run_or_default()?;
     Ok(())
 }

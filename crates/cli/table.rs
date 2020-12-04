@@ -2,9 +2,7 @@ use std::borrow::Cow;
 
 use clap::{ArgEnum, Clap};
 use eyre::{eyre, Result};
-use log::debug;
-use log::info;
-use log::trace;
+use log::{debug, trace};
 use prettytable::{cell, row, Cell, Row, Table};
 use terminal_size::{terminal_size, Width};
 
@@ -20,9 +18,13 @@ pub struct SizedTable {
 
 impl SizedTable {
     pub fn new(opt: Opt) -> Result<Self> {
-        let size: TableSize = get_terminal_width()?.into();
-        info!("The table size is: {:?}", size);
-        let table = create_table(size.get_title_row(), opt.border);
+        let title_row = if !opt.no_title {
+            Some(opt.size.get_title_row())
+        } else {
+            None
+        };
+
+        let table = create_table(title_row, opt.border);
         let sized_table = SizedTable { opt, table };
         Ok(sized_table)
     }
@@ -83,8 +85,12 @@ pub struct IndexedTable(SizedTable);
 
 impl IndexedTable {
     pub fn new(opt: Opt) -> Result<Self> {
-        let size: TableSize = get_terminal_width()?.into();
-        let table = create_table(size.get_title_row_index(), opt.border);
+        let title_row = if !opt.no_title {
+            Some(opt.size.get_title_row_index())
+        } else {
+            None
+        };
+        let table = create_table(title_row, opt.border);
         Ok(IndexedTable(SizedTable { opt, table }))
     }
 
@@ -160,9 +166,11 @@ impl TableSize {
     }
 }
 
-fn create_table(title_row: Row, border: Border) -> Table {
+fn create_table(title_row: Option<Row>, border: Border) -> Table {
     let mut table = Table::new();
-    table.set_titles(title_row);
+    if let Some(title) = title_row {
+        table.set_titles(title);
+    }
     table.set_format(border.into());
     table
 }
@@ -198,4 +206,7 @@ pub struct Opt {
     /// Wheater to get the absolute path instead of shortening the output
     #[clap(short, long)]
     absolute: bool,
+
+    #[clap(short = 't', long, env = "TRASHY_NO_TITLE")]
+    no_title: bool,
 }

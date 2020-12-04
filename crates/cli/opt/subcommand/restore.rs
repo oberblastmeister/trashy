@@ -6,8 +6,8 @@ use crate::{restore_index::RestoreIndexMultiple, table};
 use clap::Clap;
 use eyre::{bail, eyre, Result, WrapErr};
 use log::{debug, error, info, trace};
-use trash_lib::ok_log;
 use trash_lib::trash_entry::read_dir_trash_entries;
+use trash_lib::{ok_log, trash_entry::TrashEntry};
 
 use crate::exitcode::ExitCode;
 use crate::restore_index::RestoreIndex;
@@ -20,15 +20,28 @@ use crate::utils::{sort_iterator, Pair};
 // wo wthis
 pub struct Opt {
     /// The optional path to restore
-    #[clap(parse(from_os_str), short = 'p', long = "path")]
+    #[clap(
+        parse(from_os_str),
+        short = 'p',
+        long = "path",
+        conflicts_with_all = &["directory", "interactive", "last"]
+    )]
     path: Option<PathBuf>,
 
     /// Optionally restore inside of a directory
-    #[clap(parse(from_os_str), short = 'd', long = "directory")]
+    #[clap(parse(from_os_str), short = 'd', long = "directory", conflicts_with_all = &["interactive", "last"])]
     directory: Option<PathBuf>,
 
     #[clap(flatten)]
     table_opt: table::Opt,
+
+    /// Restore the last n trashed files. Uses the same indexes as interactive mode.
+    #[clap(short, long)]
+    last: RestoreIndexMultiple,
+
+    /// Go into interactive mode to restore files. The default when running with no flags.
+    #[clap(short, long)]
+    interactive: bool,
 }
 
 pub fn restore(opt: Opt) -> Result<()> {
@@ -37,7 +50,16 @@ pub fn restore(opt: Opt) -> Result<()> {
             path: Some(_),
             directory: Some(_),
             ..
-        } => bail!("Cannot restore both path and in directory"),
+        } => unreachable!(),
+        Opt {
+            path: None,
+            directory: None,
+            interactive: false,
+            last,
+            ..
+        } => {
+            restore_from_indexes(read_dir_trash_entries()?.collect(), last)?;
+        }
         Opt {
             path: Some(path), ..
         } => {
@@ -111,10 +133,17 @@ fn restore_in_directory(dir: &Path, table_opt: table::Opt) -> Result<()> {
     #[cfg(feature = "readline")]
     let indices: RestoreIndexMultiple = ReadLine::new().read_parse_loop(">> ")?;
 
-    // #[cfg(not(feature = "readline"))]
-
     info!("Indices are {:?}", indices);
 
+    restore_from_indexes(trash_entries, indices)?;
+
+    Ok(())
+}
+
+fn restore_from_indexes<U>(trash_entries: Vec<TrashEntry>, indices: U) -> Result<()>
+where
+    U: IntoIterator<Item = RestoreIndex>,
+{
     for idx in indices {
         match idx {
             RestoreIndex::Point(p) => trash_entries
