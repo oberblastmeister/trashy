@@ -3,9 +3,8 @@ mod utils;
 
 use std::path::PathBuf;
 
-use eyre::{bail, Result};
+use eyre::Result;
 
-#[ignore]
 #[test]
 fn setup_tmp_test() -> Result<()> {
     utils::setup_tmp()?;

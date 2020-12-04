@@ -1,29 +1,13 @@
-use std::fs;
-use std::path::PathBuf;
-
-use eyre::{bail, Result};
-use xshell::read_dir;
+use eyre::Result;
 use xshell::{cmd, cwd};
 
 pub fn setup_tmp() -> Result<()> {
-    get_dir()?;
+    let crate_dir = cwd()?;
+    let tests_dir = crate_dir.join("tests");
+    let tmp_dir = tests_dir.join("tmp");
+    let data_dir = tests_dir.join("data");
 
-    cmd!("cp -r tests/data tests/tmp").run()?;
+    cmd!("cp -r {data_dir} {tmp_dir}").run()?;
 
     Ok(())
-}
-
-pub fn get_dir() -> Result<PathBuf> {
-    let cwd = cwd()?;
-
-    if !cwd
-        .to_str()
-        .expect("Failed to convert path to str")
-        .contains("trashy/crates/lib")
-    {
-        println!("{:?}", cwd);
-        panic!("Did not contain correct path")
-    } else {
-        Ok(cwd)
-    }
 }
