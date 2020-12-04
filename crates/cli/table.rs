@@ -8,8 +8,9 @@ use terminal_size::{terminal_size, Width};
 
 use crate::border::Border;
 use crate::utils::{
-    colorize_path, format_date, format_date_compact, get_metadata, shorten_path, Pair,
+    get_metadata, Pair,
 };
+use crate::utils::{date, path};
 
 pub struct SizedTable {
     opt: Opt,
@@ -45,7 +46,7 @@ impl SizedTable {
 
         let mut displayed_path = if !self.opt.absolute {
             let path = path.as_ref();
-            Cow::from(shorten_path(path).unwrap())
+            Cow::from(path::shorten(path).unwrap())
         } else {
             path
         };
@@ -53,7 +54,7 @@ impl SizedTable {
 
         displayed_path = if !self.opt.dont_colorize {
             let metadata = get_metadata(&trash_entry)?;
-            Cow::from(colorize_path(displayed_path.as_ref(), &metadata))
+            Cow::from(path::colorize(displayed_path.as_ref(), &metadata))
         } else {
             displayed_path
         };
@@ -63,12 +64,12 @@ impl SizedTable {
         let row = match self.opt.size {
             TableSize::Minimal => row![displayed_path],
             TableSize::Compact => {
-                let mut res = format_date_compact(trash_info.deletion_date());
+                let mut res = date::format(trash_info.deletion_date());
                 res.push(Cell::new(&displayed_path));
                 Row::new(res)
             }
             TableSize::Full => {
-                let mut res = format_date(trash_info.deletion_date());
+                let mut res = date::format(trash_info.deletion_date());
                 res.push(Cell::new(&displayed_path));
                 Row::new(res)
             }
