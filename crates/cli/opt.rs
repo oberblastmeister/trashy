@@ -1,11 +1,16 @@
 mod subcommand;
 
-use clap::Clap;
+use clap::{crate_authors, crate_description, crate_version, AppSettings, Clap};
 use eyre::Result;
 use subcommand::SubCommand;
 
 #[derive(Debug, Clap)]
-#[clap(version = env!("CARGO_PKG_VERSION"), about = env!("CARGO_PKG_DESCRIPTION"), author = env!("CARGO_PKG_AUTHORS"))]
+#[clap(
+    version = crate_version!(),
+    about = crate_description!(),
+    author = crate_authors!(),
+    global_setting = AppSettings::ColoredHelp,
+)]
 pub struct Opt {
     #[clap(flatten)]
     put_opt: subcommand::put::Opt,
