@@ -1,13 +1,12 @@
 use std::cmp::Ordering;
 use std::fs;
-use std::io::{stdin, stdout, Write};
 use std::path::Path;
 
 use chrono::naive::NaiveDateTime;
-use eyre::{eyre, Result, WrapErr};
+use eyre::{eyre, Result};
 use lscolors::{LsColors, Style};
 use once_cell::sync::Lazy;
-use prettytable::{cell, row, Cell, Row};
+use prettytable::Cell;
 use trash_lib::trash_entry::TrashEntry;
 use trash_lib::trash_info::TrashInfo;
 use trash_lib::HOME_DIR;
