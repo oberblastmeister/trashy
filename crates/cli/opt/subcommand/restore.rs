@@ -37,7 +37,7 @@ pub struct Opt {
 
     /// Restore the last n trashed files. Uses the same indexes as interactive mode.
     #[clap(short, long)]
-    last: RestoreIndexMultiple,
+    last: Option<RestoreIndexMultiple>,
 
     /// Go into interactive mode to restore files. The default when running with no flags.
     #[clap(short, long)]
@@ -55,10 +55,15 @@ pub fn restore(opt: Opt) -> Result<()> {
             path: None,
             directory: None,
             interactive: false,
-            last,
+            last: Some(indices),
             ..
         } => {
-            restore_from_indexes(read_dir_trash_entries()?.collect(), last)?;
+            restore_from_indexes(
+                sort_iterator(get_trash_entries_in_dir(&env::current_dir()?)?)
+                    .map(Pair::revert)
+                    .collect(),
+                indices,
+            )?;
         }
         Opt {
             path: Some(path), ..
@@ -102,17 +107,21 @@ fn restore_file(path: &Path) -> Result<()> {
     trash_lib::restore(path).map_err(Into::into)
 }
 
+/// gets all the trash entries in a directory
+fn get_trash_entries_in_dir(dir: &Path) -> Result<impl Iterator<Item = Pair> + '_> {
+    let iter = read_dir_trash_entries()?
+        .map(Pair::new)
+        .filter_map(|res| ok_log!(res => error!))
+        .filter(move |pair| filter_by_in_dir(pair, dir));
+    Ok(iter)
+}
+
 /// Restore thing in a directory. Must take absolute dir path instead of relative path to avoid
 /// issues. Path must be a directory
 fn restore_in_directory(dir: &Path, table_opt: table::Opt) -> Result<()> {
     let mut table = IndexedTable::new(table_opt)?;
 
-    let trash_entry_iter = read_dir_trash_entries()?
-        .map(Pair::new)
-        .filter_map(|res| ok_log!(res => error!));
-
-    let trash_entries: Vec<_> = sort_iterator(trash_entry_iter)
-        .filter(|pair| filter_by_in_dir(pair, &dir))
+    let trash_entries: Vec<_> = sort_iterator(get_trash_entries_in_dir(dir)?)
         .map(|pair| table.add_row(&pair).map(|_| (pair)))
         .filter_map(|res| ok_log!(res => error!))
         .map(|pair| pair.revert())

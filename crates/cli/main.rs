@@ -1,5 +1,6 @@
 mod border;
 mod exitcode;
+
 #[cfg(not(feature = "readline"))]
 mod input;
 mod opt;
