@@ -148,7 +148,7 @@ impl TableSize {
     fn get_title_row(self) -> Row {
         match self {
             TableSize::Minimal => row!["Path"],
-            TableSize::Compact => row!["Date", "Time", "Path"],
+            TableSize::Compact => row!["Month", "Date", "Time", "Path"],
             TableSize::Full => row!["Month", "Day", "Time", "Path"],
         }
     }

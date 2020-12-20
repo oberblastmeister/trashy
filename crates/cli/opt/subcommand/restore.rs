@@ -37,7 +37,7 @@ pub struct Opt {
 
     /// Restore the last n trashed files. Uses the same indexes as interactive mode.
     #[clap(short, long)]
-    last: RestoreIndexMultiple,
+    last: Option<RestoreIndexMultiple>,
 
     /// Go into interactive mode to restore files. The default when running with no flags.
     #[clap(short, long)]
@@ -55,7 +55,7 @@ pub fn restore(opt: Opt) -> Result<()> {
             path: None,
             directory: None,
             interactive: false,
-            last,
+            last: Some(last),
             ..
         } => {
             restore_from_indexes(read_dir_trash_entries()?.collect(), last)?;
