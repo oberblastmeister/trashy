@@ -1,82 +1,76 @@
 use std::{
-    borrow::Cow,
-    cmp, env, fs,
+    cmp, fs,
     path::{Path, PathBuf},
 };
 
-use chrono::{DateTime, Local, NaiveDateTime, TimeZone, Utc};
+use chrono::{Local, TimeZone};
 use clap::Parser;
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use comfy_table as table;
+use table::Table;
 use trash::TrashItem;
 
-use crate::{args, utils};
+use crate::{args, filter::FilterArgs, utils};
 
 #[derive(Parser, Debug)]
 pub struct Args {
-    #[clap(
-        short,
-        long,
-        value_parser = |s: &str| -> Result<PathBuf> {
-            let p = PathBuf::from(s);
-            args::ensure_exists(&p)?;
-            args::ensure_is_dir(&p)?;
-            Ok(p)
-        },
-    )]
-    pub path: Option<PathBuf>,
-
-    /// Display all trashed files.
-    ///
-    /// By default trashed files in the current directory will be displayed.
-    #[clap(short, long, conflicts_with = "path")]
-    pub all: bool,
+    #[clap(flatten)]
+    filter_args: FilterArgs,
 }
 
 impl Args {
+    #[cfg(target_os = "macos")]
     pub fn run(&self, global_args: &args::GlobalArgs) -> Result<()> {
-        if cfg!(target_os = "macos") {
-            bail!("Listing is not supported on MacOS");
-        }
-        let path: Cow<_> = match &self.path {
-            _ if self.all => Path::new("").into(),
-            None => Path::new("").into(),
-            Some(path) => path.into(),
-        };
+        bail!("Listing is not supported on MacOS");
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    pub fn run(&self, global_args: &args::GlobalArgs) -> Result<()> {
+        let filters = self.filter_args.to_filters()?;
         let items = {
-            let items = trash::os_limited::list()?;
-            let mut items = if self.all {
-                items
-            } else {
-                items
+            let mut items = trash::os_limited::list()?;
+            if !filters.is_empty() {
+                items = items
                     .into_iter()
-                    .filter(|item| item.original_path().starts_with(&path))
+                    .filter(|item| filters.is_match(item))
                     .collect()
             };
             items.sort_by_key(|item| cmp::Reverse(item.time_deleted));
             items
         };
-        let mut failed = 0;
-        let mut table = new_table();
-        table.set_header(["Date", "Path"]);
-        items
-            .into_iter()
-            .filter_map(
-                |item| match display_item(&item, &path, global_args.color_status.color()) {
-                    Ok(s) => Some(s),
-                    Err(_) => {
-                        failed += 1;
-                        None
-                    }
-                },
-            )
-            .for_each(|row_iter| {
-                table.add_row(row_iter);
-            });
-        println!("{table}");
+        list(items, global_args.color_status.color(), Path::new(""))?;
         Ok(())
     }
+}
+
+pub fn list(items: impl IntoIterator<Item = TrashItem>, color: bool, base: &Path) -> Result<()> {
+    let table = get_table(items, color, base)?;
+    println!("{table}");
+    Ok(())
+}
+
+pub fn get_table(
+    items: impl IntoIterator<Item = TrashItem>,
+    color: bool,
+    base: &Path,
+) -> Result<Table> {
+    let mut failed = 0;
+    let mut table = new_table();
+    table.set_header(["Date", "Path"]);
+    items
+        .into_iter()
+        .filter_map(|item| match display_item(&item, color, base) {
+            Ok(s) => Some(s),
+            Err(_) => {
+                failed += 1;
+                None
+            }
+        })
+        .for_each(|row_iter| {
+            table.add_row(row_iter);
+        });
+    Ok(table)
 }
 
 fn new_table() -> table::Table {
@@ -92,8 +86,8 @@ fn new_table() -> table::Table {
 
 pub fn display_item(
     item: &TrashItem,
-    base: &Path,
     color: bool,
+    base: &Path
 ) -> Result<impl Iterator<Item = comfy_table::Cell>> {
     use comfy_table::Cell;
     let displayed_path = utils::path::display(&item.original_path().strip_prefix(base).unwrap());

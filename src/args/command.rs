@@ -18,13 +18,17 @@ pub enum Command {
 
     /// Put files into the trash
     Put(put::Args),
-    // /// PERMANANTLY removes files in the trash
-    // Empty(empty::Opt),
+
+    /// PERMANANTLY removes files in the trash
+    Empty(empty::Args),
 
     // /// Restore files from the trash
     // Restore(restore::Opt),
     /// Generates completions for shell
+
+    /// Generates completions
     Completions(completions::Args),
+
     Manpage(manpage::Args),
 }
 
@@ -35,7 +39,7 @@ impl Command {
             // Command::List(opt) => list::list(opt)?,
             List(args) => args.run(global_args),
             Put(args) => args.run(global_args),
-            // Command::Empty(opt) => empty::empty(opt)?,
+            Command::Empty(args) => args.run(),
             // Command::Restore(opt) => restore::restore(opt)?,
             Completions(args) => args.run(),
             Manpage(args) => args.run(),

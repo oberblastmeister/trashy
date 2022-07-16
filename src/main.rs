@@ -1,6 +1,7 @@
 mod args;
 mod exitcode;
 mod utils;
+mod filter;
 
 use anyhow::Result;
 use args::Args;

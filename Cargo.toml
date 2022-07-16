@@ -21,9 +21,7 @@ edition = "2021"
 [dependencies]
 clap_mangen = "0.1.10"
 clap_complete = "3.2.3"
-
 anyhow = { version = "1.0.58", features = ["backtrace"] }
-colored = "2.0.0"
 trash = "2.1.5"
 comfy-table = "6.0.0"
 chrono = "0.4.19"
@@ -33,6 +31,8 @@ atty = "0.2.14"
 ansi_term = "0.12.1"
 humantime = "2.1.0"
 regex = "1.6.0"
+aho-corasick = "0.7.18"
+dialoguer = "0.10.1"
 # prettytable-rs = "0.8.0"
 # log = "0.4.11"
 # lscolors = "0.7.1"

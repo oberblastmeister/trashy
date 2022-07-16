@@ -5,6 +5,7 @@ use chrono::naive::NaiveDateTime;
 // use eyre::{eyre, Result};
 use lscolors::{LsColors, Style};
 use once_cell::sync::Lazy;
+use trash::TrashItem;
 // use once_cell::sync::Lazy;
 // use prettytable::Cell;
 // use trash_lib::trash_entry::TrashEntry;

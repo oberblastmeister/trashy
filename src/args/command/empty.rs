@@ -1,48 +1,112 @@
-use anyhow::{bail, Result};
-use chrono::{Duration, Local};
-use clap::Parser;
+use aho_corasick::AhoCorasick;
+use anyhow::{anyhow, bail, Result};
+use chrono::{DateTime, Duration, Local, NaiveDate, TimeZone, Utc};
+use clap::{clap_derive::ArgEnum, Parser};
 // use eyre::{eyre, Result, WrapErr};
 // use log::error;
 
-use regex::Regex;
+use dialoguer::Confirm;
+use regex::{Regex, RegexSet};
+use trash::TrashItem;
+
+use crate::filter::FilterArgs;
 
 // use crate::table;
 // use crate::utils::Pair;
 
 #[derive(Parser, Debug)]
 pub struct Args {
-    /// keep stray files (not valid trash entries)
-    #[clap(short = 's', long)]
-    keep_strays: bool,
+    #[clap(flatten)]
+    filter_args: FilterArgs,
 
-    /// delete files older than amount of days, can be used with regex
-    #[clap(short, long)]
-    duration: Option<String>,
-
-    /// delete files matching regex, can be used with days
-    #[clap(short, long)]
-    regex: Option<String>,
-
-    /// deletes ALL files from the trash
-    #[clap(long, conflicts_with_all = &["days", "regex"])]
+    /// Empty all files
+    #[clap(long, conflicts_with_all = &["before", "within", "patterns"])]
     all: bool,
 
-    /// skips asking for confirmation before deleting all files
+    /// Skip confirmation
     #[clap(long)]
     force: bool,
-    // #[clap(flatten)]
-    // table_opt: table::Opt,
+}
+
+enum Patterns {
+    Regex(RegexSet),
+    Substring(AhoCorasick),
+}
+
+impl Patterns {
+    fn is_match(&self, s: &str) -> bool {
+        match self {
+            Patterns::Regex(re_set) => re_set.is_match(s),
+            Patterns::Substring(ac) => ac.is_match(s),
+        }
+    }
+}
+
+#[derive(Debug, ArgEnum, Clone, Copy)]
+enum Match {
+    Regex,
+    Substring,
 }
 
 impl Args {
+    #[cfg(target_os = "macos")]
+    pub fn run(&self, global_args: &args::GlobalArgs) -> Result<()> {
+        bail!("Emptying is not supported on MacOS");
+    }
+
+    #[cfg(not(target_os = "macos"))]
     pub fn run(&self) -> Result<()> {
-        if cfg!(target_os = "macos") {
-            bail!("Emptying is not supported on MacOS");
+        let items = trash::os_limited::list()?;
+        let empty = if self.force { empty } else { empty_with_prompt };
+        if self.all {
+            empty(items)?;
+            return Ok(());
         }
+        let filters = self.filter_args.to_filters()?;
+        if filters.is_empty() {
+            // TODO: better error message
+            bail!("Must match something");
+        }
+        let items = items
+            .into_iter()
+            .filter(|item| filters.is_match(item))
+            .collect();
+        empty(items)?;
         Ok(())
     }
 }
 
+fn empty_with_prompt(items: Vec<TrashItem>) -> Result<()> {
+    println!("{} items will be emptied from the trash", items.len());
+    if Confirm::new().with_prompt("Are you sure?").interact()? {
+        empty(items)?;
+    }
+    Ok(())
+}
+
+fn empty(items: impl IntoIterator<Item = TrashItem>) -> Result<()> {
+    trash::os_limited::purge_all(items)?;
+    Ok(())
+}
+
+fn parse_time_filter(ref_time: DateTime<Utc>, s: &str) -> Option<DateTime<Utc>> {
+    humantime::parse_duration(s)
+        .ok()
+        .and_then(|duration| Some(ref_time - chrono::Duration::from_std(duration).ok()?))
+        .or_else(|| {
+            DateTime::parse_from_rfc3339(s)
+                .map(|dt| dt.into())
+                .ok()
+                .or_else(|| {
+                    NaiveDate::parse_from_str(s, "%F")
+                        .map(|nd| nd.and_hms(0, 0, 0))
+                        .ok()
+                        .and_then(|ndt| Local.from_local_datetime(&ndt).single())
+                })
+                .or_else(|| Local.datetime_from_str(s, "%F %T").ok())
+                .map(|dt| dt.into())
+        })
+}
 // type DynIterator<'a> = &'a mut dyn Iterator<Item = TrashEntry>;
 
 // pub fn empty(opt: Opt) -> Result<()> {

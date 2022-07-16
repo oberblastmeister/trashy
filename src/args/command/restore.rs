@@ -29,7 +29,7 @@ pub struct Opt {
     path: Option<PathBuf>,
 
     /// Optionally restore inside of a directory
-    #[clap(parse(from_os_str), short = 'd', long = "directory", conflicts_with_all = &["interactive", "last"])]
+    #[clap(short = 'd', long = "directory", conflicts_with_all = &["interactive", "last"])]
     directory: Option<PathBuf>,
 
     #[clap(flatten)]

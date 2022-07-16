@@ -5,7 +5,7 @@ use clap::{IntoApp, Parser};
 
 #[derive(Debug, Parser)]
 pub struct Args {
-    /// shell to generate copmletions for
+    /// shell to generate completions for
     #[clap(arg_enum)]
     pub shell: clap_complete::Shell,
 }
