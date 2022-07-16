@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use aho_corasick::AhoCorasick;
 use anyhow::{anyhow, bail, Result};
 use chrono::{Date, DateTime, Duration, Local, NaiveDate, TimeZone, Utc};
@@ -45,6 +47,7 @@ impl FilterArgs {
         let patterns = match self.r#match {
             Match::Regex => Patterns::Regex(RegexSet::new(&self.patterns)?),
             Match::Substring => Patterns::Substring(AhoCorasick::new(&self.patterns)),
+            Match::Exact => Patterns::Exact(self.patterns.iter().cloned().collect()),
         };
         let filters = [
             before.map(|time| Filter::Time(TimeFilter::Before(time))),
@@ -102,6 +105,7 @@ impl TimeFilter {
 pub enum Patterns {
     Regex(RegexSet),
     Substring(AhoCorasick),
+    Exact(HashSet<String>),
 }
 
 impl Patterns {
@@ -109,6 +113,7 @@ impl Patterns {
         match self {
             Patterns::Regex(re_set) => re_set.is_match(s),
             Patterns::Substring(ac) => ac.is_match(s),
+            Patterns::Exact(set) => set.contains(s),
         }
     }
 }
@@ -117,6 +122,7 @@ impl Patterns {
 pub enum Match {
     Regex,
     Substring,
+    Exact,
 }
 
 fn parse_time_filter(ref_time: DateTime<Utc>, s: &str) -> Option<DateTime<Utc>> {

@@ -3,6 +3,7 @@
 // mod list;
 mod completions;
 mod empty;
+mod restore;
 mod list;
 mod manpage;
 pub mod put;
@@ -13,17 +14,17 @@ use clap::Parser;
 
 #[derive(Parser, Debug)]
 pub enum Command {
-    /// List files in the trash
+    /// List files
     List(list::Args),
 
-    /// Put files into the trash
+    /// Put files
     Put(put::Args),
 
-    /// PERMANANTLY removes files in the trash
+    /// PERMANANTLY removes files
     Empty(empty::Args),
 
-    // /// Restore files from the trash
-    // Restore(restore::Opt),
+    /// Restore files
+    Restore(restore::Args),
     /// Generates completions for shell
 
     /// Generates completions
@@ -40,7 +41,7 @@ impl Command {
             List(args) => args.run(global_args),
             Put(args) => args.run(global_args),
             Command::Empty(args) => args.run(),
-            // Command::Restore(opt) => restore::restore(opt)?,
+            Command::Restore(args) => args.run(global_args),
             Completions(args) => args.run(),
             Manpage(args) => args.run(),
         }

@@ -6,7 +6,7 @@ use std::{
 use chrono::{Local, TimeZone};
 use clap::Parser;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use comfy_table as table;
 use table::Table;
 use trash::TrashItem;
@@ -16,7 +16,7 @@ use crate::{args, filter::FilterArgs, utils};
 #[derive(Parser, Debug)]
 pub struct Args {
     #[clap(flatten)]
-    filter_args: FilterArgs,
+    query_args: QueryArgs,
 }
 
 impl Args {
@@ -27,7 +27,30 @@ impl Args {
 
     #[cfg(not(target_os = "macos"))]
     pub fn run(&self, global_args: &args::GlobalArgs) -> Result<()> {
+        let items = self.query_args.list(false)?;
+        display_items(items, global_args.color_status.color(), Path::new(""))?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Parser)]
+pub struct QueryArgs {
+    #[clap(flatten)]
+    filter_args: FilterArgs,
+
+    #[clap(long)]
+    rev: bool,
+
+    #[clap(short)]
+    n: Option<u32>,
+}
+
+impl QueryArgs {
+    pub fn list(&self, nonempty: bool) -> Result<Vec<TrashItem>> {
         let filters = self.filter_args.to_filters()?;
+        if nonempty && filters.is_empty() {
+            bail!("Must match something");
+        }
         let items = {
             let mut items = trash::os_limited::list()?;
             if !filters.is_empty() {
@@ -36,15 +59,25 @@ impl Args {
                     .filter(|item| filters.is_match(item))
                     .collect()
             };
-            items.sort_by_key(|item| cmp::Reverse(item.time_deleted));
+            if self.rev {
+                items.sort_by_key(|item| item.time_deleted);
+            } else {
+                items.sort_by_key(|item| cmp::Reverse(item.time_deleted));
+            }
             items
         };
-        list(items, global_args.color_status.color(), Path::new(""))?;
-        Ok(())
+        Ok(match self.n {
+            Some(n) => items.into_iter().take(n as usize).collect(),
+            None => items,
+        })
     }
 }
 
-pub fn list(items: impl IntoIterator<Item = TrashItem>, color: bool, base: &Path) -> Result<()> {
+pub fn display_items(
+    items: impl IntoIterator<Item = TrashItem>,
+    color: bool,
+    base: &Path,
+) -> Result<()> {
     let table = get_table(items, color, base)?;
     println!("{table}");
     Ok(())
@@ -87,7 +120,7 @@ fn new_table() -> table::Table {
 pub fn display_item(
     item: &TrashItem,
     color: bool,
-    base: &Path
+    base: &Path,
 ) -> Result<impl Iterator<Item = comfy_table::Cell>> {
     use comfy_table::Cell;
     let displayed_path = utils::path::display(&item.original_path().strip_prefix(base).unwrap());

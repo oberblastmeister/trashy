@@ -6,10 +6,13 @@ use clap::{clap_derive::ArgEnum, Parser};
 // use log::error;
 
 use dialoguer::Confirm;
+use either::Either;
 use regex::{Regex, RegexSet};
 use trash::TrashItem;
 
 use crate::filter::FilterArgs;
+
+use super::list;
 
 // use crate::table;
 // use crate::utils::Pair;
@@ -17,7 +20,7 @@ use crate::filter::FilterArgs;
 #[derive(Parser, Debug)]
 pub struct Args {
     #[clap(flatten)]
-    filter_args: FilterArgs,
+    list_args: list::QueryArgs,
 
     /// Empty all files
     #[clap(long, conflicts_with_all = &["before", "within", "patterns"])]
@@ -28,26 +31,6 @@ pub struct Args {
     force: bool,
 }
 
-enum Patterns {
-    Regex(RegexSet),
-    Substring(AhoCorasick),
-}
-
-impl Patterns {
-    fn is_match(&self, s: &str) -> bool {
-        match self {
-            Patterns::Regex(re_set) => re_set.is_match(s),
-            Patterns::Substring(ac) => ac.is_match(s),
-        }
-    }
-}
-
-#[derive(Debug, ArgEnum, Clone, Copy)]
-enum Match {
-    Regex,
-    Substring,
-}
-
 impl Args {
     #[cfg(target_os = "macos")]
     pub fn run(&self, global_args: &args::GlobalArgs) -> Result<()> {
@@ -56,22 +39,12 @@ impl Args {
 
     #[cfg(not(target_os = "macos"))]
     pub fn run(&self) -> Result<()> {
-        let items = trash::os_limited::list()?;
         let empty = if self.force { empty } else { empty_with_prompt };
         if self.all {
-            empty(items)?;
-            return Ok(());
+            empty(trash::os_limited::list()?)?;
+        } else {
+            empty(self.list_args.list(true)?)?;
         }
-        let filters = self.filter_args.to_filters()?;
-        if filters.is_empty() {
-            // TODO: better error message
-            bail!("Must match something");
-        }
-        let items = items
-            .into_iter()
-            .filter(|item| filters.is_match(item))
-            .collect();
-        empty(items)?;
         Ok(())
     }
 }
@@ -89,24 +62,6 @@ fn empty(items: impl IntoIterator<Item = TrashItem>) -> Result<()> {
     Ok(())
 }
 
-fn parse_time_filter(ref_time: DateTime<Utc>, s: &str) -> Option<DateTime<Utc>> {
-    humantime::parse_duration(s)
-        .ok()
-        .and_then(|duration| Some(ref_time - chrono::Duration::from_std(duration).ok()?))
-        .or_else(|| {
-            DateTime::parse_from_rfc3339(s)
-                .map(|dt| dt.into())
-                .ok()
-                .or_else(|| {
-                    NaiveDate::parse_from_str(s, "%F")
-                        .map(|nd| nd.and_hms(0, 0, 0))
-                        .ok()
-                        .and_then(|ndt| Local.from_local_datetime(&ndt).single())
-                })
-                .or_else(|| Local.datetime_from_str(s, "%F %T").ok())
-                .map(|dt| dt.into())
-        })
-}
 // type DynIterator<'a> = &'a mut dyn Iterator<Item = TrashEntry>;
 
 // pub fn empty(opt: Opt) -> Result<()> {
