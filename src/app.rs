@@ -1,14 +1,7 @@
 mod command;
 
-use std::path::{Path, PathBuf};
-
-// use clap::{crate_authors, crate_description, crate_version, AppSettings, Clap};
-// use eyre::Result;
-use anyhow::{anyhow, bail, Result};
-use clap::{
-    builder::{ValueParser, ValueParserFactory},
-    Parser,
-};
+use anyhow::Result;
+use clap::Parser;
 use command::Command;
 
 #[derive(Debug, Parser)]
@@ -32,21 +25,6 @@ pub struct GlobalArgs {
         global = true
     )]
     pub color_status: Status,
-}
-
-pub fn ensure_exists(path: &Path) -> Result<()> {
-    if !path.exists() {
-        bail!("The path does not exist")
-    }
-    Ok(())
-}
-
-pub fn ensure_is_dir(path: &Path) -> Result<()> {
-    if !path.is_dir() {
-        bail!("The path is not a directory")
-    }
-    Ok(())
-    
 }
 
 #[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]

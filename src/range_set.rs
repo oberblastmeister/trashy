@@ -1,13 +1,8 @@
 use crate::range::Range;
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct RangeSet {
     ranges: Vec<Range>,
-}
-
-impl RangeSet {
-    pub fn into_vec(self) -> Vec<Range> {
-        self.ranges
-    }
 }
 
 impl From<Vec<Range>> for RangeSet {
@@ -30,15 +25,33 @@ impl FromIterator<Range> for RangeSet {
     }
 }
 
-fn normalize(ranges: &mut Vec<Range>) {
-    loop {
-        match (ranges.pop(), ranges.pop()) {
-            (Some(r1), None) => break ranges.push(r1),
-            (None, _) => break,
-            (Some(r1), Some(r2)) => match r1.union(r2) {
-                None => ranges.push(r2),
-                Some(r3) => ranges.push(r3),
-            },
-        }
+impl IntoIterator for RangeSet {
+    type Item = Range;
+    type IntoIter = <Vec<Range> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.ranges.into_iter()
     }
+}
+
+fn normalize(ranges: &mut Vec<Range>) {
+    if ranges.len() < 2 {
+        return;
+    }
+    let mut i = ranges.len() - 1;
+    let mut d = 0;
+    loop {
+        match ranges[i - 1].union(ranges[i]) {
+            None => (),
+            Some(range) => {
+                ranges[i - 1] = range;
+                d += 1;
+            }
+        }
+        if i == 1 {
+            break;
+        }
+        i -= 1;
+    }
+    ranges.drain((ranges.len() - d)..);
 }

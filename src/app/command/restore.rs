@@ -1,7 +1,5 @@
 use anyhow::Result;
-use std::env;
-use std::fs;
-use std::path::{Path, PathBuf};
+use trash::TrashItem;
 
 // use crate::{restore_index::RestoreIndexMultiple, table};
 use clap::Parser;
@@ -49,181 +47,47 @@ pub struct Args {
     // interactive: bool,
     #[clap(flatten)]
     query_args: list::QueryArgs,
+
+    #[clap(long = "ix")]
+    indices: Option<String>,
 }
 
 impl Args {
     #[cfg(target_os = "macos")]
-    pub fn run(&self, global_args: &app::GlobalArgs) -> Result<()> {
+    pub fn run(&self, _: &app::GlobalArgs) -> Result<()> {
         bail!("Restoring is not supported on MacOS");
     }
 
     #[cfg(not(target_os = "macos"))]
-    pub fn run(&self, global_args: &app::GlobalArgs) -> Result<()> {
-        trash::os_limited::restore_all(self.query_args.list(true)?)?;
+    pub fn run(&self, _: &app::GlobalArgs) -> Result<()> {
+        use anyhow::bail;
+
+        use crate::range_syntax;
+
+        let items = self.query_args.list(true)?;
+        if let Some(indices) = &self.indices {
+            for range in range_syntax::parse_range_set(indices)? {
+                if range.start() as usize > items.len() || range.end() as usize > items.len() {
+                    bail!("Range is out of bounds");
+                }
+                trash::os_limited::restore_all(
+                    items[range.to_std()]
+                        .into_iter()
+                        .map(|item| clone_trash_item(item)),
+                )?;
+            }
+        } else {
+            trash::os_limited::restore_all(items)?;
+        }
         Ok(())
     }
 }
 
-pub fn restore(opt: Args) -> Result<()> {
-    // match opt {
-    //     Args {
-    //         path: Some(_),
-    //         directory: Some(_),
-    //         ..
-    //     } => unreachable!(),
-    //     Args {
-    //         path: None,
-    //         directory: None,
-    //         interactive: false,
-    //         last: Some(indices),
-    //         ..
-    //     } => {
-    //         restore_from_indexes(
-    //             sort_iterator(get_trash_entries_in_dir(&env::current_dir()?)?)
-    //                 .map(Pair::revert)
-    //                 .collect(),
-    //             indices,
-    //         )?;
-    //     }
-    //     Args {
-    //         path: Some(path), ..
-    //     } => {
-    //         info!("Restoring path {}", path.display());
-    //         restore_file(&path)?;
-    //     }
-    //     Args {
-    //         directory: Some(directory),
-    //         table_opt,
-    //         ..
-    //     } => {
-    //         if !directory.is_dir() {
-    //             bail!("The path `{}` is not a directory", directory.display());
-    //         }
-    //         let directory = fs::canonicalize(&directory).wrap_err(format!(
-    //             "Failed to canonicalize directory `{}`",
-    //             directory.display()
-    //         ))?;
-    //         info!("Restoring in directory {}", directory.display());
-    //         restore_in_directory(&directory, table_opt)?
-    //     }
-    //     Args {
-    //         path: None,
-    //         directory: None,
-    //         table_opt,
-    //         ..
-    //     } => {
-    //         info!("Restoring in current working directory");
-    //         let cwd = env::current_dir().wrap_err("Failed to find current working directory")?;
-
-    //         info!("Cwd is `{}`", cwd.display());
-    //         restore_in_directory(&cwd, table_opt)?;
-    //     }
-    // }
-
-    Ok(())
+fn clone_trash_item(item: &TrashItem) -> TrashItem {
+    TrashItem {
+        id: item.id.clone(),
+        name: item.name.clone(),
+        original_parent: item.original_parent.clone(),
+        time_deleted: item.time_deleted.clone(),
+    }
 }
-
-// fn restore_file(path: &Path) -> Result<()> {
-//     trash_lib::restore(path).map_err(Into::into)
-// }
-
-// /// gets all the trash entries in a directory
-// fn get_trash_entries_in_dir(dir: &Path) -> Result<impl Iterator<Item = Pair> + '_> {
-//     let iter = read_dir_trash_entries()?
-//         .map(Pair::new)
-//         .filter_map(|res| ok_log!(res => error!))
-//         .filter(move |pair| filter_by_in_dir(pair, dir));
-//     Ok(iter)
-// }
-
-// /// Restore thing in a directory. Must take absolute dir path instead of relative path to avoid
-// /// issues. Path must be a directory
-// fn restore_in_directory(dir: &Path, table_opt: table::Opt) -> Result<()> {
-//     let mut table = IndexedTable::new(table_opt)?;
-
-//     let trash_entries: Vec<_> = sort_iterator(get_trash_entries_in_dir(dir)?)
-//         .map(|pair| table.add_row(&pair).map(|_| (pair)))
-//         .filter_map(|res| ok_log!(res => error!))
-//         .map(|pair| pair.revert())
-//         .collect();
-
-//     if trash_entries.is_empty() {
-//         ExitCode::Success.exit_with_msg(format!(
-//             "No entries to restore in directory `{}`",
-//             dir.display()
-//         ))
-//     }
-
-//     table.print();
-//     trace!("The final vector of trash entries is {:?}", trash_entries);
-
-//     println!("Input the index or range of trash entries to restore:");
-
-//     #[cfg(feature = "readline")]
-//     let indices: RestoreIndexMultiple = ReadLine::new().read_parse_loop(">> ")?;
-
-//     info!("Indices are {:?}", indices);
-
-//     restore_from_indexes(trash_entries, indices)?;
-
-//     Ok(())
-// }
-
-// fn restore_from_indexes<U>(trash_entries: Vec<TrashEntry>, indices: U) -> Result<()>
-// where
-//     U: IntoIterator<Item = RestoreIndex>,
-// {
-//     for idx in indices {
-//         match idx {
-//             RestoreIndex::Point(p) => trash_entries
-//                 .get(p)
-//                 .ok_or_else(|| eyre!("{} is not a valid index that is in bounds", p))?
-//                 .restore()?,
-//             RestoreIndex::Range(range) => {
-//                 let slice = trash_entries.get(range.clone()).ok_or_else(|| {
-//                     eyre!(
-//                         "{}-{} is not a valid range that is in bounds",
-//                         &range.start,
-//                         &range.end
-//                     )
-//                 })?;
-//                 slice
-//                     .iter()
-//                     .map(|trash_entry| trash_entry.restore())
-//                     .filter_map(|res| ok_log!(res => error!))
-//                     .for_each(|_| ());
-//             }
-//         }
-//     }
-
-//     Ok(())
-// }
-
-// fn in_dir(dir: &Path, path: &Path) -> bool {
-//     let parent = match path.parent() {
-//         Some(p) => p,
-//         None => return false,
-//     };
-//     dir == parent
-// }
-
-// fn filter_by_in_dir(pair: &Pair, dir: &Path) -> bool {
-//     let decoded_res = pair.1.percent_path().decoded();
-//     trace!(
-//         "The original path of the trash entry file: {:?}",
-//         decoded_res
-//     );
-//     if let Ok(decoded) = decoded_res {
-//         let decoded_path: &Path = decoded.as_ref().as_ref();
-//         let in_dir = in_dir(dir, decoded_path);
-//         debug!(
-//             "path {} in the dir {}: {}",
-//             decoded_path.display(),
-//             dir.display(),
-//             in_dir
-//         );
-//         in_dir
-//     } else {
-//         false
-//     }
-// }

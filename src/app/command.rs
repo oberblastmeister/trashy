@@ -1,13 +1,9 @@
-// mod completion;
-// mod empty;
-// mod list;
 mod completions;
 mod empty;
-mod restore;
 mod list;
 mod manpage;
 pub mod put;
-// mod restore;
+mod restore;
 
 use anyhow::Result;
 use clap::Parser;

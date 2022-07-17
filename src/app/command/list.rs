@@ -1,5 +1,5 @@
 use std::{
-    cmp, fs, iter,
+    cmp, fs,
     path::{Path, PathBuf},
 };
 
@@ -7,8 +7,7 @@ use chrono::{Local, TimeZone};
 use clap::Parser;
 
 use anyhow::{bail, Result};
-use comfy_table as table;
-use table::Table;
+use tabled::{object::Segment, Alignment, Table, Tabled};
 use trash::TrashItem;
 
 use crate::{app, filter::FilterArgs, utils};
@@ -93,9 +92,7 @@ pub fn items_to_table(
     base: &Path,
 ) -> Result<Table> {
     let mut failed = 0;
-    let mut table = new_table();
-    table.set_header(["i", "Time", "Path"]);
-    {
+    let iter = {
         let vec: Vec<_> = items
             .filter_map(|item| match display_item(&item, color, base) {
                 Ok(s) => Some(s),
@@ -107,46 +104,48 @@ pub fn items_to_table(
             .collect();
         let len = vec.len();
         vec.into_iter()
-            .zip((0..len).rev())
-            .for_each(|(row_iter, i)| {
-                table.add_row(cons_iter(table::Cell::new(i), row_iter));
-            });
-    }
+            .zip((0..len as u32).rev())
+            .map(|(iter, i)| TrashItemDisplay {
+                i,
+                time: iter.0,
+                path: iter.1,
+            })
+    };
+    let table = Table::builder(iter)
+        .build()
+        .with(tabled::Style::rounded())
+        .with(tabled::Modify::new(Segment::all()).with(Alignment::left()));
     Ok(table)
 }
 
-fn cons_iter<T, I>(t: T, iter: I) -> impl IntoIterator<Item = T>
-where
-    I: IntoIterator<Item = T>,
-{
-    iter::once(t).chain(iter)
-}
-
-fn new_table() -> table::Table {
-    use table::modifiers::*;
-    use table::presets::*;
-
-    let mut table = table::Table::new();
-    table
-        .load_preset(UTF8_FULL)
-        .apply_modifier(UTF8_SOLID_INNER_BORDERS);
-    table
-}
-
-pub fn display_item(
-    item: &TrashItem,
-    color: bool,
-    base: &Path,
-) -> Result<impl Iterator<Item = comfy_table::Cell>> {
-    use comfy_table::Cell;
-    let displayed_path = utils::path::display(&item.original_path().strip_prefix(base).unwrap());
-    let mut path_cell = Cell::new(displayed_path);
+pub fn display_item(item: &TrashItem, color: bool, base: &Path) -> Result<(String, String)> {
+    let mut displayed_path =
+        utils::path::display(&item.original_path().strip_prefix(base).unwrap());
     if cfg!(target_os = "linux") && color {
         if let Some(style) = item_lscolors(item)? {
-            path_cell = add_style_to_cell(style, path_cell);
+            let ansi_style = style.to_ansi_term_style();
+            displayed_path = ansi_style.paint(displayed_path).to_string();
         }
     }
-    Ok([Cell::new(display_item_date(item)), path_cell].into_iter())
+    Ok((display_item_date(item), displayed_path))
+}
+
+pub struct TrashItemDisplay {
+    i: u32,
+    time: String,
+    path: String,
+}
+
+impl Tabled for TrashItemDisplay {
+    const LENGTH: usize = 3;
+
+    fn fields(&self) -> Vec<String> {
+        vec![self.i.to_string(), self.time.clone(), self.path.clone()]
+    }
+
+    fn headers() -> Vec<String> {
+        vec!["i".to_string(), "Time".to_string(), "Path".to_string()]
+    }
 }
 
 pub fn item_lscolors(item: &TrashItem) -> Result<Option<lscolors::Style>> {
@@ -161,22 +160,6 @@ pub fn item_lscolors(item: &TrashItem) -> Result<Option<lscolors::Style>> {
     } else {
         Ok(None)
     }
-}
-
-fn add_style_to_cell(style: lscolors::Style, mut path_cell: table::Cell) -> table::Cell {
-    if let Some(fg) = style.foreground {
-        path_cell = path_cell.fg(fg.to_crossterm_color());
-    }
-    if let Some(bg) = style.background {
-        path_cell = path_cell.bg(bg.to_crossterm_color());
-    }
-    let attrs = style.font_style.to_crossterm_attributes();
-    path_cell = path_cell.add_attributes(
-        table::Attribute::iterator()
-            .filter(|&attr| attrs.has(attr))
-            .collect(),
-    );
-    path_cell
 }
 
 pub fn display_item_date(item: &TrashItem) -> String {

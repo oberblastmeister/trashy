@@ -4,8 +4,6 @@ use aho_corasick::AhoCorasick;
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local, NaiveDate, TimeZone, Utc};
 use clap::{clap_derive::ArgEnum, Parser};
-// use eyre::{eyre, Result, WrapErr};
-// use log::error;
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use regex::RegexSet;

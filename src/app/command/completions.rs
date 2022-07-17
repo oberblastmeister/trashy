@@ -1,6 +1,7 @@
 use std::io;
 
-use anyhow::{Ok, Result};
+use crate::app;
+use anyhow::Result;
 use clap::{IntoApp, Parser};
 
 #[derive(Debug, Parser)]
@@ -14,7 +15,7 @@ impl Args {
     pub fn run(&self) -> Result<()> {
         clap_complete::generate(
             self.shell,
-            &mut crate::Args::into_app(),
+            &mut app::Args::into_app(),
             "trash",
             &mut io::stdout(),
         );
