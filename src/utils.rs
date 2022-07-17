@@ -1,5 +1,5 @@
-use std::path::Path;
 use std::fs;
+use std::path::Path;
 
 use lscolors::{LsColors, Style};
 use once_cell::sync::Lazy;

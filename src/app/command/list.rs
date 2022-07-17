@@ -19,12 +19,6 @@ pub struct Args {
 }
 
 impl Args {
-    #[cfg(target_os = "macos")]
-    pub fn run(&self, global_args: &app::GlobalArgs) -> Result<()> {
-        bail!("Listing is not supported on MacOS");
-    }
-
-    #[cfg(not(target_os = "macos"))]
     pub fn run(&self, global_args: &app::GlobalArgs) -> Result<()> {
         let items = self.query_args.list(false)?;
         display_items(

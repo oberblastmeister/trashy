@@ -20,12 +20,6 @@ pub struct Args {
 }
 
 impl Args {
-    #[cfg(target_os = "macos")]
-    pub fn run(&self, global_args: &args::GlobalArgs) -> Result<()> {
-        bail!("Emptying is not supported on MacOS");
-    }
-
-    #[cfg(not(target_os = "macos"))]
     pub fn run(&self) -> Result<()> {
         let empty = if self.force { empty } else { empty_with_prompt };
         if self.all {

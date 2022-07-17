@@ -25,8 +25,8 @@ jobs:
         # - os: ubuntu-16.04
         #   target: aarch64-unknown-linux-gnu
 
-        - os: macos-latest
-          target: x86_64-apple-darwin
+        # - os: macos-latest
+        #   target: x86_64-apple-darwin
 
         # - os: macos-latest
         #   target: aarch64-apple-darwin
@@ -54,18 +54,18 @@ jobs:
 
     - name: Build
       run: |
-        cargo build --manifest-path ./crates/lua-analyzer/Cargo.toml --bin lua-analyzer --target ${{ matrix.target }} --release
+        cargo build --target ${{ matrix.target }} --release
 
     - name: Package
       shell: bash
       run: |
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          cp "target/${{ matrix.target }}/release/lua-analyzer.exe" "lua-analyzer-${{ matrix.target }}.exe"
-          echo "ASSET=lua-analyzer-${{ matrix.target }}.exe" >> $GITHUB_ENV
+          mv "target/${{ matrix.target }}/release/trash.exe" "trash-${{ matrix.target }}.exe"
+          echo "ASSET=trash-${{ matrix.target }}.exe" >> $GITHUB_ENV
         else
-          cp "target/${{ matrix.target }}/release/lua-analyzer" "lua-analyzer"
-          tar czf lua-analyzer-${{ matrix.target }}.tar.gz lua-analyzer
-          echo "ASSET=lua-analyzer-${{ matrix.target }}.tar.gz" >> $GITHUB_ENV
+          mv "target/${{ matrix.target }}/release/trash" "trash"
+          tar czf trash-${{ matrix.target }}.tar.gz trash
+          echo "ASSET=trash-${{ matrix.target }}.tar.gz" >> $GITHUB_ENV
         fi
 
     - name: Upload artifact

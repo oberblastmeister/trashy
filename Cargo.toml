@@ -14,9 +14,9 @@ categories = ["command-line-utilities"]
 license = "MIT/Apache-2.0"
 edition = "2021"
 
-# [[bin]]
-# path = "crates/cli/main.rs"
-# name = "trash"
+[[bin]]
+path = "src/main.rs"
+name = "trash"
 
 [dependencies]
 clap_mangen = "0.1.10"
