@@ -25,11 +25,11 @@ pub enum Command {
 
     /// Restore files
     Restore(restore::Args),
-    /// Generates completions for shell
 
-    /// Generates completions
+    /// Generates completion for a shell
     Completions(completions::Args),
 
+    /// Generates manpages
     Manpage(manpage::Args),
 }
 
@@ -37,11 +37,10 @@ impl Command {
     pub fn run(self, global_args: &super::GlobalArgs) -> Result<()> {
         use Command::*;
         match self {
-            // Command::List(opt) => list::list(opt)?,
             List(args) => args.run(global_args),
             Put(args) => args.run(global_args),
-            Command::Empty(args) => args.run(),
-            Command::Restore(args) => args.run(global_args),
+            Empty(args) => args.run(),
+            Restore(args) => args.run(global_args),
             Completions(args) => args.run(),
             Manpage(args) => args.run(),
         }

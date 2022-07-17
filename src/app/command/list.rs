@@ -1,5 +1,5 @@
 use std::{
-    cmp, fs,
+    cmp, fs, iter,
     path::{Path, PathBuf},
 };
 
@@ -11,7 +11,7 @@ use comfy_table as table;
 use table::Table;
 use trash::TrashItem;
 
-use crate::{args, filter::FilterArgs, utils};
+use crate::{app, filter::FilterArgs, utils};
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -21,14 +21,18 @@ pub struct Args {
 
 impl Args {
     #[cfg(target_os = "macos")]
-    pub fn run(&self, global_args: &args::GlobalArgs) -> Result<()> {
+    pub fn run(&self, global_args: &app::GlobalArgs) -> Result<()> {
         bail!("Listing is not supported on MacOS");
     }
 
     #[cfg(not(target_os = "macos"))]
-    pub fn run(&self, global_args: &args::GlobalArgs) -> Result<()> {
+    pub fn run(&self, global_args: &app::GlobalArgs) -> Result<()> {
         let items = self.query_args.list(false)?;
-        display_items(items, global_args.color_status.color(), Path::new(""))?;
+        display_items(
+            items.into_iter(),
+            global_args.color_status.color(),
+            Path::new(""),
+        )?;
         Ok(())
     }
 }
@@ -60,9 +64,9 @@ impl QueryArgs {
                     .collect()
             };
             if self.rev {
-                items.sort_by_key(|item| item.time_deleted);
-            } else {
                 items.sort_by_key(|item| cmp::Reverse(item.time_deleted));
+            } else {
+                items.sort_by_key(|item| item.time_deleted);
             }
             items
         };
@@ -74,36 +78,48 @@ impl QueryArgs {
 }
 
 pub fn display_items(
-    items: impl IntoIterator<Item = TrashItem>,
+    items: impl ExactSizeIterator<Item = TrashItem>,
     color: bool,
     base: &Path,
 ) -> Result<()> {
-    let table = get_table(items, color, base)?;
+    let table = items_to_table(items, color, base)?;
     println!("{table}");
     Ok(())
 }
 
-pub fn get_table(
-    items: impl IntoIterator<Item = TrashItem>,
+pub fn items_to_table(
+    items: impl ExactSizeIterator<Item = TrashItem>,
     color: bool,
     base: &Path,
 ) -> Result<Table> {
     let mut failed = 0;
     let mut table = new_table();
-    table.set_header(["Date", "Path"]);
-    items
-        .into_iter()
-        .filter_map(|item| match display_item(&item, color, base) {
-            Ok(s) => Some(s),
-            Err(_) => {
-                failed += 1;
-                None
-            }
-        })
-        .for_each(|row_iter| {
-            table.add_row(row_iter);
-        });
+    table.set_header(["i", "Time", "Path"]);
+    {
+        let vec: Vec<_> = items
+            .filter_map(|item| match display_item(&item, color, base) {
+                Ok(s) => Some(s),
+                Err(_) => {
+                    failed += 1;
+                    None
+                }
+            })
+            .collect();
+        let len = vec.len();
+        vec.into_iter()
+            .zip((0..len).rev())
+            .for_each(|(row_iter, i)| {
+                table.add_row(cons_iter(table::Cell::new(i), row_iter));
+            });
+    }
     Ok(table)
+}
+
+fn cons_iter<T, I>(t: T, iter: I) -> impl IntoIterator<Item = T>
+where
+    I: IntoIterator<Item = T>,
+{
+    iter::once(t).chain(iter)
 }
 
 fn new_table() -> table::Table {
@@ -165,12 +181,14 @@ fn add_style_to_cell(style: lscolors::Style, mut path_cell: table::Cell) -> tabl
 
 pub fn display_item_date(item: &TrashItem) -> String {
     let datetime = Local.timestamp(item.time_deleted, 0);
-    format!(
-        "{} {}, {}",
-        datetime.format("%B"),
-        datetime.format("%d"),
-        datetime.format("%H:%M")
-    )
+    let humantime = chrono_humanize::HumanTime::from(datetime);
+    format!("{humantime}")
+    // format!(
+    //     "{} {}, {}",
+    //     datetime.format("%B"),
+    //     datetime.format("%d"),
+    //     datetime.format("%H:%M")
+    // )
 }
 
 pub fn files_path_from_info_path(info_path: &Path) -> PathBuf {

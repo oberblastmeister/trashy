@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 // use crate::{restore_index::RestoreIndexMultiple, table};
 use clap::Parser;
 
-use crate::args;
+use crate::app;
 
 use super::list;
 // use eyre::{bail, eyre, Result, WrapErr};
@@ -53,12 +53,12 @@ pub struct Args {
 
 impl Args {
     #[cfg(target_os = "macos")]
-    pub fn run(&self, global_args: &args::GlobalArgs) -> Result<()> {
+    pub fn run(&self, global_args: &app::GlobalArgs) -> Result<()> {
         bail!("Restoring is not supported on MacOS");
     }
 
     #[cfg(not(target_os = "macos"))]
-    pub fn run(&self, global_args: &args::GlobalArgs) -> Result<()> {
+    pub fn run(&self, global_args: &app::GlobalArgs) -> Result<()> {
         trash::os_limited::restore_all(self.query_args.list(true)?)?;
         Ok(())
     }

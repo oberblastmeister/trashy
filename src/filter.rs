@@ -1,14 +1,14 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, path::Path};
 
 use aho_corasick::AhoCorasick;
-use anyhow::{anyhow, bail, Result};
-use chrono::{Date, DateTime, Duration, Local, NaiveDate, TimeZone, Utc};
+use anyhow::{anyhow, Result};
+use chrono::{DateTime, Local, NaiveDate, TimeZone, Utc};
 use clap::{clap_derive::ArgEnum, Parser};
 // use eyre::{eyre, Result, WrapErr};
 // use log::error;
 
-use dialoguer::Confirm;
-use regex::{Regex, RegexSet};
+use globset::{Glob, GlobSet, GlobSetBuilder};
+use regex::RegexSet;
 use trash::TrashItem;
 
 #[derive(Parser, Debug)]
@@ -47,6 +47,7 @@ impl FilterArgs {
         let patterns = match self.r#match {
             Match::Regex => Patterns::Regex(RegexSet::new(&self.patterns)?),
             Match::Substring => Patterns::Substring(AhoCorasick::new(&self.patterns)),
+            Match::Glob => Patterns::Glob(new_globset(self.patterns.iter().map(|s| &**s))?),
             Match::Exact => Patterns::Exact(self.patterns.iter().cloned().collect()),
         };
         let filters = [
@@ -59,6 +60,14 @@ impl FilterArgs {
         .collect();
         Ok(Filters(filters))
     }
+}
+
+fn new_globset<'a>(i: impl IntoIterator<Item = &'a str>) -> Result<GlobSet> {
+    let mut builder = GlobSetBuilder::new();
+    for s in i {
+        builder.add(Glob::new(s)?);
+    }
+    Ok(builder.build()?)
 }
 
 pub struct Filters(pub Vec<Filter>);
@@ -105,6 +114,7 @@ impl TimeFilter {
 pub enum Patterns {
     Regex(RegexSet),
     Substring(AhoCorasick),
+    Glob(GlobSet),
     Exact(HashSet<String>),
 }
 
@@ -113,6 +123,7 @@ impl Patterns {
         match self {
             Patterns::Regex(re_set) => re_set.is_match(s),
             Patterns::Substring(ac) => ac.is_match(s),
+            Patterns::Glob(glob) => glob.is_match(Path::new(s)),
             Patterns::Exact(set) => set.contains(s),
         }
     }
@@ -122,6 +133,7 @@ impl Patterns {
 pub enum Match {
     Regex,
     Substring,
+    Glob,
     Exact,
 }
 

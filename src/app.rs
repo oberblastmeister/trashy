@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 // use clap::{crate_authors, crate_description, crate_version, AppSettings, Clap};
 // use eyre::Result;
-use anyhow::{anyhow, bail, Ok, Result};
+use anyhow::{anyhow, bail, Result};
 use clap::{
     builder::{ValueParser, ValueParserFactory},
     Parser,
@@ -24,7 +24,13 @@ pub struct Args {
 
 #[derive(Debug, Parser)]
 pub struct GlobalArgs {
-    #[clap(short = 'c', long = "color", value_enum, default_value_t = Status::Auto, global = true)]
+    #[clap(
+        short = 'c',
+        long = "color",
+        value_enum,
+        default_value_t = Status::Auto,
+        global = true
+    )]
     pub color_status: Status,
 }
 

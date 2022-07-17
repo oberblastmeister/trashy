@@ -34,6 +34,9 @@ regex = "1.6.0"
 aho-corasick = "0.7.18"
 dialoguer = "0.10.1"
 either = "1.7.0"
+globset = { version = "0.4.9", default-features = false }
+chrono-humanize = "0.2.1"
+tabled = "0.7.0"
 # prettytable-rs = "0.8.0"
 # log = "0.4.11"
 # lscolors = "0.7.1"
@@ -51,7 +54,7 @@ either = "1.7.0"
 
 [dependencies.clap]
 version = "3.2.12"
-features = ["derive", "wrap_help"]
+features = ["suggestions", "color", "derive", "wrap_help", "cargo"]
 
 # [features]
 # default = ["readline"]
