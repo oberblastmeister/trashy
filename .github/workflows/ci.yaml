@@ -28,14 +28,8 @@ jobs:
         profile: minimal
         override: true
 
-    - name: Cache cargo directories
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: Cache Dependencies
+      uses: Swatinem/rust-cache@v2.0.0
 
     - name: Compile
       uses: actions-rs/cargo@v1
