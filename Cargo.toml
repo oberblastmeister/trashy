@@ -51,7 +51,7 @@ tabled = { version = "0.7.0", default-features = false, features = ["color"] }
 # dialoguer = "0.10.1"
 
 [dependencies.clap]
-version = "3.2.12"
+version = "3.2.13"
 features = ["suggestions", "color", "derive", "wrap_help", "cargo"]
 
 # [features]
