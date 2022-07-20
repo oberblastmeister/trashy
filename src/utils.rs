@@ -3,6 +3,7 @@ use std::path::Path;
 
 use lscolors::{LsColors, Style};
 use once_cell::sync::Lazy;
+use trash::TrashItem;
 
 static LS_COLORS: Lazy<LsColors> = Lazy::new(|| LsColors::from_env().unwrap_or_default());
 
@@ -62,5 +63,14 @@ pub mod path {
         //         let path = &format!("projects/{}/code", HOME_DIR.to_str().unwrap());
         //         assert_eq!(path::shorten(path).unwrap(), Cow::from(path));
         //     }
+    }
+}
+
+pub fn clone_trash_item(item: &TrashItem) -> TrashItem {
+    TrashItem {
+        id: item.id.clone(),
+        name: item.name.clone(),
+        original_parent: item.original_parent.clone(),
+        time_deleted: item.time_deleted.clone(),
     }
 }

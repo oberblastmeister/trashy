@@ -7,29 +7,13 @@ use crate::app;
 
 #[derive(Parser, Debug, PartialEq)]
 pub struct Args {
+    /// The paths to put into the trash.
     #[clap(parse(from_os_str))]
     pub paths: Vec<PathBuf>,
-
-    // compatibility
-    /// ignored (for GNU rm compatibility)
-    #[clap(short, long)]
-    pub directory: bool,
-
-    /// ignored (for GNU rm compatibility)
-    #[clap(short, long)]
-    pub force: bool,
-
-    /// ignored (for GNU rm compatibility)
-    #[clap(short, long)]
-    pub interactive: bool,
-
-    /// ignored (for GNU rm compatibility)
-    #[clap(short = 'r', visible_short_alias = 'R', long = "recursive")]
-    pub recursive: bool,
 }
 
 impl Args {
-    pub fn run(&self, _: &app::GlobalArgs) -> Result<()> {
+    pub fn run(&self, _: &app::ConfigArgs) -> Result<()> {
         let paths = &self.paths;
         if paths.is_empty() {
             bail!("No paths were specified to trash");

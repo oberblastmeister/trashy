@@ -19,11 +19,13 @@ pub struct Args {
 }
 
 impl Args {
-    pub fn run(&self, global_args: &app::GlobalArgs) -> Result<()> {
+    pub fn run(&self, config_args: &app::ConfigArgs) -> Result<()> {
+        let is_atty = atty::is(atty::Stream::Stdout);
         let items = self.query_args.list(false)?;
         display_items(
             items.into_iter(),
-            global_args.color_status.color(),
+            config_args.color_status.merge(is_atty),
+            config_args.table_status.merge(is_atty),
             Path::new(""),
         )?;
         Ok(())
@@ -35,10 +37,23 @@ pub struct QueryArgs {
     #[clap(flatten)]
     filter_args: FilterArgs,
 
-    #[clap(long)]
+    /// Reverse the sorting of trash items
+    /// 
+    /// Normally when 'list' is run, the newest trash items are at the bottom.
+    /// This option puts the oldest trash item at the bottom.
+    /// This will also affect 'empty' or 'restore' if used in either command.
+    /// Examples:
+    /// `trash empty --rev -n=10` will delete 10 oldest trash items are deleted.
+    #[clap(long, verbatim_doc_comment)]
     rev: bool,
 
-    #[clap(short)]
+    /// Show 'n' maximum trash items
+    /// 
+    /// This will also affect 'empty' or 'restore' if used in either command.
+    /// Examples:
+    /// `trash list -n=10` will list the ten newest trashed items.
+    /// `trash restore -n=10` will list restore the ten newest trashed items.
+    #[clap(short, verbatim_doc_comment)]
     n: Option<u32>,
 }
 
@@ -72,23 +87,25 @@ impl QueryArgs {
 
 pub fn display_items(
     items: impl ExactSizeIterator<Item = TrashItem>,
-    color: bool,
+    use_color: bool,
+    use_table: bool,
     base: &Path,
 ) -> Result<()> {
-    let table = items_to_table(items, color, base)?;
+    let table = items_to_table(items, use_color, use_table, base)?;
     println!("{table}");
     Ok(())
 }
 
 pub fn items_to_table(
     items: impl ExactSizeIterator<Item = TrashItem>,
-    color: bool,
+    use_color: bool,
+    use_table: bool,
     base: &Path,
 ) -> Result<Table> {
     let mut failed = 0;
     let iter = {
         let vec: Vec<_> = items
-            .filter_map(|item| match display_item(&item, color, base) {
+            .filter_map(|item| match display_item(&item, use_color, base) {
                 Ok(s) => Some(s),
                 Err(_) => {
                     failed += 1;
@@ -105,10 +122,23 @@ pub fn items_to_table(
                 path: iter.1,
             })
     };
-    let table = Table::builder(iter)
-        .build()
-        .with(tabled::Style::rounded())
-        .with(tabled::Modify::new(Segment::all()).with(Alignment::left()));
+    let table = Table::builder(iter);
+    let table = if use_table {
+        table
+    } else {
+        // temporary hack to remove the column header
+        // will print an extra newline though
+        table.set_columns::<_, &str>([])
+    }
+    .build()
+    .with(tabled::Modify::new(Segment::all()).with(Alignment::left()));
+    let table = if use_table {
+        table.with(tabled::Style::rounded())
+    } else {
+        table
+            // .with(tabled::Header(""))
+            .with(tabled::Style::empty())
+    };
     Ok(table)
 }
 
@@ -138,7 +168,11 @@ impl Tabled for TrashItemDisplay {
     }
 
     fn headers() -> Vec<String> {
-        vec!["i".to_string(), "Time".to_string(), "Path".to_string()]
+        vec![
+            String::from("i"),
+            String::from("Time"),
+            String::from("Path"),
+        ]
     }
 }
 

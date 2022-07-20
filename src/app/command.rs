@@ -30,13 +30,13 @@ pub enum Command {
 }
 
 impl Command {
-    pub fn run(self, global_args: &super::GlobalArgs) -> Result<()> {
+    pub fn run(self, config_args: &super::ConfigArgs) -> Result<()> {
         use Command::*;
         match self {
-            List(args) => args.run(global_args),
-            Put(args) => args.run(global_args),
-            Empty(args) => args.run(),
-            Restore(args) => args.run(global_args),
+            List(args) => args.run(config_args),
+            Put(args) => args.run(config_args),
+            Empty(args) => args.run(config_args),
+            Restore(args) => args.run(config_args),
             Completions(args) => args.run(),
             Manpage(args) => args.run(),
         }
