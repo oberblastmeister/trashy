@@ -38,7 +38,7 @@ pub struct QueryArgs {
     filter_args: FilterArgs,
 
     /// Reverse the sorting of trash items
-    /// 
+    ///
     /// Normally when 'list' is run, the newest trash items are at the bottom.
     /// This option puts the oldest trash item at the bottom.
     /// This will also affect 'empty' or 'restore' if used in either command.
@@ -48,7 +48,7 @@ pub struct QueryArgs {
     rev: bool,
 
     /// Show 'n' maximum trash items
-    /// 
+    ///
     /// This will also affect 'empty' or 'restore' if used in either command.
     /// Examples:
     /// `trash list -n=10` will list the ten newest trashed items.
@@ -122,16 +122,13 @@ pub fn items_to_table(
                 path: iter.1,
             })
     };
-    let table = Table::builder(iter);
-    let table = if use_table {
-        table
-    } else {
-        // temporary hack to remove the column header
-        // will print an extra newline though
-        table.set_columns::<_, &str>([])
-    }
-    .build()
-    .with(tabled::Modify::new(Segment::all()).with(Alignment::left()));
+    let mut table = Table::builder(iter);
+    if !use_table {
+        table.remove_columns();
+    };
+    let table = table
+        .build()
+        .with(tabled::Modify::new(Segment::all()).with(Alignment::left()));
     let table = if use_table {
         table.with(tabled::Style::rounded())
     } else {
