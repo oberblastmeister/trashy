@@ -12,8 +12,8 @@ use trash::TrashItem;
 #[derive(Parser, Debug)]
 pub struct FilterArgs {
     /// Filter by time (older than)
-    /// 
-    /// Filter results based on when the file was trashed. The argument can be provided 
+    ///
+    /// Filter results based on when the file was trashed. The argument can be provided
     /// as a specific point in time (YYYY-MM-DD HH:MM:SS) or as a duration (10h, 1d, 35min).
     /// '--older-than' or '--older' can be used as aliases.
     /// This option can be used in 'list', 'restore', and 'empty'
@@ -38,12 +38,12 @@ pub struct FilterArgs {
     pub within: Option<String>,
 
     /// Filter by pattern
-    /// 
+    ///
     /// This will filter using a pattern type specified in '--match'.
     pub patterns: Vec<String>,
 
     /// What type of pattern to use
-    /// 
+    ///
     /// This will choose the pattern type use in <PATTERNS>
     #[clap(short, long, arg_enum, default_value_t = Match::Regex)]
     pub r#match: Match,

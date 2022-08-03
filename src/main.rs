@@ -5,8 +5,8 @@ mod print;
 mod range;
 mod range_set;
 mod range_syntax;
-mod utils;
 mod trash_item;
+mod utils;
 
 use anyhow::Result;
 use app::Args;
