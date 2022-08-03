@@ -55,6 +55,7 @@ mod tests {
     #[test]
     fn test_succeed() {
         parse_succeed("123..1234", [123..1234]);
+        parse_succeed("7 8 4", [4..5, 7..8, 8..9]);
         parse_succeed("5", [5..6]);
     }
 

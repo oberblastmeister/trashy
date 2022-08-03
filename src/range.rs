@@ -42,6 +42,10 @@ impl Range {
     pub fn to_std(self) -> ops::Range<usize> {
         self.start as usize..self.end as usize
     }
+
+    pub fn into_iter(self) -> impl Iterator<Item = u32> {
+        self.start..self.end
+    }
 }
 
 impl From<ops::Range<u32>> for Range {

@@ -5,6 +5,12 @@ pub struct RangeSet {
     ranges: Vec<Range>,
 }
 
+impl RangeSet {
+    pub fn is_empty(&self) -> bool {
+        self.ranges.is_empty()
+    }
+}
+
 impl From<Vec<Range>> for RangeSet {
     fn from(mut ranges: Vec<Range>) -> Self {
         ranges.sort_by_key(|range| range.start());

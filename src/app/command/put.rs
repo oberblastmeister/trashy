@@ -8,7 +8,6 @@ use crate::app;
 #[derive(Parser, Debug, PartialEq)]
 pub struct Args {
     /// The paths to put into the trash.
-    #[clap(parse(from_os_str))]
     pub paths: Vec<PathBuf>,
 }
 

@@ -1,9 +1,8 @@
-use anyhow::{bail, Result};
+use anyhow::Result;
 use clap::Parser;
-use dialoguer::Confirm;
-use trash::TrashItem;
+use either::Either::*;
 
-use crate::{app, utils};
+use crate::{app, trash_item::MaybeIndexedTrashItems};
 
 use super::list;
 
@@ -17,52 +16,48 @@ pub struct Args {
     all: bool,
 
     /// Skip confirmation
-    /// 
+    ///
     /// By default, 'trashy' will ask for confirmation before permanently removing files.
     /// You can opt out of this by adding '--force'.
     /// This can be useful in scripts.
-    #[clap(long)]
+    #[clap(short, long)]
     force: bool,
 
-    #[clap(long)]
+    #[clap(short, long)]
     ranges: Option<String>,
 }
 
 impl Args {
-    pub fn run(&self, _: &app::ConfigArgs) -> Result<()> {
-        use crate::range_syntax;
-
-        let empty = if self.force { empty } else { empty_with_prompt };
-
-        let items = self.query_args.list(true)?;
-        if let Some(ranges) = &self.ranges {
-            for range in range_syntax::parse_range_set(ranges)? {
-                if range.start() as usize > items.len() || range.end() as usize > items.len() {
-                    bail!("Range is out of bounds");
-                }
-                empty(
-                    items[range.to_std()]
-                        .into_iter()
-                        .map(|item| utils::clone_trash_item(item))
-                        .collect(),
-                )?;
-            }
+    pub fn run(&self, config_args: &app::ConfigArgs) -> Result<()> {
+        let empty: Box<dyn Fn(_) -> _> = if self.force {
+            Box::new(empty)
         } else {
-            empty(items)?;
+            Box::new(|items| empty_with_prompt(items, config_args))
+        };
+
+        if let Some(ranges) = &self.ranges {
+            empty(MaybeIndexedTrashItems(Right(
+                self.query_args.list_ranged(true, ranges)?,
+            )))?;
+        } else {
+            empty(MaybeIndexedTrashItems(Left(self.query_args.list(true)?)))?
         }
         Ok(())
     }
 }
 
-fn empty_with_prompt(items: Vec<TrashItem>) -> Result<()> {
-    println!("{} items will be emptied from the trash", items.len());
+fn empty_with_prompt(items: MaybeIndexedTrashItems, config_args: &app::ConfigArgs) -> Result<()> {
+    use dialoguer::Confirm;
+
+    println!("{} items will be emptied", items.len());
+    list::display_indexed_items(items.indexed_items(), config_args)?;
     if Confirm::new().with_prompt("Are you sure?").interact()? {
         empty(items)?;
     }
     Ok(())
 }
 
-fn empty(items: impl IntoIterator<Item = TrashItem>) -> Result<()> {
-    trash::os_limited::purge_all(items)?;
+fn empty(items: MaybeIndexedTrashItems) -> Result<()> {
+    trash::os_limited::purge_all(items.items())?;
     Ok(())
 }

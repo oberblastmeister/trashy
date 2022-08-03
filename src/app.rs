@@ -4,6 +4,8 @@ use anyhow::Result;
 use clap::{AppSettings, Parser};
 use command::Command;
 
+use command::put;
+
 #[derive(Debug, Parser)]
 #[clap(
     version,
@@ -12,14 +14,18 @@ use command::Command;
     global_setting(AppSettings::DeriveDisplayOrder),
     after_help = "Note: `trash -h` prints a short and concise overview while `trash --help` gives all \
                  details.",
+    args_conflicts_with_subcommands = true,
 )]
 pub struct Args {
     /// The command to run.
     #[clap(subcommand)]
-    pub command: Command,
+    pub command: Option<Command>,
 
     #[clap(flatten)]
     config_args: ConfigArgs,
+
+    #[clap(flatten)]
+    put_args: put::Args,
 }
 
 #[derive(Debug, Parser)]
@@ -75,7 +81,10 @@ impl Status {
 
 impl Args {
     pub fn run(self) -> Result<()> {
-        self.command.run(&self.config_args)?;
+        match self.command {
+            None => self.put_args.run(&self.config_args)?,
+            Some(command) => command.run(&self.config_args)?,
+        }
         Ok(())
     }
 }

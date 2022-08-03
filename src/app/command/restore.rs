@@ -1,8 +1,10 @@
-use anyhow::{bail, Result};
+use anyhow::Result;
 
+use crate::trash_item::MaybeIndexedTrashItems;
 use clap::Parser;
+use either::Either::*;
 
-use crate::{app, utils};
+use crate::app;
 
 use super::list;
 
@@ -16,33 +18,47 @@ pub struct Args {
     // /// Go into interactive mode to restore files. The default when running with no flags.
     // #[clap(short, long)]
     // interactive: bool,
-
     #[clap(flatten)]
     query_args: list::QueryArgs,
 
-    #[clap(long)]
+    #[clap(short, long)]
     ranges: Option<String>,
+
+    #[clap(short, long)]
+    force: bool,
 }
 
 impl Args {
-    pub fn run(&self, _: &app::ConfigArgs) -> Result<()> {
-        use crate::range_syntax;
-
-        let items = self.query_args.list(true)?;
-        if let Some(indices) = &self.ranges {
-            for range in range_syntax::parse_range_set(indices)? {
-                if range.start() as usize > items.len() || range.end() as usize > items.len() {
-                    bail!("Range is out of bounds");
-                }
-                trash::os_limited::restore_all(
-                    items[range.to_std()]
-                        .into_iter()
-                        .map(|item| utils::clone_trash_item(item)),
-                )?;
-            }
+    pub fn run(&self, config_args: &app::ConfigArgs) -> Result<()> {
+        let restore: Box<dyn Fn(_) -> _> = if self.force {
+            Box::new(restore)
         } else {
-            trash::os_limited::restore_all(items)?;
+            Box::new(|items| restore_with_prompt(items, config_args))
+        };
+
+        if let Some(ranges) = &self.ranges {
+            restore(MaybeIndexedTrashItems(Right(
+                self.query_args.list_ranged(true, ranges)?,
+            )))?;
+        } else {
+            restore(MaybeIndexedTrashItems(Left(self.query_args.list(true)?)))?
         }
         Ok(())
     }
+}
+
+fn restore_with_prompt(items: MaybeIndexedTrashItems, config_args: &app::ConfigArgs) -> Result<()> {
+    use dialoguer::Confirm;
+
+    println!("{} items will be restored", items.len());
+    list::display_indexed_items(items.indexed_items(), config_args)?;
+    if Confirm::new().with_prompt("Are you sure?").interact()? {
+        restore(items)?;
+    }
+    Ok(())
+}
+
+fn restore<'a>(items: MaybeIndexedTrashItems) -> Result<()> {
+    trash::os_limited::restore_all(items.items())?;
+    Ok(())
 }

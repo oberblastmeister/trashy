@@ -34,6 +34,7 @@ regex = "1.6.0"
 aho-corasick = "0.7.18"
 dialoguer = "0.10.2"
 globset = { version = "0.4.9", default-features = false }
+either = "1.7.0"
 # prettytable-rs = "0.8.0"
 # log = "0.4.11"
 # lscolors = "0.7.1"

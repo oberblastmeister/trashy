@@ -74,3 +74,7 @@ pub fn clone_trash_item(item: &TrashItem) -> TrashItem {
         time_deleted: item.time_deleted.clone(),
     }
 }
+
+pub fn swap<T, U>((t, u): (T, U)) -> (U, T) {
+    (u, t)
+}

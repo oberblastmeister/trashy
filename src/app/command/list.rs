@@ -10,7 +10,12 @@ use anyhow::{bail, Result};
 use tabled::{object::Segment, Alignment, Table, Tabled};
 use trash::TrashItem;
 
-use crate::{app, filter::FilterArgs, utils};
+use crate::{
+    app,
+    filter::FilterArgs,
+    range_syntax,
+    utils::{self, swap},
+};
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -20,14 +25,8 @@ pub struct Args {
 
 impl Args {
     pub fn run(&self, config_args: &app::ConfigArgs) -> Result<()> {
-        let is_atty = atty::is(atty::Stream::Stdout);
         let items = self.query_args.list(false)?;
-        display_items(
-            items.into_iter(),
-            config_args.color_status.merge(is_atty),
-            config_args.table_status.merge(is_atty),
-            Path::new(""),
-        )?;
+        display_items((&items).into_iter(), config_args)?;
         Ok(())
     }
 }
@@ -72,9 +71,9 @@ impl QueryArgs {
                     .collect()
             };
             if self.rev {
-                items.sort_by_key(|item| cmp::Reverse(item.time_deleted));
-            } else {
                 items.sort_by_key(|item| item.time_deleted);
+            } else {
+                items.sort_by_key(|item| cmp::Reverse(item.time_deleted));
             }
             items
         };
@@ -83,46 +82,89 @@ impl QueryArgs {
             None => items,
         })
     }
+
+    pub fn list_ranged(&self, nonempty: bool, ranges: &str) -> Result<Vec<(u32, TrashItem)>> {
+        let ranges = range_syntax::parse_range_set(ranges)?;
+        let items = self.list(if !ranges.is_empty() { false } else { nonempty })?;
+        let mut new_items = Vec::new();
+        for range in ranges {
+            if range.start() as usize > items.len() || range.end() as usize > items.len() {
+                bail!("Range is out of bounds");
+            }
+            new_items.extend(
+                items[range.to_std()]
+                    .into_iter()
+                    .map(utils::clone_trash_item)
+                    .zip(range.into_iter())
+                    .map(swap),
+            );
+        }
+        Ok(new_items)
+    }
 }
 
-pub fn display_items(
-    items: impl ExactSizeIterator<Item = TrashItem>,
+pub fn display_items<'a>(
+    items: impl Iterator<Item = &'a TrashItem>,
+    config_args: &app::ConfigArgs,
+) -> Result<()> {
+    display_indexed_items(items.zip(0..).map(swap), config_args)
+}
+
+pub fn display_indexed_items<'a>(
+    items: impl Iterator<Item = (u32, &'a TrashItem)>,
+    config_args: &app::ConfigArgs,
+) -> Result<()> {
+    let is_atty = atty::is(atty::Stream::Stdout);
+    display_indexed_items_with(
+        items,
+        config_args.color_status.merge(is_atty),
+        config_args.table_status.merge(is_atty),
+        Path::new(""),
+    )
+}
+
+fn display_indexed_items_with<'a>(
+    items: impl Iterator<Item = (u32, &'a TrashItem)>,
     use_color: bool,
     use_table: bool,
     base: &Path,
 ) -> Result<()> {
-    let table = items_to_table(items, use_color, use_table, base)?;
+    let table = indexed_items_to_table(items, use_color, use_table, base)?;
     println!("{table}");
     Ok(())
 }
 
-pub fn items_to_table(
-    items: impl ExactSizeIterator<Item = TrashItem>,
+pub fn items_to_table<'a>(
+    items: impl Iterator<Item = &'a TrashItem>,
+    use_color: bool,
+    use_table: bool,
+    base: &Path,
+) -> Result<Table> {
+    indexed_items_to_table(items.zip(0..).map(swap), use_color, use_table, base)
+}
+
+pub fn indexed_items_to_table<'a>(
+    items: impl Iterator<Item = (u32, &'a TrashItem)>,
     use_color: bool,
     use_table: bool,
     base: &Path,
 ) -> Result<Table> {
     let mut failed = 0;
-    let iter = {
-        let vec: Vec<_> = items
-            .filter_map(|item| match display_item(&item, use_color, base) {
-                Ok(s) => Some(s),
-                Err(_) => {
-                    failed += 1;
-                    None
-                }
-            })
-            .collect();
-        let len = vec.len();
-        vec.into_iter()
-            .zip((0..len as u32).rev())
-            .map(|(iter, i)| TrashItemDisplay {
-                i,
-                time: iter.0,
-                path: iter.1,
-            })
-    };
-    let mut table = Table::builder(iter);
+    let items: Vec<_> = items
+        .filter_map(|(i, item)| match display_item(&item, use_color, base) {
+            Ok(s) => Some((i, s)),
+            Err(_) => {
+                failed += 1;
+                None
+            }
+        })
+        .map(|(i, t)| TrashItemDisplay {
+            i,
+            time: t.0,
+            path: t.1,
+        })
+        .collect();
+    let mut table = Table::builder(items.into_iter().rev());
     if !use_table {
         table.remove_columns();
     };
@@ -130,11 +172,9 @@ pub fn items_to_table(
         .build()
         .with(tabled::Modify::new(Segment::all()).with(Alignment::left()));
     let table = if use_table {
-        table.with(tabled::Style::rounded())
+        table.with(tabled::Style::modern())
     } else {
-        table
-            // .with(tabled::Header(""))
-            .with(tabled::Style::empty())
+        table.with(tabled::Style::empty())
     };
     Ok(table)
 }
@@ -191,12 +231,6 @@ pub fn display_item_date(item: &TrashItem) -> String {
     let datetime = Local.timestamp(item.time_deleted, 0);
     let humantime = chrono_humanize::HumanTime::from(datetime);
     format!("{humantime}")
-    // format!(
-    //     "{} {}, {}",
-    //     datetime.format("%B"),
-    //     datetime.format("%d"),
-    //     datetime.format("%H:%M")
-    // )
 }
 
 pub fn files_path_from_info_path(info_path: &Path) -> PathBuf {
