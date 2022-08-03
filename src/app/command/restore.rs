@@ -21,7 +21,7 @@ pub struct Args {
     #[clap(flatten)]
     query_args: list::QueryArgs,
 
-    #[clap(short, long)]
+    #[clap(short, long, conflicts_with = "rev")]
     ranges: Option<String>,
 
     #[clap(short, long)]

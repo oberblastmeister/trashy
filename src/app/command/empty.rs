@@ -15,6 +15,9 @@ pub struct Args {
     #[clap(long, conflicts_with_all = &["before", "within", "patterns"])]
     all: bool,
 
+    #[clap(short, long, conflicts_with = "rev")]
+    ranges: Option<String>,
+
     /// Skip confirmation
     ///
     /// By default, 'trashy' will ask for confirmation before permanently removing files.
@@ -23,8 +26,6 @@ pub struct Args {
     #[clap(short, long)]
     force: bool,
 
-    #[clap(short, long)]
-    ranges: Option<String>,
 }
 
 impl Args {
