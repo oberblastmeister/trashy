@@ -58,7 +58,7 @@ fn restore_with_prompt(items: MaybeIndexedTrashItems, config_args: &app::ConfigA
     Ok(())
 }
 
-fn restore<'a>(items: MaybeIndexedTrashItems) -> Result<()> {
+fn restore(items: MaybeIndexedTrashItems) -> Result<()> {
     trash::os_limited::restore_all(items.items())?;
     Ok(())
 }
