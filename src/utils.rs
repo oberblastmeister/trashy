@@ -71,7 +71,7 @@ pub fn clone_trash_item(item: &TrashItem) -> TrashItem {
         id: item.id.clone(),
         name: item.name.clone(),
         original_parent: item.original_parent.clone(),
-        time_deleted: item.time_deleted.clone(),
+        time_deleted: item.time_deleted,
     }
 }
 
