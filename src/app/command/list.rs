@@ -150,6 +150,8 @@ pub fn indexed_items_to_table<'a>(
     base: &Path,
 ) -> Result<Table> {
     let mut failed = 0;
+    //this isn't actually needless since we need to reverse the items, which can't be done with a single-ended iterator
+    #[allow(clippy::needless_collect)]
     let items: Vec<_> = items
         .filter_map(|(i, item)| match display_item(item, use_color, base) {
             Ok(s) => Some((i, s)),
