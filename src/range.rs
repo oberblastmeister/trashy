@@ -10,10 +10,7 @@ impl Range {
     pub fn new(start: u32, end: u32) -> Range {
         let new_start = cmp::min(start, end);
         let new_end = cmp::max(start, end);
-        Range {
-            start: new_start,
-            end: new_end,
-        }
+        Range { start: new_start, end: new_end }
     }
 
     pub fn start(self) -> u32 {
@@ -50,10 +47,7 @@ impl Range {
 
 impl From<ops::Range<u32>> for Range {
     fn from(range: ops::Range<u32>) -> Self {
-        Range {
-            start: range.start,
-            end: range.end,
-        }
+        Range { start: range.start, end: range.end }
     }
 }
 
@@ -63,14 +57,8 @@ mod tests {
 
     #[test]
     fn union() {
-        assert_eq!(
-            Range::new(1, 2).union(Range::new(2, 3)),
-            Some(Range::new(1, 3))
-        );
+        assert_eq!(Range::new(1, 2).union(Range::new(2, 3)), Some(Range::new(1, 3)));
         assert_eq!(Range::new(1, 3).union(Range::new(4, 5)), None);
-        assert_eq!(
-            Range::new(1, 3).union(Range::new(2, 5)),
-            Some(Range::new(1, 5))
-        );
+        assert_eq!(Range::new(1, 3).union(Range::new(2, 5)), Some(Range::new(1, 5)));
     }
 }

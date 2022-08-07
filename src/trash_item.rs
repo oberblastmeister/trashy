@@ -7,10 +7,7 @@ pub struct MaybeIndexedTrashItems(pub Either<Vec<TrashItem>, Vec<(u32, TrashItem
 
 impl MaybeIndexedTrashItems {
     pub fn items(self) -> impl Iterator<Item = TrashItem> {
-        self.0
-            .map_right(|v| v.into_iter().map(|(_, t)| t))
-            .into_iter()
-            .into_iter()
+        self.0.map_right(|v| v.into_iter().map(|(_, t)| t)).into_iter().into_iter()
     }
 
     pub fn indexed_items(&self) -> impl Iterator<Item = (u32, &'_ TrashItem)> {

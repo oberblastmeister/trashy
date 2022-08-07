@@ -46,11 +46,7 @@ mod tests {
 
     fn parse_fail(s: &str) {
         let res = parse_range_set(s);
-        assert!(
-            res.is_err(),
-            "Expected parsing to fail, got {:?}",
-            res.unwrap()
-        );
+        assert!(res.is_err(), "Expected parsing to fail, got {:?}", res.unwrap());
     }
 
     #[test]

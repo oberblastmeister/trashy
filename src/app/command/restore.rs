@@ -37,9 +37,7 @@ impl Args {
         };
 
         if let Some(ranges) = &self.ranges {
-            restore(MaybeIndexedTrashItems(Right(
-                self.query_args.list_ranged(true, ranges)?,
-            )))?;
+            restore(MaybeIndexedTrashItems(Right(self.query_args.list_ranged(true, ranges)?)))?;
         } else {
             restore(MaybeIndexedTrashItems(Left(self.query_args.list(true)?)))?
         }

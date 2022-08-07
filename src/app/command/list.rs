@@ -65,10 +65,7 @@ impl QueryArgs {
         let items = {
             let mut items = trash::os_limited::list()?;
             if !filters.is_empty() {
-                items = items
-                    .into_iter()
-                    .filter(|item| filters.is_match(item))
-                    .collect()
+                items = items.into_iter().filter(|item| filters.is_match(item)).collect()
             };
             if self.rev {
                 items.sort_by_key(|item| item.time_deleted);
@@ -160,19 +157,13 @@ pub fn indexed_items_to_table<'a>(
                 None
             }
         })
-        .map(|(i, t)| TrashItemDisplay {
-            i,
-            time: t.0,
-            path: t.1,
-        })
+        .map(|(i, t)| TrashItemDisplay { i, time: t.0, path: t.1 })
         .collect();
     let mut table = Table::builder(items.into_iter().rev());
     if !use_table {
         table.remove_columns();
     };
-    let table = table
-        .build()
-        .with(tabled::Modify::new(Segment::all()).with(Alignment::left()));
+    let table = table.build().with(tabled::Modify::new(Segment::all()).with(Alignment::left()));
     let table = if use_table {
         table.with(tabled::Style::modern())
     } else {
@@ -206,11 +197,7 @@ impl Tabled for TrashItemDisplay {
     }
 
     fn headers() -> Vec<String> {
-        vec![
-            String::from("i"),
-            String::from("Time"),
-            String::from("Path"),
-        ]
+        vec![String::from("i"), String::from("Time"), String::from("Path")]
     }
 }
 

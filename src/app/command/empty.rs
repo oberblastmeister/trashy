@@ -36,9 +36,7 @@ impl Args {
         };
 
         if let Some(ranges) = &self.ranges {
-            empty(MaybeIndexedTrashItems(Right(
-                self.query_args.list_ranged(true, ranges)?,
-            )))?;
+            empty(MaybeIndexedTrashItems(Right(self.query_args.list_ranged(true, ranges)?)))?;
         } else {
             empty(MaybeIndexedTrashItems(Left(self.query_args.list(true)?)))?
         }
