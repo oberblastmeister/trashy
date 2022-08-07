@@ -38,7 +38,8 @@ mod tests {
 
     fn parse_succeed<const N: usize>(s: &str, expect: [ops::Range<u32>; N]) {
         assert_eq!(
-            parse_range_set(s).expect(&format!("Failed to parse str `{}` into a restore index", s)),
+            parse_range_set(s)
+                .unwrap_or_else(|_| panic!("Failed to parse str `{}` into a restore index", s)),
             expect.into_iter().map(Into::into).collect()
         );
     }
