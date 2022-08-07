@@ -1,18 +1,18 @@
-# trash-cli
+# trashy
 
 ![Build Status](https://github.com/oberblastmeister/trash-cli/workflows/ci/badge.svg)
 
-*trash-cli* is a simple, fast, and featureful alternative to *rm* and *trash-cli* written in rust.
+*trashy* is a simple, fast, and featureful alternative to *rm* and *trash-cli* written in rust.
 
 ## Features
 
-- simple to use, just to `trash PATH`
-- recursive by default compared to `rm`, without having the issues
-- colorized paths (similar to *fd*)
-- cool tables to show info of trashed files (inspired by *csview*)
-- fast (benchmarks coming)
-- full Unicode support
-- delete files without having to think about them, never lose a file again
+- easy to use, just run `trash PATH`
+- recursive by default, without having the issues
+- beautiful output
+    - colorized paths (similar to *fd*)
+    - cool tables
+- very fast, and faster than trash-cli
+- much safer than `rm -rf`
 
 ## Usage
 
@@ -51,7 +51,7 @@ SUBCOMMANDS:
 
 ### Using cargo
 
-clone the github repo using `git clone https://github.com/oberblastmeister/trash-cli.git`
+clone the github repo using `git clone https://github.com/oberblastmeister/trashy.git`
 
 build using `cargo build --release`
 
@@ -65,6 +65,6 @@ AUR package coming soon!
 
 Copyright (c) 2020 Brian Shu
 
-*trash-cli* is distributed under the terms of both the MIT license and the Apache License 2.0.
+*trashy* is distributed under the terms of both the MIT license and the Apache License 2.0.
 
 See the [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT)
