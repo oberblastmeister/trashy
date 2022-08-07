@@ -25,7 +25,6 @@ pub struct Args {
     /// This can be useful in scripts.
     #[clap(short, long)]
     force: bool,
-
 }
 
 impl Args {

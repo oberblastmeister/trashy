@@ -67,7 +67,7 @@ impl FilterArgs {
         let within = parse_time(self.within.as_deref())?;
         let patterns = match self.r#match {
             Match::Regex => Patterns::Regex(RegexSet::new(&self.patterns)?),
-            Match::Substring => Patterns::Substring(AhoCorasick::new(&self.patterns)),
+            Match::Substring => Patterns::Substring(Box::new(AhoCorasick::new(&self.patterns))),
             Match::Glob => Patterns::Glob(new_globset(self.patterns.iter().map(|s| &**s))?),
             Match::Exact => Patterns::Exact(self.patterns.iter().cloned().collect()),
         };
@@ -134,7 +134,7 @@ impl TimeFilter {
 
 pub enum Patterns {
     Regex(RegexSet),
-    Substring(AhoCorasick),
+    Substring(Box<AhoCorasick>),
     Glob(GlobSet),
     Exact(HashSet<String>),
 }

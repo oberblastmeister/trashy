@@ -26,7 +26,7 @@ pub struct Args {
 impl Args {
     pub fn run(&self, config_args: &app::ConfigArgs) -> Result<()> {
         let items = self.query_args.list(false)?;
-        display_items((&items).into_iter(), config_args)?;
+        display_items(items.iter(), config_args)?;
         Ok(())
     }
 }
@@ -93,7 +93,7 @@ impl QueryArgs {
             }
             new_items.extend(
                 items[range.to_std()]
-                    .into_iter()
+                    .iter()
                     .map(utils::clone_trash_item)
                     .zip(range.into_iter())
                     .map(swap),
@@ -150,8 +150,10 @@ pub fn indexed_items_to_table<'a>(
     base: &Path,
 ) -> Result<Table> {
     let mut failed = 0;
+    //this isn't actually needless since we need to reverse the items, which can't be done with a single-ended iterator
+    #[allow(clippy::needless_collect)]
     let items: Vec<_> = items
-        .filter_map(|(i, item)| match display_item(&item, use_color, base) {
+        .filter_map(|(i, item)| match display_item(item, use_color, base) {
             Ok(s) => Some((i, s)),
             Err(_) => {
                 failed += 1;
@@ -180,8 +182,7 @@ pub fn indexed_items_to_table<'a>(
 }
 
 pub fn display_item(item: &TrashItem, color: bool, base: &Path) -> Result<(String, String)> {
-    let mut displayed_path =
-        utils::path::display(&item.original_path().strip_prefix(base).unwrap());
+    let mut displayed_path = utils::path::display(item.original_path().strip_prefix(base).unwrap());
     if cfg!(target_os = "linux") && color {
         if let Some(style) = item_lscolors(item)? {
             let ansi_style = style.to_ansi_term_style();
