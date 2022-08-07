@@ -4,6 +4,7 @@ mod list;
 mod manpage;
 pub mod put;
 mod restore;
+mod utils;
 
 use anyhow::Result;
 use clap::Parser;

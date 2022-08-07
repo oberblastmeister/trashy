@@ -16,6 +16,16 @@
 
 ## Usage
 
+### Trash a path
+
+```bash
+$ trash first second third
+```
+
+This is just sugar for 
+
+```bash
+$ trash put first second third
 ```
 trashy 0.1.0
 Brian Shu <littlebubu.shu@gmail.com>

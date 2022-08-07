@@ -11,13 +11,6 @@ use super::list;
 #[derive(Debug, Parser)]
 // wo wthis
 pub struct Args {
-    // /// Optionally restore inside of a directory
-    // #[clap(short = 'd', long = "directory", conflicts_with_all = &["interactive", "last"])]
-    // directory: Option<PathBuf>,
-
-    // /// Go into interactive mode to restore files. The default when running with no flags.
-    // #[clap(short, long)]
-    // interactive: bool,
     #[clap(flatten)]
     query_args: list::QueryArgs,
 
@@ -33,7 +26,9 @@ impl Args {
         let restore: Box<dyn Fn(_) -> _> = if self.force {
             Box::new(restore)
         } else {
-            Box::new(|items| restore_with_prompt(items, config_args))
+            Box::new(|items| {
+                super::utils::on_items_with_prompt(items, config_args, "restored", restore)
+            })
         };
 
         if let Some(ranges) = &self.ranges {
@@ -43,17 +38,6 @@ impl Args {
         }
         Ok(())
     }
-}
-
-fn restore_with_prompt(items: MaybeIndexedTrashItems, config_args: &app::ConfigArgs) -> Result<()> {
-    use dialoguer::Confirm;
-
-    println!("{} items will be restored", items.len());
-    list::display_indexed_items(items.indexed_items(), config_args)?;
-    if Confirm::new().with_prompt("Are you sure?").interact()? {
-        restore(items)?;
-    }
-    Ok(())
 }
 
 fn restore(items: MaybeIndexedTrashItems) -> Result<()> {

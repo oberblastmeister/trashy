@@ -12,7 +12,7 @@ pub struct Args {
     query_args: list::QueryArgs,
 
     /// Empty all files
-    #[clap(long, conflicts_with_all = &["before", "within", "patterns"])]
+    #[clap(long, conflicts_with_all = &list::QueryArgs::CONFLICTS)]
     all: bool,
 
     #[clap(short, long, conflicts_with = "rev")]
@@ -32,7 +32,9 @@ impl Args {
         let empty: Box<dyn Fn(_) -> _> = if self.force {
             Box::new(empty)
         } else {
-            Box::new(|items| empty_with_prompt(items, config_args))
+            Box::new(|items| {
+                super::utils::on_items_with_prompt(items, config_args, "emptied", empty)
+            })
         };
 
         if let Some(ranges) = &self.ranges {
@@ -42,17 +44,6 @@ impl Args {
         }
         Ok(())
     }
-}
-
-fn empty_with_prompt(items: MaybeIndexedTrashItems, config_args: &app::ConfigArgs) -> Result<()> {
-    use dialoguer::Confirm;
-
-    println!("{} items will be emptied", items.len());
-    list::display_indexed_items(items.indexed_items(), config_args)?;
-    if Confirm::new().with_prompt("Are you sure?").interact()? {
-        empty(items)?;
-    }
-    Ok(())
 }
 
 fn empty(items: MaybeIndexedTrashItems) -> Result<()> {

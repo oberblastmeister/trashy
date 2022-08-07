@@ -57,6 +57,8 @@ pub struct QueryArgs {
 }
 
 impl QueryArgs {
+    pub const CONFLICTS: [&'static str; 6] = ["before", "within", "patterns", "match", "rev", "n"];
+
     pub fn list(&self, nonempty: bool) -> Result<Vec<TrashItem>> {
         let filters = self.filter_args.to_filters()?;
         if nonempty && filters.is_empty() {
@@ -147,7 +149,7 @@ pub fn indexed_items_to_table<'a>(
     base: &Path,
 ) -> Result<Table> {
     let mut failed = 0;
-    //this isn't actually needless since we need to reverse the items, which can't be done with a single-ended iterator
+    // this isn't actually needless since we need to reverse the items, which can't be done with a single-ended iterator
     #[allow(clippy::needless_collect)]
     let items: Vec<_> = items
         .filter_map(|(i, item)| match display_item(item, use_color, base) {
