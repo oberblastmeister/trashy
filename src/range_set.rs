@@ -19,9 +19,9 @@ impl From<Vec<Range>> for RangeSet {
     }
 }
 
-impl Into<Vec<Range>> for RangeSet {
-    fn into(self) -> Vec<Range> {
-        self.ranges
+impl From<RangeSet> for Vec<Range> {
+    fn from(range_set: RangeSet) -> Self {
+        range_set.ranges
     }
 }
 
