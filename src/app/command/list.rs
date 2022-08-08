@@ -42,7 +42,7 @@ pub struct QueryArgs {
     /// This option puts the oldest trash item at the bottom.
     /// This will also affect 'empty' or 'restore' if used in either command.
     /// Examples:
-    /// `trash empty --rev -n=10` will delete 10 oldest trash items are deleted.
+    /// 'trash empty --rev -n=10' will delete 10 oldest trash items are deleted.
     #[clap(long, verbatim_doc_comment)]
     rev: bool,
 
@@ -50,10 +50,10 @@ pub struct QueryArgs {
     ///
     /// This will also affect 'empty' or 'restore' if used in either command.
     /// Examples:
-    /// `trash list -n=10` will list the ten newest trashed items.
-    /// `trash restore -n=10` will list restore the ten newest trashed items.
-    #[clap(short, verbatim_doc_comment)]
-    n: Option<u32>,
+    /// 'trash list -n=10' will list the ten newest trashed items.
+    /// 'trash restore -n=10' will list restore the ten newest trashed items.
+    #[clap(short = 'n', long = "max", verbatim_doc_comment)]
+    max: Option<u32>,
 }
 
 pub fn list_only() -> Result<Vec<TrashItem>> {
@@ -94,7 +94,7 @@ impl QueryArgs {
             }
             items
         };
-        Ok(match self.n {
+        Ok(match self.max {
             Some(n) => items.into_iter().take(n as usize).collect(),
             None => items,
         })

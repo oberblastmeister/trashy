@@ -22,13 +22,13 @@ pub struct FilterArgs {
     /// '--older-than' or '--older' can be used as aliases.
     /// This option can be used in 'list', 'restore', and 'empty'
     /// Examples:
-    /// --before '2018-10-27 10:00:00'
-    /// --older-than 2weeks
-    /// --older 2018-10-27
-    #[clap(long, alias = "older-than", alias = "older", action = ArgAction::Append)]
+    ///     --before '2018-10-27 10:00:00'
+    ///     --older-than 2weeks
+    ///     --older 2018-10-27
+    #[clap(long, visible_alias = "older-than", visible_alias = "older", action = ArgAction::Append, verbatim_doc_comment)]
     pub before: Vec<String>,
 
-    /// Filter by time (newer than)
+    /// Filter by time
     ///
     /// Filter results based on when the file was trashed. The argument can be provided
     /// as a specific point in time (YYYY-MM-DD HH:MM:SS) or as a duration (10h, 1d, 35min).
@@ -38,7 +38,7 @@ pub struct FilterArgs {
     ///     --changed-within 2weeks
     ///     --change-newer-than '2018-10-27 10:00:00'
     ///     --newer 2018-10-27
-    #[clap(long, alias = "newer-than", alias = "newer", action = ArgAction::Append)]
+    #[clap(long, visible_alias = "newer-than", visible_alias = "newer", action = ArgAction::Append, verbatim_doc_comment)]
     pub within: Vec<String>,
 
     /// Filter by regex
@@ -76,7 +76,7 @@ pub struct FilterArgs {
     pub r#match: Match,
 
     /// Filter by directory
-    #[clap(short = 'd', long = "directory", alias = "dir", action = ArgAction::Append)]
+    #[clap(short = 'd', long = "directory", visible_alias = "dir", action = ArgAction::Append)]
     pub directories: Vec<PathBuf>,
 }
 
