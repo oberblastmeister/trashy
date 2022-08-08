@@ -4,6 +4,11 @@
 
 *trashy* is a simple, fast, and featureful alternative to *rm* and *trash-cli* written in rust.
 
+Quick links:
+
+- [Usage](#usage)
+- [Installation](#installation)
+
 ## Demo
 
 ![demo](doc/trashy_demo_1.gif)
