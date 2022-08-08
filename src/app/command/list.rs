@@ -171,7 +171,7 @@ pub fn indexed_items_to_table<'a>(
     };
     let table = table.build().with(tabled::Modify::new(Segment::all()).with(Alignment::left()));
     let table = if use_table {
-        table.with(tabled::Style::modern())
+        table.with(tabled::Style::rounded())
     } else {
         table.with(tabled::Style::empty())
     };

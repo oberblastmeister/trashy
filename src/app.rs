@@ -14,7 +14,6 @@ use command::put;
     global_setting(AppSettings::DeriveDisplayOrder),
     after_help = "Note: `trash -h` prints a short and concise overview while `trash --help` gives all \
                  details.",
-    args_conflicts_with_subcommands = true,
 )]
 pub struct Args {
     /// The command to run.
