@@ -4,7 +4,7 @@ use std::{
 };
 
 use chrono::{Local, TimeZone};
-use clap::{ArgAction, Parser};
+use clap::Parser;
 
 use anyhow::{bail, Result};
 use tabled::{object::Segment, Alignment, Table, Tabled};
@@ -54,10 +54,6 @@ pub struct QueryArgs {
     /// `trash restore -n=10` will list restore the ten newest trashed items.
     #[clap(short, verbatim_doc_comment)]
     n: Option<u32>,
-
-    /// Show trash items in a directory
-    #[clap(short = 'd', long = "directory", alias = "dir", action = ArgAction::Append)]
-    directories: Vec<String>,
 }
 
 pub fn list_only() -> Result<Vec<TrashItem>> {
@@ -83,21 +79,13 @@ impl QueryArgs {
 
     pub fn list(&self, nonempty: bool) -> Result<Vec<TrashItem>> {
         let filters = self.filter_args.to_filters()?;
-        let directories: Vec<_> =
-            self.directories.iter().map(|p| Ok(fs::canonicalize(p)?)).collect::<Result<_>>()?;
         if nonempty && filters.is_empty() {
             bail!("Must match something");
         }
         let items = {
             let mut items = trash::os_limited::list()?;
             if !filters.is_empty() {
-                items = items
-                    .into_iter()
-                    .filter(|item| {
-                        filters.is_match(item)
-                            && directories.iter().all(|d| item.original_path().starts_with(d))
-                    })
-                    .collect()
+                items = items.into_iter().filter(|item| filters.is_match(item)).collect()
             };
             if self.rev {
                 items.sort_by_key(|item| item.time_deleted);

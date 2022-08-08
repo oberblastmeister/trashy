@@ -1,4 +1,8 @@
-use std::{collections::HashSet, path::Path};
+use std::{
+    collections::HashSet,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use aho_corasick::AhoCorasick;
 use anyhow::{anyhow, Result};
@@ -66,41 +70,67 @@ pub struct FilterArgs {
 
     /// What type of pattern to use
     ///
-    /// This will choose the pattern type use in <PATTERNS>.
+    /// This will choose the pattern type used in <PATTERNS>.
     /// Each pattern type has it's own explicit option.
     #[clap(short, long, arg_enum, default_value_t = Match::Regex)]
     pub r#match: Match,
+
+    /// Filter by directory
+    #[clap(short = 'd', long = "directory", alias = "dir", action = ArgAction::Append)]
+    pub directories: Vec<String>,
 }
 
 impl FilterArgs {
     pub fn to_filters(&self) -> Result<Filters> {
-        if self.patterns.is_empty() && self.within.is_empty() && self.before.is_empty() {
-            return Ok(Filters(Vec::new()));
-        }
         let now = Utc::now();
         let parse_time =
             |s| parse_time_filter(now, s).ok_or_else(|| anyhow!("Invalid duration or date"));
-        let mut filters: Vec<_> = self
-            .before
-            .iter()
-            .map(|ref s| Ok(Filter::Time(TimeFilter::Before(parse_time(s)?))))
-            .collect::<Result<_>>()?;
-        filters.extend(
-            self.within
-                .iter()
-                .map(|s| Ok(Filter::Time(TimeFilter::After(parse_time(s)?))))
-                .collect::<Result<Vec<_>>>()?,
-        );
-        filters.push(Filter::PatternSet(PatternSet::new_regex(self.regex.iter())?));
-        filters.push(Filter::PatternSet(PatternSet::new_glob(self.glob.iter())?));
-        filters.push(Filter::PatternSet(PatternSet::new_substring(self.substring.iter())));
-        filters.push(Filter::PatternSet(PatternSet::new_exact(self.exact.iter())));
-        filters.push(Filter::PatternSet(match self.r#match {
-            Match::Regex => PatternSet::new_regex(self.patterns.iter())?,
-            Match::Substring => PatternSet::new_substring(self.patterns.iter()),
-            Match::Glob => PatternSet::new_glob(self.patterns.iter())?,
-            Match::Exact => PatternSet::new_exact(self.patterns.iter()),
-        }));
+        let mut filters = Vec::new();
+        if !self.before.is_empty() {
+            filters.extend(
+                self.before
+                    .iter()
+                    .map(|ref s| Ok(Filter::Time(TimeFilter::Before(parse_time(s)?))))
+                    .collect::<Result<Vec<_>>>()?,
+            );
+        }
+        if !self.within.is_empty() {
+            filters.extend(
+                self.within
+                    .iter()
+                    .map(|s| Ok(Filter::Time(TimeFilter::After(parse_time(s)?))))
+                    .collect::<Result<Vec<_>>>()?,
+            );
+        }
+        if !self.directories.is_empty() {
+            let dirs = Filter::Directories(
+                self.directories
+                    .iter()
+                    .map(|p| Ok(fs::canonicalize(p)?))
+                    .collect::<Result<Vec<_>>>()?,
+            );
+            filters.push(dirs);
+        }
+        if !self.regex.is_empty() {
+            filters.push(Filter::PatternSet(PatternSet::new_regex(self.regex.iter())?));
+        }
+        if !self.glob.is_empty() {
+            filters.push(Filter::PatternSet(PatternSet::new_glob(self.glob.iter())?));
+        }
+        if !self.substring.is_empty() {
+            filters.push(Filter::PatternSet(PatternSet::new_substring(self.substring.iter())));
+        }
+        if !self.exact.is_empty() {
+            filters.push(Filter::PatternSet(PatternSet::new_exact(self.exact.iter())));
+        }
+        if !self.patterns.is_empty() {
+            filters.push(Filter::PatternSet(match self.r#match {
+                Match::Regex => PatternSet::new_regex(self.patterns.iter())?,
+                Match::Substring => PatternSet::new_substring(self.patterns.iter()),
+                Match::Glob => PatternSet::new_glob(self.patterns.iter())?,
+                Match::Exact => PatternSet::new_exact(self.patterns.iter()),
+            }));
+        }
         Ok(Filters(filters))
     }
 }
@@ -116,9 +146,12 @@ impl Filters {
         self.0.is_empty()
     }
 }
+
+#[derive(Debug)]
 pub enum Filter {
     PatternSet(PatternSet),
     Time(TimeFilter),
+    Directories(Vec<PathBuf>),
 }
 
 impl Filter {
@@ -128,10 +161,14 @@ impl Filter {
                 patterns.is_match(&item.original_path().to_string_lossy())
             }
             Filter::Time(time_filter) => time_filter.is_match(Utc.timestamp(item.time_deleted, 0)),
+            Filter::Directories(directories) => {
+                directories.iter().all(|p| item.original_path().starts_with(p))
+            }
         }
     }
 }
 
+#[derive(Debug)]
 pub enum TimeFilter {
     Before(DateTime<Utc>),
     After(DateTime<Utc>),
@@ -146,6 +183,7 @@ impl TimeFilter {
     }
 }
 
+#[derive(Debug)]
 pub enum PatternSet {
     Regex(RegexSet),
     Substring(Box<AhoCorasick>),
