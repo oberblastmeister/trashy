@@ -5,7 +5,7 @@ use std::{
 };
 
 use aho_corasick::AhoCorasick;
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use chrono::{DateTime, Local, NaiveDate, TimeZone, Utc};
 use clap::{clap_derive::ArgEnum, ArgAction, Parser};
 
@@ -77,7 +77,7 @@ pub struct FilterArgs {
 
     /// Filter by directory
     #[clap(short = 'd', long = "directory", alias = "dir", action = ArgAction::Append)]
-    pub directories: Vec<String>,
+    pub directories: Vec<PathBuf>,
 }
 
 impl FilterArgs {
@@ -106,7 +106,12 @@ impl FilterArgs {
             let dirs = Filter::Directories(
                 self.directories
                     .iter()
-                    .map(|p| Ok(fs::canonicalize(p)?))
+                    .map(|p| {
+                        if !p.is_dir() {
+                            bail!("Path must be a directory");
+                        };
+                        Ok(fs::canonicalize(p)?)
+                    })
                     .collect::<Result<Vec<_>>>()?,
             );
             filters.push(dirs);
