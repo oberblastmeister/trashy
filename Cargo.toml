@@ -3,13 +3,13 @@ name = "trashy"
 version = "0.1.0"
 authors = ["Brian Shu <littlebubu.shu@gmail.com>"]
 description = """
-trash-cli written in rust
+*trashy* is a simple, fast, and featureful alternative to *rm* and *trash-cli*.
 """
 documentation = "https://github.com/oberblastmeister/trash-cli"
-homepage = "https://github.com/oberblastmeister/trash-cli"
-repository = "https://github.com/oberblastmeister/trash-cli"
+homepage = "https://github.com/oberblastmeister/trashy"
+repository = "https://github.com/oberblastmeister/trashy"
 readme = "README.md"
-keywords = ["trash", "remove", "recycle", "bin", "freedesktop"]
+keywords = ["trash", "remove", "recycle", "bin", "freedesktop", "tool"]
 categories = ["command-line-utilities"]
 license = "MIT/Apache-2.0"
 edition = "2021"

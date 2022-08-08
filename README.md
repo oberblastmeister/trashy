@@ -42,7 +42,7 @@ $ trash restore first second
 
 By default the arguments given are interpreted as regular expressions. Use the `-m` option to interpret them differently.
 
-<!-- ## Installation
+## Installation
 
 ### Using cargo
 
@@ -51,10 +51,6 @@ clone the github repo using `git clone https://github.com/oberblastmeister/trash
 build using `cargo build --release`
 
 the binary should be at `target/release/trash`
-
-### Arch Linux 
-
-AUR package coming soon!
 
 ## License
 
