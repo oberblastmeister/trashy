@@ -4,7 +4,10 @@ use either::Either::*;
 
 use crate::{app, trash_item::MaybeIndexedTrashItems};
 
-use super::list;
+use super::{
+    list,
+    utils::{Force, Ranges},
+};
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -15,21 +18,16 @@ pub struct Args {
     #[clap(long, conflicts_with_all = &list::QueryArgs::CONFLICTS)]
     all: bool,
 
-    #[clap(short, long, conflicts_with = "rev")]
-    ranges: Option<String>,
+    #[clap(flatten)]
+    ranges: Ranges,
 
-    /// Skip confirmation
-    ///
-    /// By default, 'trashy' will ask for confirmation before permanently removing files.
-    /// You can opt out of this by adding '--force'.
-    /// This can be useful in scripts.
-    #[clap(short, long)]
-    force: bool,
+    #[clap(flatten)]
+    force: Force,
 }
 
 impl Args {
     pub fn run(&self, config_args: &app::ConfigArgs) -> Result<()> {
-        let empty: Box<dyn Fn(_) -> _> = if self.force {
+        let empty: Box<dyn Fn(_) -> _> = if self.force.force {
             Box::new(empty)
         } else {
             Box::new(|items| {
@@ -37,10 +35,12 @@ impl Args {
             })
         };
 
-        if let Some(ranges) = &self.ranges {
-            empty(MaybeIndexedTrashItems(Right(self.query_args.list_ranged(true, ranges)?)))?;
-        } else {
+        if self.ranges.ranges.is_empty() {
             empty(MaybeIndexedTrashItems(Left(self.query_args.list(true)?)))?
+        } else {
+            empty(MaybeIndexedTrashItems(Right(
+                self.query_args.list_ranged(true, self.ranges.parse()?)?,
+            )))?;
         }
         Ok(())
     }

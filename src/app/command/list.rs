@@ -13,7 +13,7 @@ use trash::TrashItem;
 use crate::{
     app,
     filter::FilterArgs,
-    range_syntax,
+    range_set::RangeSet,
     utils::{self, swap},
 };
 
@@ -57,7 +57,18 @@ pub struct QueryArgs {
 }
 
 impl QueryArgs {
-    pub const CONFLICTS: [&'static str; 6] = ["before", "within", "patterns", "match", "rev", "n"];
+    pub const CONFLICTS: &'static [&'static str] = &[
+        "before",
+        "within",
+        "glob",
+        "regex",
+        "exact",
+        "substring",
+        "patterns",
+        "match",
+        "rev",
+        "n",
+    ];
 
     pub fn list(&self, nonempty: bool) -> Result<Vec<TrashItem>> {
         let filters = self.filter_args.to_filters()?;
@@ -82,8 +93,7 @@ impl QueryArgs {
         })
     }
 
-    pub fn list_ranged(&self, nonempty: bool, ranges: &str) -> Result<Vec<(u32, TrashItem)>> {
-        let ranges = range_syntax::parse_range_set(ranges)?;
+    pub fn list_ranged(&self, nonempty: bool, ranges: RangeSet) -> Result<Vec<(u32, TrashItem)>> {
         let items = self.list(if !ranges.is_empty() { false } else { nonempty })?;
         let mut new_items = Vec::new();
         for range in ranges {
@@ -131,15 +141,6 @@ fn display_indexed_items_with<'a>(
     let table = indexed_items_to_table(items, use_color, use_table, base)?;
     println!("{table}");
     Ok(())
-}
-
-pub fn items_to_table<'a>(
-    items: impl Iterator<Item = &'a TrashItem>,
-    use_color: bool,
-    use_table: bool,
-    base: &Path,
-) -> Result<Table> {
-    indexed_items_to_table(items.zip(0..).map(swap), use_color, use_table, base)
 }
 
 pub fn indexed_items_to_table<'a>(

@@ -6,7 +6,10 @@ use either::Either::*;
 
 use crate::app;
 
-use super::list;
+use super::{
+    list,
+    utils::{Force, Ranges},
+};
 
 #[derive(Debug, Parser)]
 // wo wthis
@@ -14,16 +17,16 @@ pub struct Args {
     #[clap(flatten)]
     query_args: list::QueryArgs,
 
-    #[clap(short, long, conflicts_with = "rev")]
-    ranges: Option<String>,
+    #[clap(flatten)]
+    ranges: Ranges,
 
-    #[clap(short, long)]
-    force: bool,
+    #[clap(flatten)]
+    force: Force,
 }
 
 impl Args {
     pub fn run(&self, config_args: &app::ConfigArgs) -> Result<()> {
-        let restore: Box<dyn Fn(_) -> _> = if self.force {
+        let restore: Box<dyn Fn(_) -> _> = if self.force.force {
             Box::new(restore)
         } else {
             Box::new(|items| {
@@ -31,10 +34,12 @@ impl Args {
             })
         };
 
-        if let Some(ranges) = &self.ranges {
-            restore(MaybeIndexedTrashItems(Right(self.query_args.list_ranged(true, ranges)?)))?;
-        } else {
+        if self.ranges.ranges.is_empty() {
             restore(MaybeIndexedTrashItems(Left(self.query_args.list(true)?)))?
+        } else {
+            restore(MaybeIndexedTrashItems(Right(
+                self.query_args.list_ranged(true, self.ranges.parse()?)?,
+            )))?;
         }
         Ok(())
     }

@@ -3,7 +3,7 @@ use std::{collections::HashSet, path::Path};
 use aho_corasick::AhoCorasick;
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local, NaiveDate, TimeZone, Utc};
-use clap::{clap_derive::ArgEnum, Parser};
+use clap::{clap_derive::ArgEnum, ArgAction, Parser};
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use regex::RegexSet;
@@ -21,8 +21,8 @@ pub struct FilterArgs {
     /// --before '2018-10-27 10:00:00'
     /// --older-than 2weeks
     /// --older 2018-10-27
-    #[clap(long, alias = "older-than", alias = "older")]
-    pub before: Option<String>,
+    #[clap(long, alias = "older-than", alias = "older", action = ArgAction::Append)]
+    pub before: Vec<String>,
 
     /// Filter by time (newer than)
     ///
@@ -34,61 +34,75 @@ pub struct FilterArgs {
     ///     --changed-within 2weeks
     ///     --change-newer-than '2018-10-27 10:00:00'
     ///     --newer 2018-10-27
-    #[clap(long, alias = "newer-than", alias = "newer")]
-    pub within: Option<String>,
+    #[clap(long, alias = "newer-than", alias = "newer", action = ArgAction::Append)]
+    pub within: Vec<String>,
+
+    /// Filter by regex
+    #[clap(long, action = ArgAction::Append)]
+    pub regex: Vec<String>,
+
+    /// Filter by glob
+    #[clap(long, action = ArgAction::Append)]
+    pub glob: Vec<String>,
+
+    /// Filter by substring
+    #[clap(long, action = ArgAction::Append)]
+    pub substring: Vec<String>,
+
+    /// Filter by exact match
+    #[clap(long, action = ArgAction::Append)]
+    pub exact: Vec<String>,
 
     /// Filter by pattern
     ///
     /// This will filter using a pattern type specified in '--match'.
+    /// Using <PATTERNS> and '--match' gives the same effect as passing one of the pattern options explicitly.
+    /// So for example
+    /// trash restore '~/projects/**' '~/builds/**' --match=glob
+    /// is the same as
+    /// trash restore --glob='~/project/**' --glob='~/builds/**'
+    #[clap(verbatim_doc_comment)]
     pub patterns: Vec<String>,
 
     /// What type of pattern to use
     ///
-    /// This will choose the pattern type use in <PATTERNS>
+    /// This will choose the pattern type use in <PATTERNS>.
+    /// Each pattern type has it's own explicit option.
     #[clap(short, long, arg_enum, default_value_t = Match::Regex)]
     pub r#match: Match,
 }
 
 impl FilterArgs {
     pub fn to_filters(&self) -> Result<Filters> {
-        if self.patterns.is_empty() && self.within.is_none() && self.before.is_none() {
+        if self.patterns.is_empty() && self.within.is_empty() && self.before.is_empty() {
             return Ok(Filters(Vec::new()));
         }
         let now = Utc::now();
-        let parse_time = |s| -> Result<Option<DateTime<Utc>>> {
-            Ok(match s {
-                None => None,
-                Some(s) => Some(
-                    parse_time_filter(now, s).ok_or_else(|| anyhow!("Invalid duration or date"))?,
-                ),
-            })
-        };
-        let before = parse_time(self.before.as_deref())?;
-        let within = parse_time(self.within.as_deref())?;
-        let patterns = match self.r#match {
-            Match::Regex => Patterns::Regex(RegexSet::new(&self.patterns)?),
-            Match::Substring => Patterns::Substring(Box::new(AhoCorasick::new(&self.patterns))),
-            Match::Glob => Patterns::Glob(new_globset(self.patterns.iter().map(|s| &**s))?),
-            Match::Exact => Patterns::Exact(self.patterns.iter().cloned().collect()),
-        };
-        let filters = [
-            before.map(|time| Filter::Time(TimeFilter::Before(time))),
-            within.map(|time| Filter::Time(TimeFilter::After(time))),
-            Some(Filter::Patterns(patterns)),
-        ]
-        .into_iter()
-        .flatten()
-        .collect();
+        let parse_time =
+            |s| parse_time_filter(now, s).ok_or_else(|| anyhow!("Invalid duration or date"));
+        let mut filters: Vec<_> = self
+            .before
+            .iter()
+            .map(|ref s| Ok(Filter::Time(TimeFilter::Before(parse_time(s)?))))
+            .collect::<Result<_>>()?;
+        filters.extend(
+            self.within
+                .iter()
+                .map(|s| Ok(Filter::Time(TimeFilter::After(parse_time(s)?))))
+                .collect::<Result<Vec<_>>>()?,
+        );
+        filters.push(Filter::PatternSet(PatternSet::new_regex(self.regex.iter())?));
+        filters.push(Filter::PatternSet(PatternSet::new_glob(self.glob.iter())?));
+        filters.push(Filter::PatternSet(PatternSet::new_substring(self.substring.iter())));
+        filters.push(Filter::PatternSet(PatternSet::new_exact(self.exact.iter())));
+        filters.push(Filter::PatternSet(match self.r#match {
+            Match::Regex => PatternSet::new_regex(self.patterns.iter())?,
+            Match::Substring => PatternSet::new_substring(self.patterns.iter()),
+            Match::Glob => PatternSet::new_glob(self.patterns.iter())?,
+            Match::Exact => PatternSet::new_exact(self.patterns.iter()),
+        }));
         Ok(Filters(filters))
     }
-}
-
-fn new_globset<'a>(i: impl IntoIterator<Item = &'a str>) -> Result<GlobSet> {
-    let mut builder = GlobSetBuilder::new();
-    for s in i {
-        builder.add(Glob::new(s)?);
-    }
-    Ok(builder.build()?)
 }
 
 pub struct Filters(pub Vec<Filter>);
@@ -103,14 +117,14 @@ impl Filters {
     }
 }
 pub enum Filter {
-    Patterns(Patterns),
+    PatternSet(PatternSet),
     Time(TimeFilter),
 }
 
 impl Filter {
     pub fn is_match(&self, item: &TrashItem) -> bool {
         match self {
-            Filter::Patterns(patterns) => {
+            Filter::PatternSet(patterns) => {
                 patterns.is_match(&item.original_path().to_string_lossy())
             }
             Filter::Time(time_filter) => time_filter.is_match(Utc.timestamp(item.time_deleted, 0)),
@@ -132,21 +146,41 @@ impl TimeFilter {
     }
 }
 
-pub enum Patterns {
+pub enum PatternSet {
     Regex(RegexSet),
     Substring(Box<AhoCorasick>),
     Glob(GlobSet),
     Exact(HashSet<String>),
 }
 
-impl Patterns {
+impl PatternSet {
     fn is_match(&self, s: &str) -> bool {
         match self {
-            Patterns::Regex(re_set) => re_set.is_match(s),
-            Patterns::Substring(ac) => ac.is_match(s),
-            Patterns::Glob(glob) => glob.is_match(Path::new(s)),
-            Patterns::Exact(set) => set.contains(s),
+            PatternSet::Regex(re_set) => re_set.is_match(s),
+            PatternSet::Substring(ac) => ac.is_match(s),
+            PatternSet::Glob(glob) => glob.is_match(Path::new(s)),
+            PatternSet::Exact(set) => set.contains(s),
         }
+    }
+
+    fn new_regex(patterns: impl Iterator<Item = impl AsRef<str>>) -> Result<PatternSet> {
+        Ok(PatternSet::Regex(RegexSet::new(patterns)?))
+    }
+
+    fn new_substring(patterns: impl Iterator<Item = impl AsRef<[u8]>>) -> PatternSet {
+        PatternSet::Substring(Box::new(AhoCorasick::new(patterns)))
+    }
+
+    fn new_glob(patterns: impl Iterator<Item = impl AsRef<str>>) -> Result<PatternSet> {
+        let mut builder = GlobSetBuilder::new();
+        for s in patterns {
+            builder.add(Glob::new(s.as_ref())?);
+        }
+        Ok(PatternSet::Glob(builder.build()?))
+    }
+
+    fn new_exact(patterns: impl Iterator<Item = impl AsRef<str>>) -> PatternSet {
+        PatternSet::Exact(patterns.map(|s| String::from(s.as_ref())).collect())
     }
 }
 

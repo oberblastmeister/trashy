@@ -1,10 +1,9 @@
 use anyhow::{bail, Context, Result};
 
-use crate::{range::Range, range_set::RangeSet};
+use crate::range::Range;
 
-// pub fn index_items(ranges: RangeSet, items: Vec<TrashItem>) ->
-pub fn parse_range_set(s: &str) -> Result<RangeSet> {
-    s.split(char::is_whitespace).map(parse_range).collect()
+pub fn parse_ranges(s: &str) -> impl Iterator<Item = Result<Range>> + '_ {
+    s.split(char::is_whitespace).map(parse_range)
 }
 
 pub fn parse_range(s: &str) -> Result<Range> {
@@ -34,7 +33,13 @@ pub fn parse_range(s: &str) -> Result<Range> {
 mod tests {
     use std::ops;
 
+    use crate::range_set::RangeSet;
+
     use super::*;
+
+    pub fn parse_range_set(s: &str) -> Result<RangeSet> {
+        parse_ranges(s).collect()
+    }
 
     fn parse_succeed<const N: usize>(s: &str, expect: [ops::Range<u32>; N]) {
         assert_eq!(
