@@ -23,7 +23,7 @@ clap_mangen = "0.1.10"
 clap_complete = "3.2.3"
 anyhow = { version = "1.0.59", features = ["backtrace"] }
 trash = "2.1.5"
-chrono = "0.4.19"
+chrono = "0.4.20"
 chrono-humanize = "0.2.1"
 lscolors = { version = "0.11.0", features = ["crossterm"] }
 once_cell = "1.13.0"
