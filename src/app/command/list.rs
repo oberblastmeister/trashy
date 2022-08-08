@@ -26,7 +26,7 @@ pub struct Args {
 impl Args {
     pub fn run(&self, config_args: &app::ConfigArgs) -> Result<()> {
         let items = self.query_args.list(false)?;
-        display_items(items.iter(), config_args)?;
+        display_items(&items, config_args)?;
         Ok(())
     }
 }
@@ -118,15 +118,12 @@ impl QueryArgs {
     }
 }
 
-pub fn display_items<'a>(
-    items: impl Iterator<Item = &'a TrashItem>,
-    config_args: &app::ConfigArgs,
-) -> Result<()> {
-    display_indexed_items(items.zip(0..).map(swap), config_args)
+pub fn display_items<'a>(items: &[TrashItem], config_args: &app::ConfigArgs) -> Result<()> {
+    display_indexed_items(items.iter().zip(0..items.len() as u32).map(swap), config_args)
 }
 
 pub fn display_indexed_items<'a>(
-    items: impl Iterator<Item = (u32, &'a TrashItem)>,
+    items: impl DoubleEndedIterator<Item = (u32, &'a TrashItem)>,
     config_args: &app::ConfigArgs,
 ) -> Result<()> {
     let is_atty = atty::is(atty::Stream::Stdout);
@@ -139,7 +136,7 @@ pub fn display_indexed_items<'a>(
 }
 
 fn display_indexed_items_with<'a>(
-    items: impl Iterator<Item = (u32, &'a TrashItem)>,
+    items: impl DoubleEndedIterator<Item = (u32, &'a TrashItem)>,
     use_color: bool,
     use_table: bool,
     base: &Path,
@@ -150,15 +147,14 @@ fn display_indexed_items_with<'a>(
 }
 
 pub fn indexed_items_to_table<'a>(
-    items: impl Iterator<Item = (u32, &'a TrashItem)>,
+    items: impl DoubleEndedIterator<Item = (u32, &'a TrashItem)>,
     use_color: bool,
     use_table: bool,
     base: &Path,
 ) -> Result<Table> {
     let mut failed = 0;
     // this isn't actually needless since we need to reverse the items, which can't be done with a single-ended iterator
-    #[allow(clippy::needless_collect)]
-    let items: Vec<_> = items
+    let items = items
         .filter_map(|(i, item)| match display_item(item, use_color, base) {
             Ok(s) => Some((i, s)),
             Err(_) => {
@@ -167,8 +163,8 @@ pub fn indexed_items_to_table<'a>(
             }
         })
         .map(|(i, t)| TrashItemDisplay { i, time: t.0, path: t.1 })
-        .collect();
-    let mut table = Table::builder(items.into_iter().rev());
+        .rev();
+    let mut table = Table::builder(items);
     if !use_table {
         table.remove_columns();
     };
