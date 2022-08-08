@@ -5,8 +5,8 @@ on:
 
   push:
     branches:
-    - release
-    - trigger-nightly
+      - release
+      - trigger-nightly
 
 jobs:
   build-release:
@@ -16,101 +16,100 @@ jobs:
     strategy:
       matrix:
         include:
-        - os: ubuntu-latest
-          target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
 
-        # - os: ubuntu-latest
-        #   target: x86_64-unknown-linux-musl
+          # - os: ubuntu-latest
+          #   target: x86_64-unknown-linux-musl
 
-        # - os: ubuntu-16.04
-        #   target: aarch64-unknown-linux-gnu
+          # - os: ubuntu-16.04
+          #   target: aarch64-unknown-linux-gnu
 
-        # - os: macos-latest
-        #   target: x86_64-apple-darwin
+          # - os: macos-latest
+          #   target: x86_64-apple-darwin
 
-        # - os: macos-latest
-        #   target: aarch64-apple-darwin
+          # - os: macos-latest
+          #   target: aarch64-apple-darwin
 
-        - os: windows-latest
-          target: x86_64-pc-windows-msvc
-          
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+
         # - os: windows-latest
         #   target: aarch64-pc-windows-msvc
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        target: ${{ matrix.target }}
-        profile: minimal
-        override: true
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          profile: minimal
+          override: true
 
-    - if: matrix.target == 'aarch64-unknown-linux-gnu'
-      run: sudo apt-get install gcc-aarch64-linux-gnu
+      - if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: sudo apt-get install gcc-aarch64-linux-gnu
 
-    - name: Build
-      run: |
-        cargo build --target ${{ matrix.target }} --release
+      - name: Build
+        run: |
+          cargo build --target ${{ matrix.target }} --release
 
-    - name: Package
-      shell: bash
-      run: |
-        if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          mv "target/${{ matrix.target }}/release/trash.exe" "trash-${{ matrix.target }}.exe"
-          echo "ASSET=trash-${{ matrix.target }}.exe" >> $GITHUB_ENV
-        else
-          mv "target/${{ matrix.target }}/release/trash" "trash"
-          tar czf trash-${{ matrix.target }}.tar.gz trash
-          echo "ASSET=trash-${{ matrix.target }}.tar.gz" >> $GITHUB_ENV
-        fi
+      - name: Package
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            mv "target/${{ matrix.target }}/release/trash.exe" "trash-${{ matrix.target }}.exe"
+            echo "ASSET=trash-${{ matrix.target }}.exe" >> $GITHUB_ENV
+          else
+            mv "target/${{ matrix.target }}/release/trash" "trash"
+            tar czf trash-${{ matrix.target }}.tar.gz trash
+            echo "ASSET=trash-${{ matrix.target }}.tar.gz" >> $GITHUB_ENV
+          fi
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v3
-      with:
-        # upload everything to dist
-        name: dist
-        path: ${{ env.ASSET }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          # upload everything to dist
+          name: dist
+          path: ${{ env.ASSET }}
 
   create-release:
     name: create-release
     runs-on: ubuntu-latest
-    needs: ['build-release']
+    needs: ["build-release"]
 
     steps:
-    - run: echo "TAG=$(date --iso -u)" >> $GITHUB_ENV
-      if: github.ref == 'refs/heads/release'
+      - run: echo "TAG=${{ github.ref_name }}" >> $GITHUB_ENV
+        if: github.ref != 'refs/heads/trigger-nightly'
 
-    - run: echo "TAG=nightly" >> $GITHUB_ENV
-      if: github.ref != 'refs/heads/release'
+      - run: echo "TAG=nightly" >> $GITHUB_ENV
+        if: github.ref == 'refs/heads/trigger-nightly'
 
-    - run: 'echo "TAG: $TAG"'
+      - run: 'echo "TAG: $TAG"'
 
-    - name: Make directories
-      run: mkdir dist
+      - name: Make directories
+        run: mkdir dist
 
-    - name: Download artifacts
-      uses: actions/download-artifact@v3
-      with:
-        # download dist to directory named dist
-        name: dist
-        path: dist
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          # download dist to directory named dist
+          name: dist
+          path: dist
 
-    - name: List downloaded files
-      run: |
-        contents=$(find dist -maxdepth 1 | tail -n +2 | paste -sd " ")
-        echo "CONTENTS=$contents" >> $GITHUB_ENV
-        echo "${{ env.CONTENTS }}"
+      - name: List downloaded files
+        run: |
+          contents=$(find dist -maxdepth 1 | tail -n +2 | paste -sd " ")
+          echo "CONTENTS=$contents" >> $GITHUB_ENV
+          echo "${{ env.CONTENTS }}"
 
-    - name: Release
-      uses: meeDamian/github-release@2.0
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        commitish: master
-        tag: ${{ env.TAG }}
-        files: ${{ env.CONTENTS }}
-        allow_override: true
-        gzip: false
+      - name: Release
+        uses: meeDamian/github-release@2.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ env.TAG }}
+          files: ${{ env.CONTENTS }}
+          allow_override: true
+          gzip: false
