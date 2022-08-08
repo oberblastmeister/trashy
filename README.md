@@ -58,12 +58,12 @@ $ trash restore first second
 
 Restore with fzf
 ```bash
-ta list | fzf --multi | awk '{$1=$1;print}' | rev | cut -d ' ' -f1 | rev | xargs ta restore --match=exact --force
+trash list | fzf --multi | awk '{$1=$1;print}' | rev | cut -d ' ' -f1 | rev | xargs trash restore --match=exact --force
 ```
 
 Empty with fzf
 ```bash
-ta list | fzf --multi | awk '{$1=$1;print}' | rev | cut -d ' ' -f1 | rev | xargs ta empty --match=exact --force
+trash list | fzf --multi | awk '{$1=$1;print}' | rev | cut -d ' ' -f1 | rev | xargs trash empty --match=exact --force
 ```
 
 ## Installation
@@ -114,7 +114,7 @@ Range (min … max):   375.9 ms … 412.0 ms    10 runs
 
 
 ```
-hyperfine 'ta list'
+hyperfine 'trash list'
 ```
 
 ```
