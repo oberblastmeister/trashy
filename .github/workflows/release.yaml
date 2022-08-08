@@ -19,11 +19,8 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
 
-          # - os: ubuntu-latest
-          #   target: x86_64-unknown-linux-musl
-
-          # - os: ubuntu-16.04
-          #   target: aarch64-unknown-linux-gnu
+          - os: ubuntu-18.04
+            target: aarch64-unknown-linux-gnu
 
           # - os: macos-latest
           #   target: x86_64-apple-darwin
@@ -34,8 +31,8 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
 
-        # - os: windows-latest
-        #   target: aarch64-pc-windows-msvc
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
 
     steps:
       - name: Checkout repository
