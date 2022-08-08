@@ -831,7 +831,7 @@ dependencies = [
 
 [[package]]
 name = "trashy"
-version = "0.1.0"
+version = "1.0.1"
 dependencies = [
  "aho-corasick",
  "ansi_term",
