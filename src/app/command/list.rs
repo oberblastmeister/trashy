@@ -56,6 +56,12 @@ pub struct QueryArgs {
     n: Option<u32>,
 }
 
+pub fn list_only() -> Result<Vec<TrashItem>> {
+    let mut items = trash::os_limited::list()?;
+    items.sort_by_key(|item| cmp::Reverse(item.time_deleted));
+    Ok(items)
+}
+
 impl QueryArgs {
     pub const CONFLICTS: &'static [&'static str] = &[
         "before",

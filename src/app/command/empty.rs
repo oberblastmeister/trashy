@@ -35,12 +35,14 @@ impl Args {
             })
         };
 
-        if self.ranges.ranges.is_empty() {
+        if self.all {
+            empty(MaybeIndexedTrashItems(Left(list::list_only()?)))?
+        } else if self.ranges.ranges.is_empty() {
             empty(MaybeIndexedTrashItems(Left(self.query_args.list(true)?)))?
         } else {
             empty(MaybeIndexedTrashItems(Right(
                 self.query_args.list_ranged(true, self.ranges.parse()?)?,
-            )))?;
+            )))?
         }
         Ok(())
     }

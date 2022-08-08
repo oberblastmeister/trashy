@@ -12,7 +12,7 @@ pub fn on_items_with_prompt(
     use dialoguer::Confirm;
 
     let len = items.len();
-    let plural = if len == 1 { "s" } else { "" };
+    let plural = if len == 1 { "" } else { "s" };
     println!("{len} item{plural} will be {action_name}");
     list::display_indexed_items(items.indexed_items(), config_args)?;
     if Confirm::new().with_prompt("Are you sure?").interact()? {
