@@ -23,6 +23,7 @@ Quick links:
 - very fast, and faster than trash-cli (see [benchmarks](#benchmarks))
 - much safer than `rm -rf`
 - intuitive syntax and fine grained control
+- works on linux and windows
 
 ## Usage
 
