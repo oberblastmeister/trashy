@@ -5,9 +5,12 @@ use std::{
 
 use chrono::{Local, TimeZone};
 use clap::Parser;
+use tabled::{
+    width::{Max, MinWidth, Truncate},
+    Table, Tabled,
+};
 
-use anyhow::{bail, Result};
-use tabled::{object::Segment, Alignment, Table, Tabled};
+use anyhow::{bail, Context, Result};
 use trash::TrashItem;
 
 use crate::{
@@ -169,7 +172,14 @@ pub fn indexed_items_to_table<'a>(
     if !use_table {
         table.remove_columns();
     };
-    let table = table.build().with(tabled::Modify::new(Segment::all()).with(Alignment::left()));
+    use tabled::{object::Segment, Alignment, Modify};
+    let (terminal_size::Width(width), _) =
+        terminal_size::terminal_size().context("terminal size")?;
+    let width = width as usize;
+    let table = table
+        .build()
+        .with(Modify::new(Segment::all()).with(Alignment::left()))
+        .with(Modify::new(Segment::new(.., 2..)).with(Truncate::new(width - 30).suffix("...")));
     let table = if use_table {
         table.with(tabled::Style::rounded())
     } else {
