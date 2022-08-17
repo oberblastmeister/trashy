@@ -173,13 +173,13 @@ pub fn indexed_items_to_table<'a>(
         table.remove_columns();
     };
     use tabled::{object::Segment, Alignment, Modify};
-    let (terminal_size::Width(width), _) =
-        terminal_size::terminal_size().context("terminal size")?;
-    let width = width as usize;
-    let table = table
-        .build()
-        .with(Modify::new(Segment::all()).with(Alignment::left()))
-        .with(Modify::new(Segment::new(.., 2..)).with(Truncate::new(width - 30).suffix("...")));
+    let table = table.build().with(Modify::new(Segment::all()).with(Alignment::left()));
+    let table = if let Some((terminal_size::Width(width), _)) = terminal_size::terminal_size() {
+        let width = width as usize;
+        table.with(Modify::new(Segment::new(.., 2..)).with(Truncate::new(width - 30).suffix("...")))
+    } else {
+        table
+    };
     let table = if use_table {
         table.with(tabled::Style::rounded())
     } else {
