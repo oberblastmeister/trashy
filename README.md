@@ -75,6 +75,10 @@ trash list | fzf --multi | awk '{$1=$1;print}' | rev | cut -d ' ' -f1 | rev | xa
 cargo install trashy
 ```
 
+### From Github Releases
+
+Download the binary from Github Releases and put it in your `$PATH`.
+
 ## Benchmarks
 
 These benchmarks are run on the rust compiler source in the `compiler/` directory.
