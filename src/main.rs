@@ -16,7 +16,7 @@ use exitcode::ExitCode;
 fn main() {
     match try_main() {
         Ok(()) => ExitCode::Success.exit(),
-        Err(e) => ExitCode::Error.exit_with_msg(format!("{e:#?}")),
+        Err(e) => ExitCode::Error.exit_with_msg(format!("{e:#}")),
     }
 }
 

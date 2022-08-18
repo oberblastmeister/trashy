@@ -1,5 +1,6 @@
+use std::io::Write;
 use std::{
-    cmp, fs,
+    cmp, fs, io,
     path::{Path, PathBuf},
 };
 
@@ -146,7 +147,7 @@ fn display_indexed_items_with<'a>(
     base: &Path,
 ) -> Result<()> {
     let table = indexed_items_to_table(items, use_color, use_table, base)?;
-    println!("{table}");
+    writeln!(io::stdout(), "{table}").context("Printing table")?;
     Ok(())
 }
 
