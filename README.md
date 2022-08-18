@@ -136,4 +136,4 @@ Copyright (c) 2020 Brian Shu
 
 *trashy* is distributed under the terms of both the MIT license and the Apache License 2.0.
 
-See the [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT) -->
+See the [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT)
