@@ -23,7 +23,7 @@ Quick links:
 - very fast, and faster than trash-cli (see [benchmarks](#benchmarks))
 - much safer than `rm -rf`
 - intuitive syntax and fine grained control
-- works on linux and windows
+- uses the system trash on both linux and windows
 
 ## Usage
 
@@ -39,18 +39,35 @@ This is just sugar for
 $ trash put first second third
 ```
 
-By default the arguments given are interpreted as regular expressions. Use the `-m` option to interpret them differently.
-
-### Listing items in the trash
+### List items in the trash
 
 ```bash
 $ trash list
 ```
 
-### Restoring a file
+### Restore or empty some files
 
 ```bash
 $ trash restore first second
+```
+```bash
+$ trash empty first second third
+```
+
+The `restore` and `empty` subcommands both take very similar arguments and flags.
+
+By default the arguments for `restore` and `empty` are interpreted as regular expressions.
+Use the `-m` option to interpret them differently.
+
+
+### Restore or empty all files
+
+```bash
+$ trash restore --all
+```
+
+```bash
+$ trash empty --all
 ```
 
 ## Integrations
