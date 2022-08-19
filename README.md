@@ -146,6 +146,11 @@ Range (min … max):   175.6 ms … 181.0 ms    16 runs
 
 `trashy` is faster by more than 2 times.
 
+## FAQ
+
+### Should I alias rm='trash put'?
+
+You should not. The alias will not be present on other systems and habits are really hard to break. An alternative is to alias `trash put` to `rt` or `tp`.
 
 ## License
 
