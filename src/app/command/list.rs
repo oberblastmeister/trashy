@@ -6,10 +6,7 @@ use std::{
 
 use chrono::{Local, TimeZone};
 use clap::Parser;
-use tabled::{
-    width::{Max, MinWidth, Truncate},
-    Table, Tabled,
-};
+use tabled::{width::Truncate, Table, Tabled};
 
 use anyhow::{bail, Context, Result};
 use trash::TrashItem;
