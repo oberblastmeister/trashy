@@ -6,6 +6,8 @@ on:
     - master
     - staging
     - trying
+    paths-ignore:
+      - "**.md"
 
 jobs:
   test:
