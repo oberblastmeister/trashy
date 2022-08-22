@@ -75,11 +75,13 @@ $ trash empty --all
 ### fzf
 
 Restore with fzf
+
 ```bash
 trash list | fzf --multi | awk '{$1=$1;print}' | rev | cut -d ' ' -f1 | rev | xargs trash restore --match=exact --force
 ```
 
 Empty with fzf
+
 ```bash
 trash list | fzf --multi | awk '{$1=$1;print}' | rev | cut -d ' ' -f1 | rev | xargs trash empty --match=exact --force
 ```
@@ -88,13 +90,21 @@ trash list | fzf --multi | awk '{$1=$1;print}' | rev | cut -d ' ' -f1 | rev | xa
 
 ### Using cargo
 
-```
+```bash
 cargo install trashy
 ```
 
 ### From Github Releases
 
 Download the binary from Github Releases and put it in your `$PATH`.
+
+### From the AUR
+
+Use your favorite AUR helper.
+
+```bash
+paru -S trashy
+```
 
 ## Benchmarks
 
