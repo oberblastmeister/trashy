@@ -74,8 +74,8 @@ impl QueryArgs {
         "patterns",
         "match",
         "rev",
-        "n",
-        "directory",
+        "max",
+        "directories",
     ];
 
     pub fn list(&self, nonempty: bool) -> Result<Vec<TrashItem>> {
