@@ -5,7 +5,7 @@ authors = ["Brian Shu <littlebubu.shu@gmail.com>"]
 description = """
 *trashy* is a simple, fast, and featureful alternative to *rm* and *trash-cli*.
 """
-documentation = "https://github.com/oberblastmeister/trash-cli"
+documentation = "https://github.com/oberblastmeister/trashy"
 homepage = "https://github.com/oberblastmeister/trashy"
 repository = "https://github.com/oberblastmeister/trashy"
 readme = "README.md"
