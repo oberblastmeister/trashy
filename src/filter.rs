@@ -144,7 +144,7 @@ pub struct Filters(pub Vec<Filter>);
 
 impl Filters {
     pub fn is_match(&self, item: &TrashItem) -> bool {
-        self.is_empty() || self.0.iter().any(|filter| filter.is_match(item))
+        self.0.iter().all(|filter| filter.is_match(item))
     }
 
     pub fn is_empty(&self) -> bool {
