@@ -158,6 +158,10 @@ Range (min … max):   175.6 ms … 181.0 ms    16 runs
 
 ## FAQ
 
+### Is this supported on MacOS?
+
+No, see this [issue](https://github.com/Byron/trash-rs/issues/8)
+
 ### Should I alias rm='trash put'?
 
 You should not. The alias will not be present on other systems and habits are really hard to break. An alternative is to alias `trash put` to `rt` or `tp`.
