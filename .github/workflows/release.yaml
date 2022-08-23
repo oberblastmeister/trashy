@@ -4,6 +4,9 @@ on:
   # - cron: '0 0 * * *' # midnight UTC
 
   push:
+    tags:
+      - '*'
+
     branches:
       - release
       - trigger-nightly
