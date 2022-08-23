@@ -3,7 +3,7 @@ name = "trashy"
 version = "1.0.2"
 authors = ["Brian Shu <littlebubu.shu@gmail.com>"]
 description = """
-*trashy* is a simple, fast, and featureful alternative to *rm* and *trash-cli*.
+trashy is a simple, fast, and featureful alternative to rm and trash-cli.
 """
 documentation = "https://github.com/oberblastmeister/trashy"
 homepage = "https://github.com/oberblastmeister/trashy"
