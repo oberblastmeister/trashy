@@ -106,6 +106,18 @@ Use your favorite AUR helper.
 paru -S trashy
 ```
 
+### Using Nix
+
+```bash
+niv-env -i trashy
+```
+
+Or if you have flakes enabled:
+
+```bash
+nix profile install nixpkgs#trashy
+```
+
 ## Benchmarks
 
 These benchmarks are run on the rust compiler source in the `compiler/` directory.
