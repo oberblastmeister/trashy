@@ -44,5 +44,5 @@ default-features = false
 features = ["color"]
 
 [dependencies.clap]
-version = "3.2.16"
+version = "3.2.19"
 features = ["suggestions", "color", "derive", "wrap_help", "cargo"]
