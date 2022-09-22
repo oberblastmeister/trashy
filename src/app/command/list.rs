@@ -125,7 +125,7 @@ pub fn display_items<'a>(items: &[TrashItem], config_args: &app::ConfigArgs) -> 
 }
 
 pub fn display_indexed_items<'a>(
-    items: impl DoubleEndedIterator<Item = (u32, &'a TrashItem)>,
+    items: impl DoubleEndedIterator<Item = (u32, &'a TrashItem)> + ExactSizeIterator,
     config_args: &app::ConfigArgs,
 ) -> Result<()> {
     let is_atty = atty::is(atty::Stream::Stdout);
@@ -138,11 +138,14 @@ pub fn display_indexed_items<'a>(
 }
 
 fn display_indexed_items_with<'a>(
-    items: impl DoubleEndedIterator<Item = (u32, &'a TrashItem)>,
+    items: impl DoubleEndedIterator<Item = (u32, &'a TrashItem)> + ExactSizeIterator,
     use_color: bool,
     use_table: bool,
     base: &Path,
 ) -> Result<()> {
+    if items.len() == 0 {
+        return Ok(());
+    }
     let table = indexed_items_to_table(items, use_color, use_table, base)?;
     writeln!(io::stdout(), "{table}").context("Printing table")?;
     Ok(())
