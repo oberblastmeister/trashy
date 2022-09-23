@@ -15,7 +15,7 @@ pub struct Args {
     query_args: list::QueryArgs,
 
     /// Empty all files
-    #[clap(long, conflicts_with_all = &list::QueryArgs::CONFLICTS)]
+    #[arg(long, conflicts_with_all = list::QueryArgs::CONFLICTS)]
     all: bool,
 
     #[clap(flatten)]

@@ -7,7 +7,7 @@ use std::{
 use aho_corasick::AhoCorasick;
 use anyhow::{anyhow, bail, Result};
 use chrono::{DateTime, Local, NaiveDate, TimeZone, Utc};
-use clap::{clap_derive::ArgEnum, ArgAction, Parser};
+use clap::{ValueEnum, ArgAction, Parser};
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use regex::RegexSet;
@@ -25,7 +25,7 @@ pub struct FilterArgs {
     ///     --before '2018-10-27 10:00:00'
     ///     --older-than 2weeks
     ///     --older 2018-10-27
-    #[clap(long, visible_alias = "older-than", visible_alias = "older", action = ArgAction::Append, verbatim_doc_comment)]
+    #[arg(long, visible_alias = "older-than", visible_alias = "older", action = ArgAction::Append, verbatim_doc_comment)]
     pub before: Vec<String>,
 
     /// Filter by time
@@ -38,23 +38,23 @@ pub struct FilterArgs {
     ///     --changed-within 2weeks
     ///     --change-newer-than '2018-10-27 10:00:00'
     ///     --newer 2018-10-27
-    #[clap(long, visible_alias = "newer-than", visible_alias = "newer", action = ArgAction::Append, verbatim_doc_comment)]
+    #[arg(long, visible_alias = "newer-than", visible_alias = "newer", action = ArgAction::Append, verbatim_doc_comment)]
     pub within: Vec<String>,
 
     /// Filter by regex
-    #[clap(long, action = ArgAction::Append)]
+    #[arg(long, action = ArgAction::Append)]
     pub regex: Vec<String>,
 
     /// Filter by glob
-    #[clap(long, action = ArgAction::Append)]
+    #[arg(long, action = ArgAction::Append)]
     pub glob: Vec<String>,
 
     /// Filter by substring
-    #[clap(long, action = ArgAction::Append)]
+    #[arg(long, action = ArgAction::Append)]
     pub substring: Vec<String>,
 
     /// Filter by exact match
-    #[clap(long, action = ArgAction::Append)]
+    #[arg(long, action = ArgAction::Append)]
     pub exact: Vec<String>,
 
     /// Filter by pattern
@@ -65,18 +65,18 @@ pub struct FilterArgs {
     /// trash restore '~/projects/**' '~/builds/**' --match=glob
     /// is the same as
     /// trash restore --glob='~/project/**' --glob='~/builds/**'
-    #[clap(verbatim_doc_comment)]
+    #[arg(verbatim_doc_comment)]
     pub patterns: Vec<String>,
 
     /// What type of pattern to use
     ///
     /// This will choose the pattern type used in <PATTERNS>.
     /// Each pattern type has it's own explicit option.
-    #[clap(short, long, arg_enum, default_value_t = Match::Regex)]
+    #[arg(short, long, value_enum, default_value_t = Match::Regex)]
     pub r#match: Match,
 
     /// Filter by directory
-    #[clap(short = 'd', long = "directory", visible_alias = "dir", action = ArgAction::Append)]
+    #[arg(short = 'd', long = "directory", visible_alias = "dir", action = ArgAction::Append)]
     pub directories: Vec<PathBuf>,
 }
 
@@ -227,7 +227,7 @@ impl PatternSet {
     }
 }
 
-#[derive(Debug, ArgEnum, Clone, Copy)]
+#[derive(Debug, ValueEnum, Clone, Copy)]
 pub enum Match {
     Regex,
     Substring,

@@ -15,7 +15,7 @@ pub enum Command {
     List(list::Args),
 
     /// Put files
-    Put(put::Args),
+    Put(put::PutArgs),
 
     /// PERMANANTLY removes files
     Empty(empty::Args),

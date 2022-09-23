@@ -28,7 +28,7 @@ pub struct Force {
     /// By default, 'trashy' will ask for confirmation before restoring or permanently removing files.
     /// You can opt out of this by adding '--force'.
     /// This can be useful in scripts.
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub force: bool,
 }
 
@@ -43,7 +43,7 @@ pub struct Ranges {
     /// Examples:
     ///     --ranges='1 5..9 10..12'
     ///     --ranges='1 4 5 6'
-    #[clap(
+    #[arg(
        short,
        long,
        conflicts_with_all = list::QueryArgs::CONFLICTS,

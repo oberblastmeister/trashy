@@ -1,17 +1,16 @@
 mod command;
 
 use anyhow::Result;
-use clap::{AppSettings, Parser};
+use clap::Parser;
+use command::put;
 use command::Command;
 
-use command::put;
-
 #[derive(Debug, Parser)]
-#[clap(
+#[command(
     version,
     about,
     long_about = None,
-    global_setting(AppSettings::DeriveDisplayOrder),
+    // global_setting(AppSettings::DeriveDisplayOrder),
     after_help = "Note: `trash -h` prints a short and concise overview while `trash --help` gives all \
                  details.",
 )]
@@ -24,7 +23,7 @@ pub struct Args {
     config_args: ConfigArgs,
 
     #[clap(flatten)]
-    put_args: put::Args,
+    put_args: put::PutArgs,
 }
 
 #[derive(Debug, Parser)]
@@ -35,7 +34,7 @@ pub struct ConfigArgs {
     ///    'auto':      show colors if the output goes to an interactive console
     ///    'never':     do not use colorized output
     ///    'always':    always use colorized output,
-    #[clap(
+    #[arg(
         short = 'c',
         long = "color",
         value_enum,
@@ -50,7 +49,7 @@ pub struct ConfigArgs {
     ///    'auto':      format as a table if the output goes to an interactive console
     ///    'never':     do not format as a table
     ///    'always':    always format as a table
-    #[clap(
+    #[arg(
         short = 't',
         long = "table",
         value_enum,
