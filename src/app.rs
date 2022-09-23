@@ -10,7 +10,6 @@ use command::Command;
     version,
     about,
     long_about = None,
-    // global_setting(AppSettings::DeriveDisplayOrder),
     after_help = "Note: `trash -h` prints a short and concise overview while `trash --help` gives all \
                  details.",
 )]
