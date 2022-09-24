@@ -1,7 +1,7 @@
 use std::io;
 
 use anyhow::Result;
-use clap::{IntoApp, Parser};
+use clap::{CommandFactory, Parser};
 
 use crate::app;
 
@@ -10,7 +10,7 @@ pub struct Args {}
 
 impl Args {
     pub fn run(&self) -> Result<()> {
-        let man = clap_mangen::Man::new(app::Args::into_app());
+        let man = clap_mangen::Man::new(app::Args::command());
         man.render(&mut io::stdout())?;
         Ok(())
     }
