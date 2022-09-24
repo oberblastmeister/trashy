@@ -7,7 +7,7 @@ use std::{
 use aho_corasick::AhoCorasick;
 use anyhow::{anyhow, bail, Result};
 use chrono::{DateTime, Local, NaiveDate, TimeZone, Utc};
-use clap::{ValueEnum, ArgAction, Parser};
+use clap::{ArgAction, Parser, ValueEnum};
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use regex::RegexSet;

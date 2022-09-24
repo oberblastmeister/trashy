@@ -10,7 +10,9 @@ impl MaybeIndexedTrashItems {
         self.0.map_right(|v| v.into_iter().map(|(_, t)| t)).into_iter().into_iter()
     }
 
-    pub fn indexed_items(&self) -> impl DoubleEndedIterator<Item = (u32, &'_ TrashItem)> + ExactSizeIterator {
+    pub fn indexed_items(
+        &self,
+    ) -> impl DoubleEndedIterator<Item = (u32, &'_ TrashItem)> + ExactSizeIterator {
         self.0
             .as_ref()
             .map_left(|v| v.iter().zip(0..v.len() as u32).map(swap))
