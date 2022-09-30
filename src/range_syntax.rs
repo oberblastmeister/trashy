@@ -1,6 +1,10 @@
 use anyhow::{bail, Context, Result};
 
-use crate::range::Range;
+use crate::{range::Range, range_set};
+
+pub fn parse_range_set(s: &str) -> Result<range_set::RangeSet> {
+    parse_ranges(s).collect()
+}
 
 pub fn parse_ranges(s: &str) -> impl Iterator<Item = Result<Range>> + '_ {
     s.split(char::is_whitespace).map(parse_range)

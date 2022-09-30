@@ -1,4 +1,5 @@
 use std::io::Write;
+use std::num::NonZeroU32;
 use std::{
     cmp, fs, io,
     path::{Path, PathBuf},
@@ -11,6 +12,7 @@ use tabled::{width::Truncate, Table, Tabled};
 use anyhow::{bail, Context, Result};
 use trash::TrashItem;
 
+use crate::filter::Filters;
 use crate::{
     app,
     filter::FilterArgs,
@@ -26,8 +28,7 @@ pub struct Args {
 
 impl Args {
     pub fn run(&self, config_args: &app::ConfigArgs) -> Result<()> {
-        let items = self.query_args.list(false)?;
-        display_items(&items, config_args)?;
+        display_items(&self.query_args.list(false)?, config_args)?;
         Ok(())
     }
 }
@@ -35,7 +36,7 @@ impl Args {
 #[derive(Debug, Parser)]
 pub struct QueryArgs {
     #[clap(flatten)]
-    filter_args: FilterArgs,
+    pub filter_args: FilterArgs,
 
     /// Reverse the sorting of trash items
     ///
@@ -45,7 +46,7 @@ pub struct QueryArgs {
     /// Examples:
     /// 'trash empty --rev -n=10' will delete 10 oldest trash items are deleted.
     #[arg(long, verbatim_doc_comment)]
-    rev: bool,
+    pub rev: bool,
 
     /// Show 'n' maximum trash items
     ///
@@ -54,13 +55,7 @@ pub struct QueryArgs {
     /// 'trash list -n=10' will list the ten newest trashed items.
     /// 'trash restore -n=10' will list restore the ten newest trashed items.
     #[arg(short = 'n', long = "max", verbatim_doc_comment)]
-    max: Option<u32>,
-}
-
-pub fn list_only() -> Result<Vec<TrashItem>> {
-    let mut items = trash::os_limited::list()?;
-    items.sort_by_key(|item| cmp::Reverse(item.time_deleted));
-    Ok(items)
+    pub max: Option<NonZeroU32>,
 }
 
 impl QueryArgs {
@@ -78,46 +73,80 @@ impl QueryArgs {
         "directories",
     ];
 
-    pub fn list(&self, nonempty: bool) -> Result<Vec<TrashItem>> {
+    pub fn list(&self, non_empty: bool) -> Result<Vec<TrashItem>> {
         let filters = self.filter_args.to_filters()?;
-        if nonempty && filters.is_empty() {
+        if non_empty && filters.is_empty() {
             bail!("Must match something");
         }
-        let items = {
-            let mut items = trash::os_limited::list()?;
-            if !filters.is_empty() {
-                items = items.into_iter().filter(|item| filters.is_match(item)).collect()
-            };
-            if self.rev {
-                items.sort_by_key(|item| item.time_deleted);
-            } else {
-                items.sort_by_key(|item| cmp::Reverse(item.time_deleted));
-            }
-            items
-        };
-        Ok(match self.max {
-            Some(n) => items.into_iter().take(n as usize).collect(),
-            None => items,
-        })
+        list(self.rev, self.max, filters)
     }
 
-    pub fn list_ranged(&self, nonempty: bool, ranges: RangeSet) -> Result<Vec<(u32, TrashItem)>> {
-        let items = self.list(if !ranges.is_empty() { false } else { nonempty })?;
-        let mut new_items = Vec::new();
-        for range in ranges {
-            if range.start() as usize > items.len() || range.end() as usize > items.len() {
-                bail!("Range is out of bounds");
-            }
-            new_items.extend(
-                items[range.to_std()]
-                    .iter()
-                    .map(utils::clone_trash_item)
-                    .zip(range.into_iter())
-                    .map(swap),
-            );
+    pub fn list_ranged(&self, non_empty: bool, ranges: RangeSet) -> Result<Vec<(u32, TrashItem)>> {
+        let filters = self.filter_args.to_filters()?;
+        if non_empty && filters.is_empty() {
+            bail!("Must match something");
         }
-        Ok(new_items)
+        list_ranged(self.rev, self.max, filters, ranges)
     }
+}
+
+pub fn list_only() -> Result<Vec<TrashItem>> {
+    let mut items = trash::os_limited::list()?;
+    items.sort_by_key(|item| cmp::Reverse(item.time_deleted));
+    Ok(items)
+}
+
+pub fn list(rev: bool, max: Option<NonZeroU32>, filters: Filters) -> Result<Vec<TrashItem>> {
+    Ok(process_items(rev, max, filters, trash::os_limited::list()?))
+}
+
+pub fn process_items(
+    rev: bool,
+    max: Option<NonZeroU32>,
+    filters: Filters,
+    items: Vec<TrashItem>,
+) -> Vec<TrashItem> {
+    let mut items = if !filters.is_empty() {
+        items.into_iter().filter(|item| filters.is_match(item)).collect()
+    } else {
+        items
+    };
+    if rev {
+        items.sort_by_key(|item| item.time_deleted);
+    } else {
+        items.sort_by_key(|item| cmp::Reverse(item.time_deleted));
+    }
+    match max {
+        Some(n) => items.into_iter().take(n.get() as usize).collect(),
+        None => items,
+    }
+}
+
+pub fn list_ranged(
+    rev: bool,
+    max: Option<NonZeroU32>,
+    filters: Filters,
+    ranges: RangeSet,
+) -> Result<Vec<(u32, TrashItem)>> {
+    let items = list(rev, max, filters)?;
+    filter_by_ranges(&items, ranges)
+}
+
+pub fn filter_by_ranges(items: &[TrashItem], ranges: RangeSet) -> Result<Vec<(u32, TrashItem)>> {
+    let mut new_items = Vec::new();
+    for range in ranges {
+        if range.start() as usize > items.len() || range.end() as usize > items.len() {
+            bail!("Range is out of bounds");
+        }
+        new_items.extend(
+            items[range.to_std()]
+                .iter()
+                .map(utils::clone_trash_item)
+                .zip(range.into_iter())
+                .map(swap),
+        );
+    }
+    Ok(new_items)
 }
 
 pub fn display_items<'a>(items: &[TrashItem], config_args: &app::ConfigArgs) -> Result<()> {
