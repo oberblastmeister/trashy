@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::trash_item::MaybeIndexedTrashItems;
+use crate::{range_syntax, trash_item::MaybeIndexedTrashItems};
 use clap::Parser;
 use either::Either::*;
 
@@ -34,12 +34,28 @@ impl Args {
             })
         };
 
-        if self.ranges.ranges.is_empty() {
-            restore(MaybeIndexedTrashItems(Left(self.query_args.list(true)?)))?
+        let filters = self.query_args.filter_args.to_filters()?;
+        if filters.is_empty() && self.ranges.ranges.is_empty() {
+            let items = list::list(self.query_args.rev, self.query_args.max, filters)?;
+            list::display_items(&items, config_args)?;
+            let ranges = dialoguer::Input::<String>::new().with_prompt("restore ranges").interact_text()?;
+            restore(MaybeIndexedTrashItems(Right(list::filter_by_ranges(
+                &items,
+                range_syntax::parse_range_set(&ranges)?,
+            )?)))?
+        } else if self.ranges.ranges.is_empty() {
+            restore(MaybeIndexedTrashItems(Left(list::list(
+                self.query_args.rev,
+                self.query_args.max,
+                filters,
+            )?)))?
         } else {
-            restore(MaybeIndexedTrashItems(Right(
-                self.query_args.list_ranged(true, self.ranges.parse()?)?,
-            )))?;
+            restore(MaybeIndexedTrashItems(Right(list::list_ranged(
+                self.query_args.rev,
+                self.query_args.max,
+                filters,
+                self.ranges.parse()?,
+            )?)))?;
         }
         Ok(())
     }
