@@ -161,6 +161,7 @@ Range (min … max):   375.9 ms … 412.0 ms    10 runs
 hyperfine 'trash list'
 ```
 
+
 ```
 Time (mean ± σ):     178.3 ms ±   1.9 ms    [User: 135.7 ms, System: 40.4 ms]
 Range (min … max):   175.6 ms … 181.0 ms    16 runs
