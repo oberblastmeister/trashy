@@ -38,7 +38,8 @@ impl Args {
         if filters.is_empty() && self.ranges.ranges.is_empty() {
             let items = list::list(self.query_args.rev, self.query_args.max, filters)?;
             list::display_items(&items, config_args)?;
-            let ranges = dialoguer::Input::<String>::new().with_prompt("restore ranges").interact_text()?;
+            let ranges =
+                dialoguer::Input::<String>::new().with_prompt("restore ranges").interact_text()?;
             restore(MaybeIndexedTrashItems(Right(list::filter_by_ranges(
                 &items,
                 range_syntax::parse_range_set(&ranges)?,
