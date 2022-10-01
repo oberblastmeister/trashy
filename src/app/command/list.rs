@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::Write;
 use std::num::NonZeroU32;
 use std::{
@@ -203,18 +204,18 @@ pub fn indexed_items_to_table<'a>(
         table.remove_columns();
     };
     use tabled::{object::Segment, Alignment, Modify};
-    let table = table.build().with(Modify::new(Segment::all()).with(Alignment::left()));
-    let table = if let Some((terminal_size::Width(width), _)) = terminal_size::terminal_size() {
+    let mut table = table.build();
+    table.with(Modify::new(Segment::all()).with(Alignment::left()));
+    if let Some((terminal_size::Width(width), _)) = terminal_size::terminal_size() {
         let width = width as usize;
-        table.with(Modify::new(Segment::new(.., 2..)).with(Truncate::new(width - 30).suffix("...")))
-    } else {
         table
-    };
-    let table = if use_table {
-        table.with(tabled::Style::rounded())
+            .with(Modify::new(Segment::new(.., 2..)).with(Truncate::new(width - 30).suffix("...")));
+    }
+    if use_table {
+        table.with(tabled::Style::rounded());
     } else {
-        table.with(tabled::Style::empty())
-    };
+        table.with(tabled::Style::empty());
+    }
     Ok(table)
 }
 
@@ -238,12 +239,12 @@ pub struct TrashItemDisplay {
 impl Tabled for TrashItemDisplay {
     const LENGTH: usize = 3;
 
-    fn fields(&self) -> Vec<String> {
-        vec![self.i.to_string(), self.time.clone(), self.path.clone()]
+    fn fields(&self) -> Vec<Cow<'_, str>> {
+        vec![self.i.to_string().into(), self.time.clone().into(), self.path.clone().into()]
     }
 
-    fn headers() -> Vec<String> {
-        vec![String::from("i"), String::from("Time"), String::from("Path")]
+    fn headers() -> Vec<Cow<'static, str>> {
+        vec!["i".into(), "Time".into(), "Path".into()]
     }
 }
 
