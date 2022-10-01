@@ -22,7 +22,7 @@ name = "trash"
 [dependencies]
 clap_mangen = "0.2.2"
 clap_complete = "4.0.2"
-anyhow = { version = "1.0.63", features = ["backtrace"] }
+anyhow = { version = "1.0.65", features = ["backtrace"] }
 trash = "2.1.5"
 chrono = "0.4.20"
 chrono-humanize = "0.2.1"
