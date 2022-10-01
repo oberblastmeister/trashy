@@ -4,8 +4,8 @@
 
 ## Features
 
-- `trash restore` will pull up a interactive prompt if no arguments are given
-- upgrade to clap 4
+- `trash restore` will pull up an interactive prompt if no arguments are given
+- upgrade to clap v4
 
 ## Bugfixes
 
