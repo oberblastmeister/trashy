@@ -20,7 +20,7 @@ path = "src/main.rs"
 name = "trash"
 
 [dependencies]
-clap_mangen = "0.2.2"
+clap_mangen = "0.2.4"
 clap_complete = "4.0.2"
 anyhow = { version = "1.0.66", features = ["backtrace"] }
 trash = "2.1.5"
