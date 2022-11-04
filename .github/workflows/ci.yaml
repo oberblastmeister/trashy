@@ -31,7 +31,7 @@ jobs:
         override: true
 
     - name: Cache Dependencies
-      uses: Swatinem/rust-cache@v2.0.0
+      uses: Swatinem/rust-cache@v2.0.1
 
     - name: Compile
       uses: actions-rs/cargo@v1
