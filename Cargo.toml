@@ -36,7 +36,7 @@ aho-corasick = "0.7.19"
 dialoguer = "0.10.2"
 globset = { version = "0.4.9", default-features = false }
 either = "1.7.0"
-terminal_size = "0.2.1"
+terminal_size = "0.2.3"
 
 [dependencies.tabled]
 version = "0.10.0"
