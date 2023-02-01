@@ -21,7 +21,7 @@ name = "trash"
 
 [dependencies]
 clap_mangen = "0.2.4"
-clap_complete = "4.0.6"
+clap_complete = "4.1.1"
 anyhow = { version = "1.0.68", features = ["backtrace"] }
 trash = "3.0.0"
 chrono = "0.4.23"
