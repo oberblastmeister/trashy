@@ -23,7 +23,7 @@ name = "trash"
 clap_mangen = "0.2.9"
 clap_complete = "4.1.4"
 anyhow = { version = "1.0.68", features = ["backtrace"] }
-trash = "3.0.0"
+trash = "3.0.1"
 chrono = "0.4.23"
 chrono-humanize = "0.2.1"
 lscolors = { version = "0.13.0", features = ["crossterm"] }
