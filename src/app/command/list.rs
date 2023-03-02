@@ -13,6 +13,7 @@ use tabled::{width::Truncate, Table, Tabled};
 use anyhow::{bail, Context, Result};
 use trash::TrashItem;
 
+use crate::app::TimeDisplayMode;
 use crate::filter::Filters;
 use crate::{
     app,
@@ -163,6 +164,7 @@ pub fn display_indexed_items<'a>(
         items,
         config_args.color_status.merge(is_atty),
         config_args.table_status.merge(is_atty),
+        config_args.time_display_mode,
         Path::new(""),
     )
 }
@@ -171,12 +173,13 @@ fn display_indexed_items_with<'a>(
     items: impl DoubleEndedIterator<Item = (u32, &'a TrashItem)> + ExactSizeIterator,
     use_color: bool,
     use_table: bool,
+    time_display_mode: TimeDisplayMode,
     base: &Path,
 ) -> Result<()> {
     if items.len() == 0 {
         return Ok(());
     }
-    let table = indexed_items_to_table(items, use_color, use_table, base)?;
+    let table = indexed_items_to_table(items, use_color, use_table, time_display_mode, base)?;
     writeln!(io::stdout(), "{table}").context("Printing table")?;
     Ok(())
 }
@@ -185,19 +188,20 @@ pub fn indexed_items_to_table<'a>(
     items: impl DoubleEndedIterator<Item = (u32, &'a TrashItem)>,
     use_color: bool,
     use_table: bool,
+    time_display_mode: TimeDisplayMode,
     base: &Path,
 ) -> Result<Table> {
-    let mut failed = 0;
+    let mut failed = 0; // 'failed' does not seem to be read anywhere except 197 line
+
     // this isn't actually needless since we need to reverse the items, which can't be done with a single-ended iterator
     let items = items
-        .filter_map(|(i, item)| match display_item(item, use_color, base) {
-            Ok(s) => Some((i, s)),
+        .filter_map(|(i, item)| match display_item(item, use_color, time_display_mode, base) {
+            Ok(s) => Some(TrashItemDisplay { i, time: s.0, path: s.1 }),
             Err(_) => {
                 failed += 1;
                 None
             }
         })
-        .map(|(i, t)| TrashItemDisplay { i, time: t.0, path: t.1 })
         .rev();
     let mut table = Table::builder(items);
     if !use_table {
@@ -219,7 +223,12 @@ pub fn indexed_items_to_table<'a>(
     Ok(table)
 }
 
-pub fn display_item(item: &TrashItem, color: bool, base: &Path) -> Result<(String, String)> {
+pub fn display_item(
+    item: &TrashItem,
+    color: bool,
+    time_display_mode: TimeDisplayMode,
+    base: &Path,
+) -> Result<(String, String)> {
     let mut displayed_path = utils::path::display(item.original_path().strip_prefix(base).unwrap());
     if cfg!(target_os = "linux") && color {
         if let Some(style) = item_lscolors(item)? {
@@ -227,7 +236,7 @@ pub fn display_item(item: &TrashItem, color: bool, base: &Path) -> Result<(Strin
             displayed_path = ansi_style.paint(displayed_path).to_string();
         }
     }
-    Ok((display_item_date(item), displayed_path))
+    Ok((display_item_date(item, time_display_mode), displayed_path))
 }
 
 pub struct TrashItemDisplay {
@@ -262,10 +271,17 @@ pub fn item_lscolors(item: &TrashItem) -> Result<Option<lscolors::Style>> {
     }
 }
 
-pub fn display_item_date(item: &TrashItem) -> String {
+pub fn display_item_date(item: &TrashItem, time_display_mode: TimeDisplayMode) -> String {
     let datetime = Local.timestamp(item.time_deleted, 0);
-    let humantime = chrono_humanize::HumanTime::from(datetime);
-    format!("{humantime}")
+    match time_display_mode {
+        TimeDisplayMode::Precise => {
+            format!("{}", Local.timestamp(item.time_deleted, 0).format("%d/%m/%Y %H:%M"))
+        }
+        TimeDisplayMode::Imprecise => {
+            let humantime = chrono_humanize::HumanTime::from(datetime);
+            format!("{humantime}")
+        }
+    }
 }
 
 pub fn files_path_from_info_path(info_path: &Path) -> PathBuf {
