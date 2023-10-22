@@ -2,7 +2,6 @@ mod command;
 
 use anyhow::Result;
 use clap::Parser;
-use command::put;
 use command::Command;
 
 #[derive(Debug, Parser)]
@@ -16,13 +15,10 @@ use command::Command;
 pub struct Args {
     /// The command to run.
     #[clap(subcommand)]
-    pub command: Option<Command>,
+    pub command: Command,
 
     #[clap(flatten)]
     config_args: ConfigArgs,
-
-    #[clap(flatten)]
-    put_args: put::PutArgs,
 }
 
 #[derive(Debug, Parser)]
@@ -97,10 +93,7 @@ pub enum TimeDisplayMode {
 
 impl Args {
     pub fn run(self) -> Result<()> {
-        match self.command {
-            None => self.put_args.run(&self.config_args)?,
-            Some(command) => command.run(&self.config_args)?,
-        }
+        self.command.run(&self.config_args)?;
         Ok(())
     }
 }
