@@ -62,12 +62,12 @@ jobs:
         shell: bash
         run: |
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            mv "target/${{ matrix.target }}/release/trash.exe" "trash-${{ matrix.target }}.exe"
-            echo "ASSET=trash-${{ matrix.target }}.exe" >> $GITHUB_ENV
+            mv "target/${{ matrix.target }}/release/trashy.exe" "trashy-${{ matrix.target }}.exe"
+            echo "ASSET=trashy-${{ matrix.target }}.exe" >> $GITHUB_ENV
           else
-            mv "target/${{ matrix.target }}/release/trash" "trash"
-            tar czf trash-${{ matrix.target }}.tar.gz trash
-            echo "ASSET=trash-${{ matrix.target }}.tar.gz" >> $GITHUB_ENV
+            mv "target/${{ matrix.target }}/release/trashy" "trashy"
+            tar czf trashy-${{ matrix.target }}.tar.gz trashy
+            echo "ASSET=trashy-${{ matrix.target }}.tar.gz" >> $GITHUB_ENV
           fi
 
       - name: Upload artifact

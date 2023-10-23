@@ -46,7 +46,7 @@ pub struct QueryArgs {
     /// This option puts the oldest trash item at the bottom.
     /// This will also affect 'empty' or 'restore' if used in either command.
     /// Examples:
-    /// 'trash empty --rev -n=10' will delete 10 oldest trash items are deleted.
+    /// 'trashy empty --rev -n=10' will delete 10 oldest trash items are deleted.
     #[arg(long, verbatim_doc_comment)]
     pub rev: bool,
 
@@ -54,8 +54,8 @@ pub struct QueryArgs {
     ///
     /// This will also affect 'empty' or 'restore' if used in either command.
     /// Examples:
-    /// 'trash list -n=10' will list the ten newest trashed items.
-    /// 'trash restore -n=10' will list restore the ten newest trashed items.
+    /// 'trashy list -n=10' will list the ten newest trashed items.
+    /// 'trashy restore -n=10' will list restore the ten newest trashed items.
     #[arg(short = 'n', long = "max", verbatim_doc_comment)]
     pub max: Option<NonZeroU32>,
 }

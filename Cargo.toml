@@ -17,7 +17,7 @@ rust-version = "1.62"
 
 [[bin]]
 path = "src/main.rs"
-name = "trash"
+name = "trashy"
 
 [dependencies]
 clap_mangen = "0.2.9"
