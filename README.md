@@ -100,10 +100,10 @@ Download the binary from Github Releases and put it in your `$PATH`.
 
 ### From the AUR
 
-Use your favorite AUR helper.
+Use your favorite AUR helper to install `trashy` or `trashy-git`. Trashy git will remain up to date with the `master` branch.
 
 ```bash
-paru -S trashy
+paru -S <trashy or trashy-git>
 ```
 
 ### Using Nix
