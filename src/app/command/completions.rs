@@ -13,7 +13,7 @@ pub struct Args {
 
 impl Args {
     pub fn run(&self) -> Result<()> {
-        clap_complete::generate(self.shell, &mut app::Args::command(), "trash", &mut io::stdout());
+        clap_complete::generate(self.shell, &mut app::Args::command(), "trashy", &mut io::stdout());
         Ok(())
     }
 }

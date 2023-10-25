@@ -15,7 +15,7 @@ Quick links:
 
 ## Features
 
-- easy to use, just run `trash PATH`
+- easy to use, just run `trashy put PATH`
 - recursive by default, without having the issues
 - beautiful output
     - colorized paths (similar to *fd*)
@@ -30,28 +30,28 @@ Quick links:
 ### Trash a path
 
 ```bash
-$ trash first second third
+$ trashy first second third
 ```
 
 This is just sugar for 
 
 ```bash
-$ trash put first second third
+$ trashy put first second third
 ```
 
 ### List items in the trash
 
 ```bash
-$ trash list
+$ trashy list
 ```
 
 ### Restore or empty some files
 
 ```bash
-$ trash restore first second
+$ trashy restore first second
 ```
 ```bash
-$ trash empty first second third
+$ trashy empty first second third
 ```
 
 The `restore` and `empty` subcommands both take very similar arguments and flags.
@@ -63,11 +63,11 @@ Use the `-m` option to interpret them differently.
 ### Restore or empty all files
 
 ```bash
-$ trash restore --all
+$ trashy restore --all
 ```
 
 ```bash
-$ trash empty --all
+$ trashy empty --all
 ```
 
 ## Integrations
@@ -77,13 +77,13 @@ $ trash empty --all
 Restore with fzf
 
 ```bash
-trash list | fzf --multi | awk '{$1=$1;print}' | rev | cut -d ' ' -f1 | rev | xargs trash restore --match=exact --force
+trashy list | fzf --multi | awk '{$1=$1;print}' | rev | cut -d ' ' -f1 | rev | xargs trashy restore --match=exact --force
 ```
 
 Empty with fzf
 
 ```bash
-trash list | fzf --multi | awk '{$1=$1;print}' | rev | cut -d ' ' -f1 | rev | xargs trash empty --match=exact --force
+trashy list | fzf --multi | awk '{$1=$1;print}' | rev | cut -d ' ' -f1 | rev | xargs trashy empty --match=exact --force
 ```
 
 ## Installation
@@ -136,7 +136,7 @@ Time (abs ≡):        65.849 s               [User: 54.383 s, System: 11.370 s]
 Now with `trashy`
 
 ```
-hyperfine -M 1 'fd -t f --threads 1 -x trash put'
+hyperfine -M 1 'fd -t f --threads 1 -x trashy put'
 ```
 
 ```
@@ -158,7 +158,7 @@ Range (min … max):   375.9 ms … 412.0 ms    10 runs
 
 
 ```
-hyperfine 'trash list'
+hyperfine 'trashy list'
 ```
 
 ```
@@ -174,9 +174,9 @@ Range (min … max):   175.6 ms … 181.0 ms    16 runs
 
 No, see this [issue](https://github.com/Byron/trash-rs/issues/8)
 
-### Should I alias rm='trash put'?
+### Should I alias rm='trashy put'?
 
-You should not. The alias will not be present on other systems and habits are really hard to break. An alternative is to alias `trash put` to `rt` or `tp`.
+You should not. The alias will not be present on other systems and habits are really hard to break. An alternative is to alias `trashy put` to `rt` or `tp`.
 
 ## License
 

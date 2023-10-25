@@ -9,7 +9,7 @@ use command::Command;
     version,
     about,
     long_about = None,
-    after_help = "Note: `trash -h` prints a short and concise overview while `trash --help` gives all \
+    after_help = "Note: `trashy -h` prints a short and concise overview while `trashy --help` gives all \
                  details.",
 )]
 pub struct Args {

@@ -62,9 +62,9 @@ pub struct FilterArgs {
     /// This will filter using a pattern type specified in '--match'.
     /// Using <PATTERNS> and '--match' gives the same effect as passing one of the pattern options explicitly.
     /// So for example
-    /// trash restore '~/projects/**' '~/builds/**' --match=glob
+    /// trashy restore '~/projects/**' '~/builds/**' --match=glob
     /// is the same as
-    /// trash restore --glob='~/project/**' --glob='~/builds/**'
+    /// trashy restore --glob='~/project/**' --glob='~/builds/**'
     #[arg(verbatim_doc_comment)]
     pub patterns: Vec<String>,
 

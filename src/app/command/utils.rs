@@ -37,7 +37,7 @@ pub struct Ranges {
     /// Filter by ranges
     ///
     /// This should be used to restore specific items.
-    /// To find the ranges, look at the 'i' column in the table shown by 'trash list'.
+    /// To find the ranges, look at the 'i' column in the table shown by 'trashy list'.
     /// The option is called '--ranges' but you can also use individual indices by just typing out the number.
     /// Ranges are zero based, inclusive at the start, and exclusive at the end, just like rust ranges.
     /// Examples:
