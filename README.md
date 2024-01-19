@@ -109,7 +109,7 @@ paru -S trashy
 ### Using Nix
 
 ```bash
-niv-env -i trashy
+nix-env -i trashy
 ```
 
 Or if you have flakes enabled:
