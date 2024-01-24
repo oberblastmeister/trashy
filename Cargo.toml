@@ -34,7 +34,7 @@ humantime = "2.1.0"
 regex = "1.7.0"
 aho-corasick = "0.7.20"
 dialoguer = "0.10.3"
-globset = { version = "0.4.9", default-features = false }
+globset = { version = "0.4.10", default-features = false }
 either = "1.8.1"
 terminal_size = "0.2.3"
 
