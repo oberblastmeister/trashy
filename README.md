@@ -1,9 +1,3 @@
-This fork is here to change the help message styling from underlines back to colors, since the underlines cause issues in certain terminals, including `cmd.exe` on Windows. 
-
-I also have statically linked binaries available for Linux in the releases, for both x86-64 and Arm 64. They are statically linked and stripped, which makes them significantly smaller than the default releases, and also means they don't depend on glibc, so they can run on distros like Alpine that don't use glibc.
-
-*I used no generative AI in any part of the process of making and making modifications to this fork.*
-
 # trashy
 
 ![Build Status](https://github.com/oberblastmeister/trash-cli/workflows/ci/badge.svg)
