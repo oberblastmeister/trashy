@@ -3,6 +3,13 @@ mod command;
 use anyhow::Result;
 use clap::Parser;
 use command::Command;
+use clap::builder::styling;
+
+const STYLES: styling::Styles = styling::Styles::styled()
+    .header(styling::AnsiColor::Yellow.on_default())
+    .usage(styling::AnsiColor::Green.on_default())
+    .literal(styling::AnsiColor::Green.on_default())
+    .placeholder(styling::AnsiColor::Green.on_default());
 
 #[derive(Debug, Parser)]
 #[command(
@@ -12,6 +19,7 @@ use command::Command;
     after_help = "Note: `trashy -h` prints a short and concise overview while `trashy --help` gives all \
                  details.",
 )]
+#[command(styles = STYLES)]
 pub struct Args {
     /// The command to run.
     #[clap(subcommand)]
