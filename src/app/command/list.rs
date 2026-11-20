@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::io::Write;
+use std::io::{IsTerminal, Write};
 use std::num::NonZeroU32;
 use std::{
     cmp, fs, io,
@@ -8,7 +8,8 @@ use std::{
 
 use chrono::{Local, TimeZone};
 use clap::Parser;
-use tabled::{width::Truncate, Table, Tabled};
+use tabled::settings::{object::Segment, width::Truncate, Alignment, Modify, Style};
+use tabled::{Table, Tabled};
 
 use anyhow::{bail, Context, Result};
 use trash::TrashItem;
@@ -151,7 +152,7 @@ pub fn filter_by_ranges(items: &[TrashItem], ranges: RangeSet) -> Result<Vec<(u3
     Ok(new_items)
 }
 
-pub fn display_items<'a>(items: &[TrashItem], config_args: &app::ConfigArgs) -> Result<()> {
+pub fn display_items(items: &[TrashItem], config_args: &app::ConfigArgs) -> Result<()> {
     display_indexed_items(items.iter().zip(0..items.len() as u32).map(swap), config_args)
 }
 
@@ -159,7 +160,7 @@ pub fn display_indexed_items<'a>(
     items: impl DoubleEndedIterator<Item = (u32, &'a TrashItem)> + ExactSizeIterator,
     config_args: &app::ConfigArgs,
 ) -> Result<()> {
-    let is_atty = atty::is(atty::Stream::Stdout);
+    let is_atty = io::stdout().is_terminal();
     display_indexed_items_with(
         items,
         config_args.color_status.merge(is_atty),
@@ -205,20 +206,23 @@ pub fn indexed_items_to_table<'a>(
         .rev();
     let mut table = Table::builder(items);
     if !use_table {
-        table.remove_columns();
+        // the first record is the header
+        table.remove_record(0);
     };
-    use tabled::{object::Segment, Alignment, Modify};
     let mut table = table.build();
     table.with(Modify::new(Segment::all()).with(Alignment::left()));
-    if let Some((terminal_size::Width(width), _)) = terminal_size::terminal_size() {
-        let width = width as usize;
+    // a terminal too narrow to leave the path any room shows it whole
+    let path_width = terminal_size::terminal_size()
+        .and_then(|(terminal_size::Width(width), _)| usize::from(width).checked_sub(30))
+        .filter(|&path_width| path_width > 0);
+    if let Some(path_width) = path_width {
         table
-            .with(Modify::new(Segment::new(.., 2..)).with(Truncate::new(width - 30).suffix("...")));
+            .with(Modify::new(Segment::new(.., 2..)).with(Truncate::new(path_width).suffix("...")));
     }
     if use_table {
-        table.with(tabled::Style::rounded());
+        table.with(Style::rounded());
     } else {
-        table.with(tabled::Style::empty());
+        table.with(Style::empty());
     }
     Ok(table)
 }
@@ -232,7 +236,7 @@ pub fn display_item(
     let mut displayed_path = utils::path::display(item.original_path().strip_prefix(base).unwrap());
     if cfg!(target_os = "linux") && color {
         if let Some(style) = item_lscolors(item)? {
-            let ansi_style = style.to_ansi_term_style();
+            let ansi_style = style.to_nu_ansi_term_style();
             displayed_path = ansi_style.paint(displayed_path).to_string();
         }
     }
@@ -272,11 +276,11 @@ pub fn item_lscolors(item: &TrashItem) -> Result<Option<lscolors::Style>> {
 }
 
 pub fn display_item_date(item: &TrashItem, time_display_mode: TimeDisplayMode) -> String {
-    let datetime = Local.timestamp(item.time_deleted, 0);
+    let Some(datetime) = Local.timestamp_opt(item.time_deleted, 0).single() else {
+        return String::from("unknown");
+    };
     match time_display_mode {
-        TimeDisplayMode::Precise => {
-            format!("{}", Local.timestamp(item.time_deleted, 0).format("%d/%m/%Y %H:%M"))
-        }
+        TimeDisplayMode::Precise => format!("{}", datetime.format("%d/%m/%Y %H:%M")),
         TimeDisplayMode::Imprecise => {
             let humantime = chrono_humanize::HumanTime::from(datetime);
             format!("{humantime}")

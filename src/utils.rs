@@ -15,7 +15,7 @@ pub mod path {
     }
 
     pub fn style_for<'a>(path: &Path, metadata: &'a fs::Metadata) -> Option<&'a Style> {
-        LS_COLORS.style_for_path_with_metadata(&path, Some(metadata))
+        LS_COLORS.style_for_path_with_metadata(path, Some(metadata))
     }
 }
 
