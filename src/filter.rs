@@ -6,7 +6,7 @@ use std::{
 
 use aho_corasick::AhoCorasick;
 use anyhow::{anyhow, bail, Result};
-use chrono::{DateTime, Local, NaiveDate, TimeZone, Utc};
+use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use clap::{ArgAction, Parser, ValueEnum};
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
@@ -123,7 +123,7 @@ impl FilterArgs {
             filters.push(Filter::PatternSet(PatternSet::new_glob(self.glob.iter())?));
         }
         if !self.substring.is_empty() {
-            filters.push(Filter::PatternSet(PatternSet::new_substring(self.substring.iter())));
+            filters.push(Filter::PatternSet(PatternSet::new_substring(self.substring.iter())?));
         }
         if !self.exact.is_empty() {
             filters.push(Filter::PatternSet(PatternSet::new_exact(self.exact.iter())));
@@ -131,7 +131,7 @@ impl FilterArgs {
         if !self.patterns.is_empty() {
             filters.push(Filter::PatternSet(match self.r#match {
                 Match::Regex => PatternSet::new_regex(self.patterns.iter())?,
-                Match::Substring => PatternSet::new_substring(self.patterns.iter()),
+                Match::Substring => PatternSet::new_substring(self.patterns.iter())?,
                 Match::Glob => PatternSet::new_glob(self.patterns.iter())?,
                 Match::Exact => PatternSet::new_exact(self.patterns.iter()),
             }));
@@ -165,7 +165,8 @@ impl Filter {
             Filter::PatternSet(patterns) => {
                 patterns.is_match(&item.original_path().to_string_lossy())
             }
-            Filter::Time(time_filter) => time_filter.is_match(Utc.timestamp(item.time_deleted, 0)),
+            Filter::Time(time_filter) => DateTime::from_timestamp(item.time_deleted, 0)
+                .is_some_and(|datetime| time_filter.is_match(datetime)),
             Filter::Directories(directories) => {
                 directories.iter().all(|p| item.original_path().starts_with(p))
             }
@@ -210,8 +211,8 @@ impl PatternSet {
         Ok(PatternSet::Regex(RegexSet::new(patterns)?))
     }
 
-    fn new_substring(patterns: impl Iterator<Item = impl AsRef<[u8]>>) -> PatternSet {
-        PatternSet::Substring(Box::new(AhoCorasick::new(patterns)))
+    fn new_substring(patterns: impl Iterator<Item = impl AsRef<[u8]>>) -> Result<PatternSet> {
+        Ok(PatternSet::Substring(Box::new(AhoCorasick::new(patterns)?)))
     }
 
     fn new_glob(patterns: impl Iterator<Item = impl AsRef<str>>) -> Result<PatternSet> {
@@ -245,11 +246,15 @@ fn parse_time_filter(ref_time: DateTime<Utc>, s: &str) -> Option<DateTime<Utc>> 
                 .ok()
                 .or_else(|| {
                     NaiveDate::parse_from_str(s, "%F")
-                        .map(|nd| nd.and_hms(0, 0, 0))
+                        .ok()
+                        .and_then(|nd| nd.and_hms_opt(0, 0, 0))
+                        .and_then(|ndt| Local.from_local_datetime(&ndt).single())
+                })
+                .or_else(|| {
+                    NaiveDateTime::parse_from_str(s, "%F %T")
                         .ok()
                         .and_then(|ndt| Local.from_local_datetime(&ndt).single())
                 })
-                .or_else(|| Local.datetime_from_str(s, "%F %T").ok())
                 .map(|dt| dt.into())
         })
 }

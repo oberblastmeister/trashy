@@ -20,29 +20,28 @@ path = "src/main.rs"
 name = "trashy"
 
 [dependencies]
-clap_mangen = "0.2.9"
-clap_complete = "4.1.4"
-anyhow = { version = "1.0.68", features = ["backtrace"] }
+clap_mangen = "0.3.4"
+clap_complete = "4.6.12"
+anyhow = { version = "1.0.104", features = ["backtrace"] }
 trash = "5.4.0"
-chrono = "0.4.23"
-chrono-humanize = "0.2.1"
-lscolors = { version = "0.13.0", features = ["crossterm"] }
-once_cell = "1.17.0"
-atty = "0.2.14"
-ansi_term = "0.12.1"
-humantime = "2.1.0"
-regex = "1.7.0"
-aho-corasick = "0.7.20"
-dialoguer = "0.10.3"
-globset = { version = "0.4.9", default-features = false }
-either = "1.8.1"
-terminal_size = "0.2.3"
+chrono = "0.4.45"
+chrono-humanize = "0.2.3"
+lscolors = "0.21.0"
+once_cell = "1.21.4"
+nu-ansi-term = "0.50.3"
+humantime = "2.4.0"
+regex = "1.13.2"
+aho-corasick = "1.1.5"
+dialoguer = "0.12.0"
+globset = { version = "0.4.19", default-features = false }
+either = "1.19.0"
+terminal_size = "0.4.4"
 
 [dependencies.tabled]
-version = "0.10.0"
+version = "0.22.0"
 default-features = false
-features = ["color"]
+features = ["std", "ansi"]
 
 [dependencies.clap]
-version = "4.1.8"
+version = "4.6.9"
 features = ["suggestions", "color", "derive", "wrap_help", "cargo"]
