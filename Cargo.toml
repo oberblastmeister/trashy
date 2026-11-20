@@ -13,7 +13,7 @@ keywords = ["trash", "remove", "recycle", "bin", "freedesktop"]
 categories = ["command-line-utilities"]
 license = "MIT/Apache-2.0"
 edition = "2021"
-rust-version = "1.62"
+rust-version = "1.87"
 
 [[bin]]
 path = "src/main.rs"
@@ -23,7 +23,7 @@ name = "trashy"
 clap_mangen = "0.2.9"
 clap_complete = "4.1.4"
 anyhow = { version = "1.0.68", features = ["backtrace"] }
-trash = "3.0.6"
+trash = "5.4.0"
 chrono = "0.4.23"
 chrono-humanize = "0.2.1"
 lscolors = { version = "0.13.0", features = ["crossterm"] }
