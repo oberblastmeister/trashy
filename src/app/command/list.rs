@@ -152,7 +152,7 @@ pub fn filter_by_ranges(items: &[TrashItem], ranges: RangeSet) -> Result<Vec<(u3
     Ok(new_items)
 }
 
-pub fn display_items<'a>(items: &[TrashItem], config_args: &app::ConfigArgs) -> Result<()> {
+pub fn display_items(items: &[TrashItem], config_args: &app::ConfigArgs) -> Result<()> {
     display_indexed_items(items.iter().zip(0..items.len() as u32).map(swap), config_args)
 }
 

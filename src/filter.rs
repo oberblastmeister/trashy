@@ -90,7 +90,7 @@ impl FilterArgs {
             filters.extend(
                 self.before
                     .iter()
-                    .map(|ref s| Ok(Filter::Time(TimeFilter::Before(parse_time(s)?))))
+                    .map(|s| Ok(Filter::Time(TimeFilter::Before(parse_time(s)?))))
                     .collect::<Result<Vec<_>>>()?,
             );
         }
